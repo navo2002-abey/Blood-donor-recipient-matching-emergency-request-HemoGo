@@ -1,0 +1,13 @@
+.env
+node_modules
+.expo
+dist
+.DS_Store
+*.log
+npm-debug.log*
+.idea
+.vscode
+coverage
+mobile/.expo
+mobile/dist
+backend/.env
