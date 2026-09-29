@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,38 +14,42 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
 import Sidebar from '../../components/Sidebar';
-import { useAuth } from '../../context/AuthContext';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 
+const { width } = Dimensions.get('window');
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
-const statusColor = (status) => {
-  if (status === 'CRITICAL' || status === 'EXPIRED') return colors.primary;
-  if (status === 'LOW') return '#F59E0B';
-  if (status === 'AVAILABLE' || status === 'Good') return colors.success;
-  return colors.textSecondary;
+const comingSoon = (feature) => {
+  Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
+};
+
+const getStatusTheme = (status) => {
+  switch (status) {
+    case 'CRITICAL':
+    case 'EXPIRED':
+      return { bg: '#FEE2E2', text: '#DC2626', progress: '#EF4444' };
+    case 'LOW':
+      return { bg: '#FFFAF0', text: '#D97706', progress: '#F59E0B' };
+    case 'RESERVED':
+      return { bg: '#EFF6FF', text: '#2563EB', progress: '#3B82F6' };
+    case 'USED':
+    case 'TRANSFERRED':
+      return { bg: '#F3F4F6', text: '#6B7280', progress: '#9CA3AF' };
+    case 'AVAILABLE':
+    case 'Good':
+    default:
+      return { bg: '#ECFDF5', text: '#059669', progress: '#10B981' };
+  }
 };
 
 const InventoryDashboardScreen = ({ navigation }) => {
-  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const rawName = user?.name || 'Nimal Perera';
-  const name = /^dr\.?\s/i.test(rawName) ? rawName : `Dr. ${rawName}`;
-  const initials = name
-    .replace(/^Dr\.?\s*/i, '')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
 
   const load = useCallback(async () => {
     try {
@@ -62,30 +67,47 @@ const InventoryDashboardScreen = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
   useEffect(() => {
     const unsub = navigation.addListener('focus', load);
     return unsub;
   }, [navigation, load]);
 
-  const onRefresh = () => { setRefreshing(true); load(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
+  };
 
   const totalUnits = stock.reduce((sum, item) => sum + item.units, 0);
+  const criticalCount = stock.filter(
+    (s) => s.status === 'CRITICAL' || s.status === 'EXPIRED'
+  ).length;
+
+  const actions = [
+    { label: 'Add Stock', icon: 'add-circle', color: colors.primary, screen: 'AddStock' },
+    { label: 'Expiry', icon: 'hourglass-outline', color: '#F59E0B', screen: 'ExpiryMonitoring' },
+    { label: 'Reservations', icon: 'bookmark-outline', color: '#3B82F6', screen: 'ReservedUnits' },
+    { label: 'Rescue', icon: 'swap-horizontal-outline', color: '#8B5CF6', screen: 'BloodRescue' },
+  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.headerBtn}>
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
+          <Ionicons name="grid-outline" size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brand}>
-          <BloodDrop size={16} />
+          <BloodDrop size={20} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <View style={styles.headerBtn}>
-          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+        <TouchableOpacity style={styles.headerBtn} onPress={() => comingSoon('Notifications')}>
+          <Ionicons name="notifications-outline" size={24} color={colors.text} />
           <View style={styles.bellBadge} />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -93,107 +115,102 @@ const InventoryDashboardScreen = ({ navigation }) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.welcome}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials || 'NP'}</Text>
+        {/* Hero Stats */}
+        <View style={styles.heroStats}>
+          <View style={styles.heroMain}>
+            <Text style={styles.heroLabel}>Total Inventory</Text>
+            <Text style={styles.heroValue}>
+              {totalUnits} <Text style={styles.unitText}>Units</Text>
+            </Text>
           </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.welcomeLabel}>Welcome back,</Text>
-            <Text style={styles.welcomeName}>{name}</Text>
-            <Text style={styles.hospital}>{HOSPITAL}</Text>
-            <View style={styles.statusRow}>
-              <View style={styles.greenDot} />
-              <Text style={styles.statusText}>On duty · Blood Bank Officer</Text>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroSub}>
+            <View>
+              <Text style={styles.subStatValue}>{reservations.length}</Text>
+              <Text style={styles.subStatLabel}>Reserved</Text>
+            </View>
+            <View>
+              <Text style={styles.subStatValue}>{criticalCount}</Text>
+              <Text style={[styles.subStatLabel, { color: colors.primary }]}>Critical</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.statGrid}>
-          <View style={styles.statCard}>
-            <Ionicons name="water-outline" size={16} color={colors.primary} />
-            <Text style={styles.statValue}>{totalUnits}</Text>
-            <Text style={styles.statLabel}>Total Units</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="list-outline" size={16} color={colors.primary} />
-            <Text style={styles.statValue}>{stock.length}</Text>
-            <Text style={styles.statLabel}>Blood Types</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="bookmark-outline" size={16} color={colors.primary} />
-            <Text style={styles.statValue}>{reservations.length}</Text>
-            <Text style={styles.statLabel}>Reserved</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="time-outline" size={16} color={colors.primary} />
-            <Text style={styles.statValue}>{stock.filter(s => s.status === 'AVAILABLE').length}</Text>
-            <Text style={styles.statLabel}>Available</Text>
-          </View>
+        {/* Quick Actions */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickGrid}>
+          {actions.map((action, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.actionCard}
+              onPress={() => navigation.navigate(action.screen)}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: action.color + '15' }]}>
+                <Ionicons name={action.icon} size={22} color={action.color} />
+              </View>
+              <Text style={styles.actionLabel}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('AddStock')}
-        >
-          <Ionicons name="add-circle" size={20} color={colors.white} />
-          <Text style={styles.addBtnText}>Add New Stock</Text>
-        </TouchableOpacity>
-
-        <View style={styles.quickRow}>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => navigation.navigate('ExpiryMonitoring')}
-          >
-            <Ionicons name="hourglass-outline" size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Expiry</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => navigation.navigate('ReservedUnits')}
-          >
-            <Ionicons name="bookmark-outline" size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Reserved</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => navigation.navigate('AIPrediction')}
-          >
-            <Ionicons name="pulse-outline" size={18} color={colors.primary} />
-            <Text style={styles.quickText}>AI</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => navigation.navigate('BloodRescue')}
-          >
-            <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
-            <Text style={styles.quickText}>Rescue</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Blood Inventory</Text>
+        <Text style={styles.sectionTitle}>Inventory Details</Text>
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 30 }} />
         ) : stock.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="water-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No stock yet. Tap "Add New Stock" to start.</Text>
+            <Ionicons name="water-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No blood units registered yet.</Text>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={() => navigation.navigate('AddStock')}
+            >
+              <Ionicons name="add" size={16} color={colors.white} />
+              <Text style={styles.emptyBtnText}>Add First Stock</Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.grid}>
-            {stock.map((item) => (
-              <TouchableOpacity
-                key={item._id}
-                style={styles.stockCard}
-                onPress={() => navigation.navigate('EditStock', { id: item._id })}
-              >
-                <Text style={styles.stockType}>{item.bloodGroup}</Text>
-                <Text style={styles.stockUnits}>{item.units}</Text>
-                <Text style={[styles.stockStatus, { color: statusColor(item.status) }]}>
-                  {item.status}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.inventoryList}>
+            {stock.map((item) => {
+              const theme = getStatusTheme(item.status);
+              const progressColor = theme.progress || theme.text;
+              const percentage = Math.min((item.units / 50) * 100, 100);
+
+              return (
+                <TouchableOpacity
+                  key={item._id}
+                  style={styles.listItem}
+                  onPress={() => navigation.navigate('EditStock', { id: item._id })}
+                >
+                  <View style={styles.listBloodType}>
+                    <Text style={styles.bloodTypeText}>{item.bloodGroup}</Text>
+                  </View>
+
+                  <View style={styles.listContent}>
+                    <View style={styles.listRow}>
+                      <Text style={styles.listUnits}>
+                        {item.units} {item.units === 1 ? 'Unit' : 'Units'}
+                      </Text>
+                      <View style={[styles.statusBadge, { backgroundColor: theme.bg }]}>
+                        <Text style={[styles.statusBadgeText, { color: theme.text }]}>
+                          {item.status}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${percentage}%`, backgroundColor: progressColor },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -202,7 +219,7 @@ const InventoryDashboardScreen = ({ navigation }) => {
         visible={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         navigation={navigation}
-        onComingSoon={(f) => Alert.alert('Coming Soon', f)}
+        onComingSoon={comingSoon}
         menu={OFFICER_MENU}
         variant="staff"
         activeKey="Inventory Dashboard"
@@ -213,39 +230,148 @@ const InventoryDashboardScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
-  headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  bellBadge: { position: 'absolute', top: 6, right: 7, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, borderWidth: 1.5, borderColor: colors.white },
+  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 28 },
-  welcome: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, backgroundColor: colors.white, borderRadius: 20, padding: 12, borderWidth: 1, borderColor: colors.cardBorder },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.primary, fontWeight: '800', fontSize: 16 },
-  welcomeLabel: { fontSize: 12, color: colors.textSecondary },
-  welcomeName: { fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 1 },
-  hospital: { fontSize: 12, color: colors.text, marginTop: 2, fontWeight: '600' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  greenDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success, marginRight: 6 },
-  statusText: { fontSize: 12, color: colors.textSecondary },
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
-  statCard: { width: '47%', flexGrow: 1, backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.cardBorder, padding: 12 },
-  statValue: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 8 },
-  statLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontWeight: '600' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52, borderRadius: 26, backgroundColor: colors.primary, marginBottom: 12 },
-  addBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
-  quickRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
-  quickBtn: { flex: 1, flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center', height: 44, borderRadius: 14, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.cardBorder },
-  quickText: { fontSize: 11, fontWeight: '700', color: colors.text },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  stockCard: { width: '22%', minWidth: 72, flexGrow: 1, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
-  stockType: { fontSize: 14, fontWeight: '800', color: colors.text },
-  stockUnits: { fontSize: 20, fontWeight: '800', color: colors.primary, marginVertical: 4 },
-  stockStatus: { fontSize: 10, fontWeight: '700' },
-  empty: { alignItems: 'center', padding: 30, backgroundColor: colors.white, borderRadius: 16, borderWidth: 1, borderColor: colors.cardBorder },
-  emptyText: { marginTop: 10, color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+  brandText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
+
+  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
+
+  /* Hero stats */
+  heroStats: {
+    backgroundColor: '#1E293B',
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  heroMain: { flex: 1.2 },
+  heroLabel: { color: '#94A3B8', fontSize: 13, fontWeight: '600' },
+  heroValue: { color: colors.white, fontSize: 32, fontWeight: '800', marginTop: 4 },
+  unitText: { fontSize: 16, color: '#94A3B8', fontWeight: '400' },
+  heroDivider: { width: 1, height: 40, backgroundColor: '#334155', marginHorizontal: 20 },
+  heroSub: { flex: 1, gap: 12 },
+  subStatValue: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  subStatLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
+
+  /* Section titles */
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+
+  /* Quick actions grid */
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  actionCard: {
+    width: (width - 32 - 12) / 2,
+    backgroundColor: colors.white,
+    padding: 16,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  actionIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionLabel: { fontSize: 14, fontWeight: '700', color: colors.text },
+
+  /* Inventory list */
+  inventoryList: { gap: 10 },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  listBloodType: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bloodTypeText: { fontSize: 16, fontWeight: '900', color: colors.primary },
+  listContent: { flex: 1, marginLeft: 14 },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  listUnits: { fontSize: 15, fontWeight: '800', color: colors.text },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 3 },
+
+  /* Empty */
+  empty: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+  },
+  emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+  },
+  emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
 });
 
 export default InventoryDashboardScreen;
