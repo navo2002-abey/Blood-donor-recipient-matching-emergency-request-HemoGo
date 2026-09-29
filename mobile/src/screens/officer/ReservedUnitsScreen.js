@@ -11,15 +11,34 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useConfirm } from '../../context/ConfirmContext';
 import { reservationService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
+const statusColor = (status) => {
+  if (status === 'RESERVED') return '#F59E0B';
+  if (status === 'RELEASED') return colors.success;
+  if (status === 'USED') return '#3B82F6';
+  if (status === 'EXPIRED') return colors.primary;
+  return colors.textSecondary;
+};
+
+const statusBg = (status) => {
+  if (status === 'RESERVED') return '#FFFBEB';
+  if (status === 'RELEASED') return '#ECFDF5';
+  if (status === 'USED') return '#EFF6FF';
+  if (status === 'EXPIRED') return '#FFF1F3';
+  return '#F4F4F6';
+};
+
 const ReservedUnitsScreen = ({ navigation }) => {
+  const confirm = useConfirm();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -39,60 +58,71 @@ const ReservedUnitsScreen = ({ navigation }) => {
     return unsub;
   }, [navigation, load]);
 
-  const handleRelease = (item) => {
-    Alert.alert('Release Unit', `Return this unit to available stock?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Release',
-        onPress: async () => {
-          try {
-            await reservationService.update(item._id, { status: 'RELEASED' });
-            load();
-          } catch (e) {
-            Alert.alert('Error', 'Failed to release.');
-          }
-        },
-      },
-    ]);
+  const handleRelease = async (item) => {
+    const ok = await confirm({
+      title: 'Release Unit',
+      message: `Return unit ${item.unitId} to available stock?`,
+      confirmText: 'Release',
+    });
+    if (!ok) return;
+
+    try {
+      setBusyId(item._id);
+      await reservationService.update(item._id, { status: 'RELEASED' });
+      await load();
+      Alert.alert('Released', 'Unit returned to available stock.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to release unit.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleMarkUsed = (item) => {
-    Alert.alert('Mark Used', `Mark this unit as used?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Mark Used',
-        onPress: async () => {
-          try {
-            await reservationService.update(item._id, { status: 'USED' });
-            load();
-          } catch (e) {
-            Alert.alert('Error', 'Failed to update.');
-          }
-        },
-      },
-    ]);
+  const handleMarkUsed = async (item) => {
+    const ok = await confirm({
+      title: 'Mark Used',
+      message: `Mark unit ${item.unitId} as used?`,
+      confirmText: 'Mark Used',
+    });
+    if (!ok) return;
+
+    try {
+      setBusyId(item._id);
+      await reservationService.update(item._id, { status: 'USED' });
+      await load();
+      Alert.alert('Updated', 'Unit marked as used.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update unit.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleDelete = (item) => {
-    Alert.alert('Cancel Reservation', 'This will remove the reservation.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await reservationService.remove(item._id);
-            load();
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete.');
-          }
-        },
-      },
-    ]);
+  const handleDelete = async (item) => {
+    const ok = await confirm({
+      title: 'Cancel Reservation',
+      message: `Permanently remove reservation for ${item.patientName}?`,
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+
+    try {
+      setBusyId(item._id);
+      await reservationService.remove(item._id);
+      await load();
+      Alert.alert('Deleted', 'Reservation removed.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete reservation.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const renderItem = ({ item }) => {
     const isReserved = item.status === 'RESERVED';
+    const busy = busyId === item._id;
+
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
@@ -106,32 +136,44 @@ const ReservedUnitsScreen = ({ navigation }) => {
             <Text style={styles.patient}>{item.patientName}</Text>
             <Text style={styles.ward}>{item.ward}</Text>
           </View>
-          <View style={[styles.statusPill, !isReserved && styles.statusPillDone]}>
-            <Text style={[styles.statusText, !isReserved && styles.statusTextDone]}>
+          <View style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}>
+            <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
               {item.status}
             </Text>
           </View>
         </View>
 
+        {item.reservedFor ? (
+          <Text style={styles.subInfo}>
+            Reserved for: <Text style={styles.subValue}>{item.reservedFor}</Text>
+          </Text>
+        ) : null}
+
         <Text style={styles.subInfo}>
-          Reserved: {new Date(item.reservedAt).toLocaleString()}
+          Reserved at: {new Date(item.reservedAt || item.createdAt).toLocaleString()}
         </Text>
 
         {isReserved && (
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, busy && styles.actionDisabled]}
               onPress={() => handleRelease(item)}
+              disabled={busy}
             >
-              <Text style={styles.actionText}>Release</Text>
+              <Text style={styles.actionText}>{busy ? '...' : 'Release'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.actionPrimary]}
+              style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
               onPress={() => handleMarkUsed(item)}
+              disabled={busy}
             >
-              <Text style={styles.actionPrimaryText}>Mark Used</Text>
+              <Text style={styles.actionPrimaryText}>{busy ? '...' : 'Mark Used'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(item)}>
+            <TouchableOpacity
+              style={[styles.iconBtn, busy && styles.actionDisabled]}
+              onPress={() => handleDelete(item)}
+              disabled={busy}
+            >
               <Ionicons name="trash-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -171,7 +213,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="bookmark-outline" size={32} color={colors.textMuted} />
+              <Ionicons name="bookmark-outline" size={40} color={colors.textMuted} />
               <Text style={styles.emptyText}>No reservations yet.</Text>
               <TouchableOpacity
                 style={styles.emptyBtn}
@@ -210,16 +252,16 @@ const styles = StyleSheet.create({
   bloodText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   patient: { fontSize: 14, fontWeight: '800', color: colors.text },
   ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.primarySoft, borderRadius: 10 },
-  statusPillDone: { backgroundColor: '#F4F4F6' },
-  statusText: { fontSize: 10, fontWeight: '800', color: colors.primary },
-  statusTextDone: { color: colors.textSecondary },
-  subInfo: { fontSize: 11, color: colors.textMuted, marginTop: 10 },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  statusText: { fontSize: 10, fontWeight: '800' },
+  subInfo: { fontSize: 11, color: colors.textMuted, marginTop: 8 },
+  subValue: { color: colors.text, fontWeight: '700' },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
   actionBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   actionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   actionText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   actionPrimaryText: { fontSize: 12, fontWeight: '800', color: colors.white },
+  actionDisabled: { opacity: 0.5 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary, fontSize: 14 },

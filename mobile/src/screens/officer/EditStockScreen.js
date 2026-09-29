@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
+import { useConfirm } from '../../context/ConfirmContext';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { digitsOnly, isPositiveInt } from '../../utils/numbers';
@@ -23,8 +24,11 @@ const STATUSES = ['AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'TRANSFERRED'];
 
 const EditStockScreen = ({ route, navigation }) => {
   const { id } = route.params;
+  const confirm = useConfirm();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [bloodGroup, setBloodGroup] = useState('');
   const [units, setUnits] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -51,7 +55,6 @@ const EditStockScreen = ({ route, navigation }) => {
   }, [id, navigation]);
 
   const handleUpdate = async () => {
-    // ✅ Digits-only validation
     if (!isPositiveInt(units)) {
       return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
     }
@@ -71,8 +74,6 @@ const EditStockScreen = ({ route, navigation }) => {
         expiryDate: parsed.toISOString(),
         status,
       });
-
-      // Navigate first, then show alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Updated', 'Stock updated successfully.');
@@ -84,25 +85,27 @@ const EditStockScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert('Delete Stock', 'Are you sure? This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await stockService.remove(id);
-            navigation.goBack();
-            setTimeout(() => {
-              Alert.alert('Deleted', 'Stock removed.');
-            }, 200);
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete.');
-          }
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Delete Stock',
+      message: 'Are you sure? This cannot be undone.',
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+
+    try {
+      setDeleting(true);
+      await stockService.remove(id);
+      navigation.goBack();
+      setTimeout(() => {
+        Alert.alert('Deleted', 'Stock removed.');
+      }, 200);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete stock.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -188,16 +191,22 @@ const EditStockScreen = ({ route, navigation }) => {
           <TouchableOpacity
             style={styles.saveBtn}
             onPress={handleUpdate}
-            disabled={saving}
+            disabled={saving || deleting}
           >
             <Text style={styles.saveText}>
               {saving ? 'UPDATING...' : 'UPDATE STOCK'}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+          <TouchableOpacity
+            style={[styles.deleteBtn, deleting && { opacity: 0.6 }]}
+            onPress={handleDelete}
+            disabled={deleting || saving}
+          >
             <Ionicons name="trash-outline" size={18} color={colors.primary} />
-            <Text style={styles.deleteText}>DELETE STOCK</Text>
+            <Text style={styles.deleteText}>
+              {deleting ? 'DELETING...' : 'DELETE STOCK'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
