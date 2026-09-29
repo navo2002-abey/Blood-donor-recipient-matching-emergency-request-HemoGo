@@ -43,7 +43,7 @@ const getStatusTheme = (status) => {
   }
 };
 
-const InventoryDashboardScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -383,4 +383,4 @@ const styles = StyleSheet.create({
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
 });
 
-export default InventoryDashboardScreen;
+export default HomeScreen;

@@ -6,7 +6,8 @@ import React from 'react';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import { colors } from '../utils/colors';
 
-import InventoryDashboardScreen from '../screens/officer/InventoryDashboardScreen';
+import HomeScreen from '../screens/officer/HomeScreen';
+import InventoryListScreen from '../screens/officer/InventoryListScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
 import EditStockScreen from '../screens/officer/EditStockScreen';
 import ReservedUnitsScreen from '../screens/officer/ReservedUnitsScreen';
@@ -31,12 +32,9 @@ const tabOptions = (icons) => ({ route }) => ({
   tabBarInactiveTintColor: colors.textMuted,
   tabBarAllowFontScaling: false,
   tabBarLabelStyle: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     marginTop: -2,
-  },
-  tabBarItemStyle: {
-    paddingVertical: 2,
   },
   tabBarStyle: {
     height: 62,
@@ -45,7 +43,7 @@ const tabOptions = (icons) => ({ route }) => ({
     borderTopColor: colors.border,
   },
   tabBarIcon: ({ color, size }) => (
-    <Ionicons name={icons[route.name] || 'ellipse-outline'} size={20} color={color} />
+    <Ionicons name={icons[route.name] || 'ellipse-outline'} size={22} color={color} />
   ),
 });
 
@@ -53,36 +51,36 @@ const OfficerTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
       Home: 'home-outline',
-      Stock: 'business-outline',
+      Inventory: 'water-outline',
       Requests: 'swap-horizontal-outline',
-      Alerts: 'hourglass-outline',
+      Alerts: 'warning-outline',
       Profile: 'person-outline',
     })}
   >
     <Tab.Screen
-      name="Home"
-      component={InventoryDashboardScreen}
-      options={{ tabBarLabel: 'Stock' }}
+    name="Home"
+    component={HomeScreen}
+    options={{ tabBarLabel: 'Home' }}
     />
     <Tab.Screen
-      name="Stock"
-      component={NearbyBloodBanksScreen}
-      options={{ tabBarLabel: 'Banks' }}
+      name="Inventory"
+      component={InventoryListScreen}
+      options={{ tabBarLabel: 'Inventory' }}
     />
     <Tab.Screen
       name="Requests"
       component={PendingTransfersScreen}
-      options={{ tabBarLabel: 'Log' }}
+      options={{ tabBarLabel: 'Requests' }}
     />
     <Tab.Screen
       name="Alerts"
       component={ExpiryMonitoringScreen}
-      options={{ tabBarLabel: 'Expiry' }}
+      options={{ tabBarLabel: 'Alerts' }}
     />
     <Tab.Screen
       name="Profile"
       component={ProfileScreen}
-      options={{ tabBarLabel: 'Me' }}
+      options={{ tabBarLabel: 'Profile' }}
     />
   </Tab.Navigator>
 );
