@@ -3,9 +3,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
-import ComingSoonScreen from '../screens/ComingSoonScreen';
 import { colors } from '../utils/colors';
 
+// Officer screens
 import HomeScreen from '../screens/officer/HomeScreen';
 import InventoryListScreen from '../screens/officer/InventoryListScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
@@ -20,11 +20,11 @@ import TransferRequestScreen from '../screens/officer/TransferRequestScreen';
 import PendingTransfersScreen from '../screens/officer/PendingTransfersScreen';
 import NearbyBloodBanksScreen from '../screens/officer/NearbyBloodBanksScreen';
 import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
+import QRScanScreen from '../screens/officer/QRScanScreen';
+import SettingsScreen from '../screens/officer/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-const ProfileScreen = (props) => <ComingSoonScreen title="Profile" showLogout {...props} />;
 
 const tabOptions = (icons) => ({ route }) => ({
   headerShown: false,
@@ -52,20 +52,25 @@ const OfficerTabs = () => (
     screenOptions={tabOptions({
       Home: 'home-outline',
       Inventory: 'water-outline',
+      Scan: 'qr-code-outline',
       Requests: 'swap-horizontal-outline',
       Alerts: 'warning-outline',
-      Profile: 'person-outline',
     })}
   >
     <Tab.Screen
-    name="Home"
-    component={HomeScreen}
-    options={{ tabBarLabel: 'Home' }}
+      name="Home"
+      component={HomeScreen}
+      options={{ tabBarLabel: 'Home' }}
     />
     <Tab.Screen
       name="Inventory"
       component={InventoryListScreen}
       options={{ tabBarLabel: 'Inventory' }}
+    />
+    <Tab.Screen
+      name="Scan"
+      component={QRScanScreen}
+      options={{ tabBarLabel: 'Scan' }}
     />
     <Tab.Screen
       name="Requests"
@@ -76,11 +81,6 @@ const OfficerTabs = () => (
       name="Alerts"
       component={ExpiryMonitoringScreen}
       options={{ tabBarLabel: 'Alerts' }}
-    />
-    <Tab.Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{ tabBarLabel: 'Profile' }}
     />
   </Tab.Navigator>
 );
@@ -100,6 +100,8 @@ const OfficerNavigator = () => (
     <Stack.Screen name="PendingTransfers" component={PendingTransfersScreen} />
     <Stack.Screen name="NearbyBloodBanks" component={NearbyBloodBanksScreen} />
     <Stack.Screen name="BloodBankDetails" component={BloodBankDetailsScreen} />
+    <Stack.Screen name="QRScan" component={QRScanScreen} />
+    <Stack.Screen name="Settings" component={SettingsScreen} />
   </Stack.Navigator>
 );
 
