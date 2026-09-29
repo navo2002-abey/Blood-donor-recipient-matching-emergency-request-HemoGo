@@ -9,13 +9,16 @@ import ComingSoonScreen from '../screens/ComingSoonScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
-import OfficerDashboardScreen from '../screens/OfficerDashboardScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
+
+import OfficerNavigator from './OfficerNavigator';
+
 import { colors } from '../utils/colors';
 import { ROLES } from '../utils/roles';
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -75,24 +78,6 @@ const AdminTabs = () => (
   </Tab.Navigator>
 );
 
-const OfficerTabs = () => (
-  <Tab.Navigator
-    screenOptions={tabOptions({
-      Home: 'home-outline',
-      Stock: 'file-tray-stacked-outline',
-      Requests: 'water-outline',
-      Alerts: 'warning-outline',
-      Profile: 'person-outline',
-    })}
-  >
-    <Tab.Screen name="Home" component={OfficerDashboardScreen} options={{ title: 'Inventory' }} />
-    <Tab.Screen name="Stock" component={soon('Nearby Blood Bank Stock')} options={{ title: 'Stock' }} />
-    <Tab.Screen name="Requests" component={soon('Emergency Alerts & Logs')} />
-    <Tab.Screen name="Alerts" component={soon('Expiry Monitoring')} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
-  </Tab.Navigator>
-);
-
 const PatientTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
@@ -116,7 +101,7 @@ const RoleRoot = () => {
     return <AdminTabs />;
   }
   if (user?.role === ROLES.BLOOD_BANK_OFFICER) {
-    return <OfficerTabs />;
+    return <OfficerNavigator />;
   }
   return <DonorTabs />;
 };
