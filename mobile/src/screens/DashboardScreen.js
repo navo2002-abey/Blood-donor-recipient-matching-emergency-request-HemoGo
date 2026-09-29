@@ -81,7 +81,7 @@ const DashboardScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.grid}>
-          <TouchableOpacity style={styles.smallCard} onPress={() => comingSoon('Find Donors')}>
+          <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('FindDonors')}>
             <View style={styles.cardIcon}>
               <Ionicons name="search-outline" size={20} color={colors.text} />
             </View>

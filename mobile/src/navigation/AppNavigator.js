@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import FindDonorsScreen from '../screens/FindDonorsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
 import OfficerDashboardScreen from '../screens/OfficerDashboardScreen';
@@ -104,7 +105,7 @@ const PatientTabs = () => (
   >
     <Tab.Screen name="Home" component={PatientDashboardScreen} />
     <Tab.Screen name="Requests" component={soon('My Requests')} />
-    <Tab.Screen name="Donors" component={soon('Find Donors')} />
+    <Tab.Screen name="Donors" component={FindDonorsScreen} options={{ tabBarStyle: { display: 'none' } }} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
@@ -136,6 +137,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Main" component={RoleRoot} />
+        <Stack.Screen name="FindDonors" component={FindDonorsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

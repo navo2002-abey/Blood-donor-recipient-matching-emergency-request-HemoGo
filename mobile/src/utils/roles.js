@@ -20,7 +20,7 @@ export const DEMO_ACCOUNTS = [
 
 export const DONOR_MENU = [
   { key: 'Dashboard', tab: 'Home' },
-  { key: 'Find Donors' },
+  { key: 'Find Donors', screen: 'FindDonors' },
   { key: 'Request Blood', tab: 'Requests' },
   { key: 'History' },
   { key: 'Live Map', tab: 'Map' },
@@ -55,7 +55,7 @@ export const OFFICER_MENU = [
 export const PATIENT_MENU = [
   { key: 'Dashboard', tab: 'Home' },
   { key: 'Create Request', tab: 'Requests' },
-  { key: 'Find Donors', tab: 'Donors' },
+  { key: 'Find Donors', screen: 'FindDonors' },
   { key: 'My Requests', tab: 'Requests' },
   { key: 'Profile & Settings', tab: 'Profile' },
   { key: 'Help & Support' },

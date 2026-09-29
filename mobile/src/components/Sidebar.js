@@ -52,8 +52,17 @@ const Sidebar = ({
 
   const handleItem = (item) => {
     onClose();
+    if (item.screen) {
+      navigation.navigate(item.screen);
+      return;
+    }
     if (item.tab) {
-      navigation.navigate(item.tab);
+      const routeNames = navigation.getState?.()?.routeNames || [];
+      if (routeNames.includes(item.tab)) {
+        navigation.navigate(item.tab);
+      } else {
+        navigation.navigate('Main', { screen: item.tab });
+      }
       return;
     }
     onComingSoon(item.key);
@@ -62,7 +71,9 @@ const Sidebar = ({
   const handleLogout = async () => {
     onClose();
     await logout();
-    navigation.getParent()?.reset({
+    const parent = navigation.getParent?.();
+    const navigator = parent || navigation;
+    navigator.reset({
       index: 0,
       routes: [{ name: 'Login' }],
     });
