@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import FormField from '../../components/FormField';
 import { transferService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { digitsOnly, isPositiveInt } from '../../utils/numbers';
+import { digitsOnly } from '../../utils/numbers';
+import { minLength, positiveInt, required } from '../../utils/validators';
 
 const SOURCE_HOSPITAL = 'Colombo General Hospital Blood Bank';
 const DEST_HOSPITAL = 'National Hospital Colombo Blood Bank';
@@ -27,21 +29,28 @@ const TransferRequestScreen = ({ route, navigation }) => {
   const [urgency, setUrgency] = useState('HIGH');
   const [saving, setSaving] = useState(false);
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  const validate = () => {
+    const next = {
+      units: positiveInt(units, 'Units'),
+      urgency: required(urgency, 'Urgency'),
+      reason: required(reason, 'Reason') || minLength(reason, 5, 'Reason'),
+    };
+    setErrors(next);
+    return !Object.values(next).some(Boolean);
+  };
+
   const handleSend = async () => {
-    // ✅ Digits-only validation
-    if (!isPositiveInt(units)) {
-      return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
-    }
-    if (!reason.trim()) {
-      return Alert.alert('Missing', 'Please enter a reason for the transfer.');
-    }
-    const unitsNum = Number(units);
+    setTouched({ units: true, urgency: true, reason: true });
+    if (!validate()) return;
 
     try {
       setSaving(true);
       await transferService.create({
         bloodGroup,
-        units: unitsNum,
+        units: Number(units),
         sourceBank: SOURCE_HOSPITAL,
         destinationHospital: DEST_HOSPITAL,
         distanceKm: 3.8,
@@ -50,7 +59,6 @@ const TransferRequestScreen = ({ route, navigation }) => {
         status: 'PENDING',
       });
 
-      // Navigate first, then show alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Sent', 'Transfer request sent successfully.');
@@ -97,11 +105,16 @@ const TransferRequestScreen = ({ route, navigation }) => {
                 style={styles.unitsInput}
                 value={units}
                 onChangeText={(text) => setUnits(digitsOnly(text))}
+                onBlur={() => setTouched((t) => ({ ...t, units: true }))}
                 keyboardType="number-pad"
                 maxLength={4}
               />
             </View>
           </View>
+
+          {touched.units && errors.units ? (
+            <Text style={styles.inlineError}>{errors.units}</Text>
+          ) : null}
 
           <Text style={styles.label}>SOURCE</Text>
           <View style={styles.readonly}>
@@ -115,30 +128,39 @@ const TransferRequestScreen = ({ route, navigation }) => {
             <Text style={styles.readonlyText}>{DEST_HOSPITAL}</Text>
           </View>
 
-          <Text style={styles.label}>URGENCY</Text>
-          <View style={styles.chipRow}>
-            {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((u) => (
-              <TouchableOpacity
-                key={u}
-                style={[styles.chip, urgency === u && styles.chipActive]}
-                onPress={() => setUrgency(u)}
-              >
-                <Text style={[styles.chipText, urgency === u && styles.chipTextActive]}>
-                  {u}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FormField label="URGENCY" error={touched.urgency ? errors.urgency : null}>
+            <View style={styles.chipRow}>
+              {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  style={[styles.chip, urgency === u && styles.chipActive]}
+                  onPress={() => {
+                    setUrgency(u);
+                    setTouched((t) => ({ ...t, urgency: true }));
+                  }}
+                >
+                  <Text
+                    style={[styles.chipText, urgency === u && styles.chipTextActive]}
+                  >
+                    {u}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
-          <Text style={styles.label}>REASON</Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            value={reason}
-            onChangeText={setReason}
-            multiline
-            placeholder="Reason for transfer..."
-            placeholderTextColor={colors.textMuted}
-          />
+          <FormField label="REASON" error={touched.reason ? errors.reason : null}>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              value={reason}
+              onChangeText={setReason}
+              onBlur={() => setTouched((t) => ({ ...t, reason: true }))}
+              multiline
+              placeholder="Reason for transfer..."
+              placeholderTextColor={colors.textMuted}
+              maxLength={200}
+            />
+          </FormField>
 
           <TouchableOpacity
             style={styles.sendBtn}
@@ -169,7 +191,7 @@ const styles = StyleSheet.create({
   scroll: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 6, marginBottom: 20 },
-  infoRow: { flexDirection: 'row', gap: 12, marginBottom: 10 },
+  infoRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
   infoBox: { flex: 1, backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14 },
   infoLabel: { fontSize: 10, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.4 },
   infoValue: { fontSize: 22, fontWeight: '800', color: colors.primary, marginTop: 6 },
@@ -179,6 +201,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: 6,
     padding: 0,
+  },
+  inlineError: {
+    marginTop: 4,
+    marginLeft: 4,
+    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   label: {
     fontSize: 12,

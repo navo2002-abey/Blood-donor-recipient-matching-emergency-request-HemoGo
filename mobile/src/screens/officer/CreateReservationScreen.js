@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import FormField from '../../components/FormField';
 import { reservationService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { digitsOnly, isPositiveInt } from '../../utils/numbers';
+import { minLength, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
@@ -27,11 +28,30 @@ const CreateReservationScreen = ({ navigation }) => {
   const [reservedFor, setReservedFor] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  const validate = () => {
+    const next = {
+      unitId: required(unitId, 'Unit ID') || minLength(unitId, 3, 'Unit ID'),
+      bloodGroup: required(bloodGroup, 'Blood group'),
+      patientName:
+        required(patientName, 'Patient name') ||
+        minLength(patientName, 3, 'Patient name'),
+      ward: required(ward, 'Ward / location') || minLength(ward, 2, 'Ward / location'),
+    };
+    setErrors(next);
+    return !Object.values(next).some(Boolean);
+  };
+
   const handleSave = async () => {
-    if (!unitId.trim()) return Alert.alert('Missing', 'Please enter the unit ID.');
-    if (!bloodGroup) return Alert.alert('Missing', 'Please select a blood group.');
-    if (!patientName.trim()) return Alert.alert('Missing', 'Please enter patient name.');
-    if (!ward.trim()) return Alert.alert('Missing', 'Please enter ward / location.');
+    setTouched({
+      unitId: true,
+      bloodGroup: true,
+      patientName: true,
+      ward: true,
+    });
+    if (!validate()) return;
 
     try {
       setSaving(true);
@@ -45,7 +65,6 @@ const CreateReservationScreen = ({ navigation }) => {
         status: 'RESERVED',
       });
 
-      // Navigate first, then show alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Success', 'Reservation created successfully.');
@@ -79,60 +98,86 @@ const CreateReservationScreen = ({ navigation }) => {
           <Text style={styles.title}>Create New Reservation</Text>
           <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
-          <Text style={styles.label}>BLOOD GROUP</Text>
-          <View style={styles.chipRow}>
-            {GROUPS.map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, bloodGroup === g && styles.chipActive]}
-                onPress={() => setBloodGroup(g)}
-              >
-                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
-                  {g}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FormField
+            label="BLOOD GROUP"
+            error={touched.bloodGroup ? errors.bloodGroup : null}
+          >
+            <View style={styles.chipRow}>
+              {GROUPS.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.chip, bloodGroup === g && styles.chipActive]}
+                  onPress={() => {
+                    setBloodGroup(g);
+                    setTouched((t) => ({ ...t, bloodGroup: true }));
+                  }}
+                >
+                  <Text
+                    style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}
+                  >
+                    {g}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
-          <Text style={styles.label}>UNIT ID</Text>
-          <TextInput
-            style={styles.input}
-            value={unitId}
-            onChangeText={setUnitId}
-            placeholder="e.g. B-7749"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="characters"
-          />
+          <FormField label="UNIT ID" error={touched.unitId ? errors.unitId : null}>
+            <TextInput
+              style={styles.input}
+              value={unitId}
+              onChangeText={setUnitId}
+              onBlur={() => setTouched((t) => ({ ...t, unitId: true }))}
+              placeholder="e.g. B-7749"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="characters"
+              maxLength={20}
+            />
+          </FormField>
 
-          <Text style={styles.label}>PATIENT NAME</Text>
-          <TextInput
-            style={styles.input}
-            value={patientName}
-            onChangeText={setPatientName}
-            placeholder="Enter name"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-          />
+          <FormField
+            label="PATIENT NAME"
+            error={touched.patientName ? errors.patientName : null}
+          >
+            <TextInput
+              style={styles.input}
+              value={patientName}
+              onChangeText={setPatientName}
+              onBlur={() => setTouched((t) => ({ ...t, patientName: true }))}
+              placeholder="Enter name"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              maxLength={50}
+            />
+          </FormField>
 
-          <Text style={styles.label}>WARD / HOSPITAL LOCATION</Text>
-          <TextInput
-            style={styles.input}
-            value={ward}
-            onChangeText={setWard}
-            placeholder="e.g. Cardiac Ward 3"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-          />
+          <FormField
+            label="WARD / HOSPITAL LOCATION"
+            error={touched.ward ? errors.ward : null}
+          >
+            <TextInput
+              style={styles.input}
+              value={ward}
+              onChangeText={setWard}
+              onBlur={() => setTouched((t) => ({ ...t, ward: true }))}
+              placeholder="e.g. Cardiac Ward 3"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              maxLength={50}
+            />
+          </FormField>
 
-          <Text style={styles.label}>RESERVED FOR (OPTIONAL)</Text>
-          <TextInput
-            style={styles.input}
-            value={reservedFor}
-            onChangeText={setReservedFor}
-            placeholder="e.g. Surgery, Emergency"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-          />
+          <FormField label="RESERVED FOR (OPTIONAL)">
+            <TextInput
+              style={styles.input}
+              value={reservedFor}
+              onChangeText={setReservedFor}
+              placeholder="e.g. Surgery, Emergency"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              maxLength={50}
+            />
+          </FormField>
 
           <Text style={styles.label}>LOCATION</Text>
           <View style={[styles.input, styles.readonly]}>
@@ -192,7 +237,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: colors.text,
-    marginTop: 16,
+    marginTop: 18,
     marginBottom: 10,
     letterSpacing: 0.4,
   },

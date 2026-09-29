@@ -13,10 +13,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
+import FormField from '../../components/FormField';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { digitsOnly, isPositiveInt } from '../../utils/numbers';
-
+import { digitsOnly } from '../../utils/numbers';
+import { notPastDate, positiveInt, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
@@ -27,30 +28,33 @@ const AddStockScreen = ({ navigation }) => {
   const [expiryDate, setExpiryDate] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
-    // Validation
-    if (!bloodGroup) return Alert.alert('Missing', 'Please select a blood group.');
-    if (!isPositiveInt(units)) {
-        return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
-    }
-    if (!expiryDate) return Alert.alert('Missing', 'Please pick an expiry date.');
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-    const parsed = new Date(expiryDate);
-    if (isNaN(parsed.getTime())) {
-      return Alert.alert('Invalid date', 'Please pick a valid date.');
-    }
+  const validate = () => {
+    const next = {
+      bloodGroup: required(bloodGroup, 'Blood group'),
+      units: positiveInt(units, 'Units'),
+      expiryDate: notPastDate(expiryDate, 'Expiry date'),
+    };
+    setErrors(next);
+    return !Object.values(next).some(Boolean);
+  };
+
+  const handleSave = async () => {
+    setTouched({ bloodGroup: true, units: true, expiryDate: true });
+    if (!validate()) return;
 
     try {
       setSaving(true);
       await stockService.create({
         bloodGroup,
         units: Number(units),
-        expiryDate: parsed.toISOString(),
+        expiryDate: new Date(expiryDate).toISOString(),
         hospital: HOSPITAL,
         status: 'AVAILABLE',
       });
 
-      // ✅ FIX: Navigate FIRST, then show alert (works on web + mobile)
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Success', 'Stock added successfully.');
@@ -80,35 +84,41 @@ const AddStockScreen = ({ navigation }) => {
           <Text style={styles.title}>Add Blood Stock</Text>
           <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
-          <Text style={styles.label}>BLOOD GROUP</Text>
-          <View style={styles.chipRow}>
-            {GROUPS.map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, bloodGroup === g && styles.chipActive]}
-                onPress={() => setBloodGroup(g)}
-              >
-                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
-                  {g}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FormField label="BLOOD GROUP" error={touched.bloodGroup ? errors.bloodGroup : null}>
+            <View style={styles.chipRow}>
+              {GROUPS.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.chip, bloodGroup === g && styles.chipActive]}
+                  onPress={() => {
+                    setBloodGroup(g);
+                    setTouched((t) => ({ ...t, bloodGroup: true }));
+                  }}
+                >
+                  <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
+                    {g}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
-          <Text style={styles.label}>NUMBER OF UNITS</Text>
+          <FormField label="NUMBER OF UNITS" error={touched.units ? errors.units : null}>
             <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={units}
-            onChangeText={(text) => setUnits(digitsOnly(text))}
-            placeholder="Enter quantity"
-            placeholderTextColor={colors.textMuted}
-            maxLength={4}
+              style={styles.input}
+              keyboardType="number-pad"
+              value={units}
+              onChangeText={(t) => setUnits(digitsOnly(t))}
+              onBlur={() => setTouched((t) => ({ ...t, units: true }))}
+              placeholder="Enter quantity"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
             />
+          </FormField>
 
-          <Text style={styles.label}>EXPIRY DATE</Text>
-          {/* ✅ FIX: Use DateField instead of plain TextInput */}
-          <DateField value={expiryDate} onChange={setExpiryDate} />
+          <FormField label="EXPIRY DATE" error={touched.expiryDate ? errors.expiryDate : null}>
+            <DateField value={expiryDate} onChange={setExpiryDate} />
+          </FormField>
 
           <Text style={styles.label}>LOCATION</Text>
           <View style={[styles.input, styles.readonly]}>
@@ -129,9 +139,7 @@ const AddStockScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-            <Text style={styles.saveText}>
-              {saving ? 'SAVING...' : 'SAVE STOCK UPDATE'}
-            </Text>
+            <Text style={styles.saveText}>{saving ? 'SAVING...' : 'SAVE STOCK UPDATE'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -13,8 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
+import FormField from '../../components/FormField';
 import { campaignService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { minLength, notPastDate, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
@@ -25,30 +27,41 @@ const OrganizeDonationDriveScreen = ({ navigation }) => {
   const [venue, setVenue] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handlePublish = async () => {
-    if (!name.trim()) return Alert.alert('Missing', 'Please enter a campaign name.');
-    if (!targetBloodGroup) return Alert.alert('Missing', 'Please select a target blood group.');
-    if (!preferredDate) return Alert.alert('Missing', 'Please pick a preferred date.');
-    if (!venue.trim()) return Alert.alert('Missing', 'Please enter a venue.');
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-    const parsed = new Date(preferredDate);
-    if (isNaN(parsed.getTime())) {
-      return Alert.alert('Invalid date', 'Please pick a valid date.');
-    }
+  const validate = () => {
+    const next = {
+      name: required(name, 'Campaign name') || minLength(name, 4, 'Campaign name'),
+      targetBloodGroup: required(targetBloodGroup, 'Blood group'),
+      preferredDate: notPastDate(preferredDate, 'Preferred date'),
+      venue: required(venue, 'Venue') || minLength(venue, 3, 'Venue'),
+    };
+    setErrors(next);
+    return !Object.values(next).some(Boolean);
+  };
+
+  const handlePublish = async () => {
+    setTouched({
+      name: true,
+      targetBloodGroup: true,
+      preferredDate: true,
+      venue: true,
+    });
+    if (!validate()) return;
 
     try {
       setSaving(true);
       await campaignService.create({
         name: name.trim(),
         targetBloodGroup,
-        preferredDate: parsed.toISOString(),
+        preferredDate: new Date(preferredDate).toISOString(),
         venue: venue.trim(),
         suggestedByAI: true,
         reason: `Predicted ${targetBloodGroup} shortage`,
         status: 'PUBLISHED',
       });
 
-      // ✅ Navigate first, then alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Published', 'Donation drive created successfully.');
@@ -95,49 +108,66 @@ const OrganizeDonationDriveScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.label}>CAMPAIGN NAME</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Life-Save Colombo Drive"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-          />
+          <FormField label="CAMPAIGN NAME" error={touched.name ? errors.name : null}>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+              placeholder="e.g. Life-Save Colombo Drive"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              maxLength={60}
+            />
+          </FormField>
 
-          <Text style={styles.label}>TARGET BLOOD GROUP</Text>
-          <View style={styles.chipRow}>
-            {GROUPS.map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, targetBloodGroup === g && styles.chipActive]}
-                onPress={() => setTarget(g)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    targetBloodGroup === g && styles.chipTextActive,
-                  ]}
+          <FormField
+            label="TARGET BLOOD GROUP"
+            error={touched.targetBloodGroup ? errors.targetBloodGroup : null}
+          >
+            <View style={styles.chipRow}>
+              {GROUPS.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.chip, targetBloodGroup === g && styles.chipActive]}
+                  onPress={() => {
+                    setTarget(g);
+                    setTouched((t) => ({ ...t, targetBloodGroup: true }));
+                  }}
                 >
-                  {g}
-                  {g === 'O-' ? ' ★' : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      targetBloodGroup === g && styles.chipTextActive,
+                    ]}
+                  >
+                    {g}
+                    {g === 'O-' ? ' ★' : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
-          <Text style={styles.label}>PREFERRED DATE</Text>
-          <DateField value={preferredDate} onChange={setPreferredDate} />
+          <FormField
+            label="PREFERRED DATE"
+            error={touched.preferredDate ? errors.preferredDate : null}
+          >
+            <DateField value={preferredDate} onChange={setPreferredDate} />
+          </FormField>
 
-          <Text style={styles.label}>LOCATION / VENUE</Text>
-          <TextInput
-            style={styles.input}
-            value={venue}
-            onChangeText={setVenue}
-            placeholder="e.g. Independence Square, Colombo"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="words"
-          />
+          <FormField label="LOCATION / VENUE" error={touched.venue ? errors.venue : null}>
+            <TextInput
+              style={styles.input}
+              value={venue}
+              onChangeText={setVenue}
+              onBlur={() => setTouched((t) => ({ ...t, venue: true }))}
+              placeholder="e.g. Independence Square, Colombo"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              maxLength={80}
+            />
+          </FormField>
 
           <TouchableOpacity
             style={styles.publishBtn}
@@ -187,14 +217,6 @@ const styles = StyleSheet.create({
   aiTitle: { fontSize: 11, fontWeight: '800', color: colors.primary, letterSpacing: 0.5 },
   aiText: { fontSize: 12, color: colors.text, marginTop: 4, lineHeight: 17 },
   aiBold: { fontWeight: '800', color: colors.primary },
-  label: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.text,
-    marginTop: 18,
-    marginBottom: 10,
-    letterSpacing: 0.4,
-  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 14,

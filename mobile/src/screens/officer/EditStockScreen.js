@@ -14,10 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
+import FormField from '../../components/FormField';
 import { useConfirm } from '../../context/ConfirmContext';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { digitsOnly, isPositiveInt } from '../../utils/numbers';
+import { digitsOnly } from '../../utils/numbers';
+import { notPastDate, positiveInt, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const STATUSES = ['AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'TRANSFERRED'];
@@ -29,11 +31,15 @@ const EditStockScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
   const [bloodGroup, setBloodGroup] = useState('');
   const [units, setUnits] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [status, setStatus] = useState('AVAILABLE');
   const [hospital, setHospital] = useState('');
+
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
     (async () => {
@@ -54,24 +60,27 @@ const EditStockScreen = ({ route, navigation }) => {
     })();
   }, [id, navigation]);
 
+  const validate = () => {
+    const next = {
+      bloodGroup: required(bloodGroup, 'Blood group'),
+      units: positiveInt(units, 'Units'),
+      expiryDate: notPastDate(expiryDate, 'Expiry date'),
+      status: required(status, 'Status'),
+    };
+    setErrors(next);
+    return !Object.values(next).some(Boolean);
+  };
+
   const handleUpdate = async () => {
-    if (!isPositiveInt(units)) {
-      return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
-    }
-    if (!expiryDate) {
-      return Alert.alert('Missing', 'Please pick an expiry date.');
-    }
-    const parsed = new Date(expiryDate);
-    if (isNaN(parsed.getTime())) {
-      return Alert.alert('Invalid date', 'Please pick a valid date.');
-    }
+    setTouched({ bloodGroup: true, units: true, expiryDate: true, status: true });
+    if (!validate()) return;
 
     try {
       setSaving(true);
       await stockService.update(id, {
         bloodGroup,
         units: Number(units),
-        expiryDate: parsed.toISOString(),
+        expiryDate: new Date(expiryDate).toISOString(),
         status,
       });
       navigation.goBack();
@@ -138,49 +147,70 @@ const EditStockScreen = ({ route, navigation }) => {
           <Text style={styles.title}>Update Stock</Text>
           <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
-          <Text style={styles.label}>BLOOD GROUP</Text>
-          <View style={styles.chipRow}>
-            {GROUPS.map((g) => (
-              <TouchableOpacity
-                key={g}
-                style={[styles.chip, bloodGroup === g && styles.chipActive]}
-                onPress={() => setBloodGroup(g)}
-              >
-                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
-                  {g}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FormField
+            label="BLOOD GROUP"
+            error={touched.bloodGroup ? errors.bloodGroup : null}
+          >
+            <View style={styles.chipRow}>
+              {GROUPS.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.chip, bloodGroup === g && styles.chipActive]}
+                  onPress={() => {
+                    setBloodGroup(g);
+                    setTouched((t) => ({ ...t, bloodGroup: true }));
+                  }}
+                >
+                  <Text
+                    style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}
+                  >
+                    {g}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
-          <Text style={styles.label}>NUMBER OF UNITS</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={units}
-            onChangeText={(text) => setUnits(digitsOnly(text))}
-            placeholder="Enter quantity"
-            placeholderTextColor={colors.textMuted}
-            maxLength={4}
-          />
+          <FormField label="NUMBER OF UNITS" error={touched.units ? errors.units : null}>
+            <TextInput
+              style={styles.input}
+              keyboardType="number-pad"
+              value={units}
+              onChangeText={(text) => setUnits(digitsOnly(text))}
+              onBlur={() => setTouched((t) => ({ ...t, units: true }))}
+              placeholder="Enter quantity"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
+            />
+          </FormField>
 
-          <Text style={styles.label}>EXPIRY DATE</Text>
-          <DateField value={expiryDate} onChange={setExpiryDate} />
+          <FormField
+            label="EXPIRY DATE"
+            error={touched.expiryDate ? errors.expiryDate : null}
+          >
+            <DateField value={expiryDate} onChange={setExpiryDate} />
+          </FormField>
 
-          <Text style={styles.label}>STATUS</Text>
-          <View style={styles.chipRow}>
-            {STATUSES.map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={[styles.chip, status === s && styles.chipActive]}
-                onPress={() => setStatus(s)}
-              >
-                <Text style={[styles.chipText, status === s && styles.chipTextActive]}>
-                  {s}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <FormField label="STATUS" error={touched.status ? errors.status : null}>
+            <View style={styles.chipRow}>
+              {STATUSES.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.chip, status === s && styles.chipActive]}
+                  onPress={() => {
+                    setStatus(s);
+                    setTouched((t) => ({ ...t, status: true }));
+                  }}
+                >
+                  <Text
+                    style={[styles.chipText, status === s && styles.chipTextActive]}
+                  >
+                    {s}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </FormField>
 
           <Text style={styles.label}>LOCATION</Text>
           <View style={[styles.input, styles.readonly]}>
