@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
 import Sidebar from '../../components/Sidebar';
+import { useAlerts } from '../../context/AlertsContext';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
@@ -44,6 +44,7 @@ const getStatusTheme = (status) => {
 };
 
 const HomeScreen = ({ navigation }) => {
+  const { unreadCount } = useAlerts();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -103,9 +104,12 @@ const HomeScreen = ({ navigation }) => {
           <BloodDrop size={20} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => comingSoon('Notifications')}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.navigate('Alerts')}
+        >
           <Ionicons name="notifications-outline" size={24} color={colors.text} />
-          <View style={styles.bellBadge} />
+          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -223,7 +227,7 @@ const HomeScreen = ({ navigation }) => {
         onComingSoon={comingSoon}
         menu={OFFICER_MENU}
         variant="staff"
-        activeKey="Inventory Dashboard"
+        activeKey="Home"
         hospital={HOSPITAL}
       />
     </SafeAreaView>
@@ -231,10 +235,7 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: {
-  flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
+  safe: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -267,7 +268,6 @@ const styles = StyleSheet.create({
 
   scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
 
-  /* Hero stats */
   heroStats: {
     backgroundColor: '#1E293B',
     borderRadius: 24,
@@ -293,7 +293,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  /* ✅ FIX 2: Quick Actions now 2 columns regardless of screen width */
   quickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -321,7 +320,6 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: 13, fontWeight: '700', color: colors.text, flex: 1 },
 
-  /* Inventory list */
   inventoryList: { gap: 10 },
   listItem: {
     flexDirection: 'row',
@@ -359,7 +357,6 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', borderRadius: 3 },
 
-  /* Empty */
   empty: {
     alignItems: 'center',
     padding: 32,

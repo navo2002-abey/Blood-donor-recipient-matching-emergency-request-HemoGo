@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,14 +12,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
+import { useAlerts } from '../../context/AlertsContext';
 import {
   predictionService,
   stockService,
   transferService,
 } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const AlertCard = ({ icon, iconColor, bg, title, subtitle, time, onPress }) => (
   <TouchableOpacity
@@ -46,6 +45,15 @@ const AlertCard = ({ icon, iconColor, bg, title, subtitle, time, onPress }) => (
 );
 
 const AlertsScreen = ({ navigation }) => {
+  const {
+    setAlertList,
+    markAllRead,
+    dismissOne,
+    unreadCount,
+    totalCount,
+    dismissedIds,
+  } = useAlerts();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expiring, setExpiring] = useState([]);
@@ -86,29 +94,118 @@ const AlertsScreen = ({ navigation }) => {
     return unsub;
   }, [navigation, load]);
 
-  const expiredUnits = expiring.filter(
-    (s) => new Date(s.expiryDate) <= new Date()
-  );
-  const criticalUnits = expiring.filter((s) => {
-    const days = (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24);
-    return days > 0 && days <= 5;
-  });
-  const criticalPreds = predictions.filter((p) => p.riskLevel === 'CRITICAL');
-  const highPreds = predictions.filter((p) => p.riskLevel === 'HIGH');
+  // Build alert list with STABLE IDs so dismissed state persists correctly
+  const allAlerts = useMemo(() => {
+    const list = [];
 
-  const totalAlerts =
-    expiredUnits.length +
-    criticalUnits.length +
-    criticalPreds.length +
-    pendingTransfers.length;
+    // Expired units
+    expiring
+      .filter((s) => new Date(s.expiryDate) <= new Date())
+      .forEach((s) => {
+        list.push({
+          id: `expired-${s._id}`,
+          section: 'EXPIRED UNITS',
+          icon: 'close-circle',
+          iconColor: '#7F1D1D',
+          bg: '#FEE2E2',
+          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expired`,
+          subtitle: `Batch expired on ${new Date(s.expiryDate).toLocaleDateString()}. Dispose immediately.`,
+          nav: 'ExpiryMonitoring',
+        });
+      });
 
-  const timeAgo = (date) => {
-    const diff = Date.now() - new Date(date).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
+    // Expiring soon (within 5 days)
+    expiring
+      .filter((s) => {
+        const days = (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24);
+        return days > 0 && days <= 5;
+      })
+      .forEach((s) => {
+        const days = Math.ceil(
+          (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24)
+        );
+        list.push({
+          id: `expiring-${s._id}`,
+          section: 'EXPIRING SOON',
+          icon: 'hourglass',
+          iconColor: '#EF4444',
+          bg: '#FFF1F3',
+          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expiring`,
+          subtitle: `Expires in ${days} day${days === 1 ? '' : 's'} on ${new Date(s.expiryDate).toLocaleDateString()}.`,
+          nav: 'ExpiryMonitoring',
+        });
+      });
+
+    // Critical predictions
+    predictions
+      .filter((p) => p.riskLevel === 'CRITICAL')
+      .forEach((p, idx) => {
+        list.push({
+          id: `critical-pred-${p.bloodGroup}-${idx}`,
+          section: 'SHORTAGE WARNINGS',
+          icon: 'warning',
+          iconColor: colors.primary,
+          bg: '#FFF1F3',
+          title: `Critical ${p.bloodGroup} shortage`,
+          subtitle: `${p.reason} ${p.recommendedAction}`,
+          nav: 'AIPrediction',
+        });
+      });
+
+    // Pending transfers
+    pendingTransfers.forEach((t) => {
+      list.push({
+        id: `transfer-${t._id}`,
+        section: 'PENDING TRANSFERS',
+        icon: 'swap-horizontal',
+        iconColor: '#3B82F6',
+        bg: '#EFF6FF',
+        title: `${t.bloodGroup} transfer pending`,
+        subtitle: `${t.units} unit(s) from ${t.sourceBank} → ${t.destinationHospital}.`,
+        nav: 'PendingTransfers',
+      });
+    });
+
+    // High priority predictions
+    predictions
+      .filter((p) => p.riskLevel === 'HIGH')
+      .forEach((p, idx) => {
+        list.push({
+          id: `high-pred-${p.bloodGroup}-${idx}`,
+          section: 'HIGH PRIORITY',
+          icon: 'alert-circle',
+          iconColor: '#F59E0B',
+          bg: '#FFFBEB',
+          title: `${p.bloodGroup} stock warning`,
+          subtitle: `${p.reason} ${p.recommendedAction}`,
+          nav: 'AIPrediction',
+        });
+      });
+
+    return list;
+  }, [expiring, predictions, pendingTransfers]);
+
+  // Push to context
+  useEffect(() => {
+    setAlertList(allAlerts);
+  }, [allAlerts, setAlertList]);
+
+  // Visible alerts = not dismissed
+  const visibleAlerts = allAlerts.filter((a) => !dismissedIds.includes(a.id));
+
+  // Group by section for rendering
+  const sections = useMemo(() => {
+    const map = new Map();
+    visibleAlerts.forEach((a) => {
+      if (!map.has(a.section)) map.set(a.section, []);
+      map.get(a.section).push(a);
+    });
+    return Array.from(map.entries());
+  }, [visibleAlerts]);
+
+  const handlePress = (alert) => {
+    dismissOne(alert.id);
+    navigation.navigate(alert.nav);
   };
 
   return (
@@ -118,16 +215,14 @@ const AlertsScreen = ({ navigation }) => {
           <BloodDrop size={18} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <View style={styles.badgeWrap}>
-          <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          {totalAlerts > 0 ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {totalAlerts > 9 ? '9+' : totalAlerts}
-              </Text>
-            </View>
-          ) : null}
-        </View>
+        {unreadCount > 0 ? (
+          <TouchableOpacity style={styles.markReadBtn} onPress={markAllRead}>
+            <Ionicons name="checkmark-done" size={18} color={colors.primary} />
+            <Text style={styles.markReadText}>Mark all read</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <ScrollView
@@ -145,9 +240,9 @@ const AlertsScreen = ({ navigation }) => {
       >
         <View style={styles.titleRow}>
           <Text style={styles.title}>Alerts</Text>
-          {totalAlerts > 0 ? (
+          {unreadCount > 0 ? (
             <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{totalAlerts} new</Text>
+              <Text style={styles.countPillText}>{unreadCount} new</Text>
             </View>
           ) : null}
         </View>
@@ -157,7 +252,7 @@ const AlertsScreen = ({ navigation }) => {
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
-        ) : totalAlerts === 0 ? (
+        ) : unreadCount === 0 ? (
           <View style={styles.empty}>
             <Ionicons
               name="checkmark-circle-outline"
@@ -165,110 +260,29 @@ const AlertsScreen = ({ navigation }) => {
               color={colors.success}
             />
             <Text style={styles.emptyTitle}>All clear</Text>
-            <Text style={styles.emptySub}>No urgent alerts right now.</Text>
+            <Text style={styles.emptySub}>
+              {totalCount === 0
+                ? 'No urgent alerts right now.'
+                : `All ${totalCount} alerts marked as read.`}
+            </Text>
           </View>
         ) : (
-          <>
-            {expiredUnits.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>EXPIRED UNITS</Text>
-                {expiredUnits.slice(0, 3).map((item) => (
-                  <AlertCard
-                    key={item._id}
-                    icon="close-circle"
-                    iconColor="#7F1D1D"
-                    bg="#FEE2E2"
-                    title={`${item.bloodGroup} · ${item.units} unit${
-                      item.units > 1 ? 's' : ''
-                    } expired`}
-                    subtitle={`Batch expired on ${new Date(
-                      item.expiryDate
-                    ).toLocaleDateString()}. Dispose immediately.`}
-                    onPress={() => navigation.navigate('ExpiryMonitoring')}
-                  />
-                ))}
-              </>
-            )}
-
-            {criticalUnits.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>EXPIRING SOON</Text>
-                {criticalUnits.slice(0, 3).map((item) => {
-                  const days = Math.ceil(
-                    (new Date(item.expiryDate) - Date.now()) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  return (
-                    <AlertCard
-                      key={item._id}
-                      icon="hourglass"
-                      iconColor="#EF4444"
-                      bg="#FFF1F3"
-                      title={`${item.bloodGroup} · ${item.units} unit${
-                        item.units > 1 ? 's' : ''
-                      } expiring`}
-                      subtitle={`Expires in ${days} day${
-                        days === 1 ? '' : 's'
-                      } on ${new Date(item.expiryDate).toLocaleDateString()}.`}
-                      onPress={() => navigation.navigate('ExpiryMonitoring')}
-                    />
-                  );
-                })}
-              </>
-            )}
-
-            {criticalPreds.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>SHORTAGE WARNINGS</Text>
-                {criticalPreds.slice(0, 3).map((p, idx) => (
-                  <AlertCard
-                    key={`pred-${idx}`}
-                    icon="warning"
-                    iconColor={colors.primary}
-                    bg="#FFF1F3"
-                    title={`Critical ${p.bloodGroup} shortage`}
-                    subtitle={`${p.reason} ${p.recommendedAction}`}
-                    onPress={() => navigation.navigate('AIPrediction')}
-                  />
-                ))}
-              </>
-            )}
-
-            {pendingTransfers.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>PENDING TRANSFERS</Text>
-                {pendingTransfers.slice(0, 3).map((t) => (
-                  <AlertCard
-                    key={t._id}
-                    icon="swap-horizontal"
-                    iconColor="#3B82F6"
-                    bg="#EFF6FF"
-                    title={`${t.bloodGroup} transfer pending`}
-                    subtitle={`${t.units} unit(s) from ${t.sourceBank} → ${t.destinationHospital}.`}
-                    time={timeAgo(t.createdAt)}
-                    onPress={() => navigation.navigate('PendingTransfers')}
-                  />
-                ))}
-              </>
-            )}
-
-            {highPreds.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>HIGH PRIORITY</Text>
-                {highPreds.slice(0, 2).map((p, idx) => (
-                  <AlertCard
-                    key={`high-${idx}`}
-                    icon="alert-circle"
-                    iconColor="#F59E0B"
-                    bg="#FFFBEB"
-                    title={`${p.bloodGroup} stock warning`}
-                    subtitle={`${p.reason} ${p.recommendedAction}`}
-                    onPress={() => navigation.navigate('AIPrediction')}
-                  />
-                ))}
-              </>
-            )}
-          </>
+          sections.map(([section, items]) => (
+            <View key={section}>
+              <Text style={styles.sectionLabel}>{section}</Text>
+              {items.map((alert) => (
+                <AlertCard
+                  key={alert.id}
+                  icon={alert.icon}
+                  iconColor={alert.iconColor}
+                  bg={alert.bg}
+                  title={alert.title}
+                  subtitle={alert.subtitle}
+                  onPress={() => handlePress(alert)}
+                />
+              ))}
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -287,22 +301,20 @@ const styles = StyleSheet.create({
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  badgeWrap: { position: 'relative', padding: 4 },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.primary,
+  markReadBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-    borderWidth: 1.5,
-    borderColor: colors.white,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
   },
-  badgeText: { color: colors.white, fontSize: 9, fontWeight: '900' },
+  markReadText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+  },
   scroll: { padding: 16, paddingBottom: 30 },
   titleRow: {
     flexDirection: 'row',
