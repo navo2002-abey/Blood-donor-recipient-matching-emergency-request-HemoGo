@@ -60,15 +60,44 @@ exports.deleteStock = async (req, res) => {
 };
 
 // Expiry monitoring — units expiring within N days
+// Expiry monitoring — units expiring within N days (or already expired)
 exports.getExpiring = async (req, res) => {
   try {
-    const days = Number(req.query.days) || 7;
+    const days = Number(req.query.days) || 30;
     const threshold = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-    const stock = await BloodStock.find({
-      expiryDate: { $lte: threshold, $gte: new Date() },
-      status: 'AVAILABLE',
-    }).sort({ expiryDate: 1 });
-    res.json({ success: true, count: stock.length, stock });
+
+    // Optional hospital filter
+    const filter = {
+      status: { $in: ['AVAILABLE', 'EXPIRED'] },
+      units: { $gt: 0 },
+      expiryDate: { $lte: threshold }, // any date up to the threshold (includes past)
+    };
+    if (req.query.hospital) filter.hospital = req.query.hospital;
+
+    const stock = await BloodStock.find(filter).sort({ expiryDate: 1 });
+
+    // Tag each row with computed urgency so frontend doesn't need to recalculate
+    const now = Date.now();
+    const enriched = stock.map((s) => {
+      const obj = s.toObject();
+      const diff = new Date(s.expiryDate).getTime() - now;
+      const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      obj.daysLeft = daysLeft;
+      obj.isExpired = daysLeft <= 0;
+      obj.urgency =
+        daysLeft <= 0
+          ? 'EXPIRED'
+          : daysLeft <= 3
+          ? 'CRITICAL'
+          : daysLeft <= 7
+          ? 'HIGH'
+          : daysLeft <= 14
+          ? 'MEDIUM'
+          : 'LOW';
+      return obj;
+    });
+
+    res.json({ success: true, count: enriched.length, stock: enriched });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
