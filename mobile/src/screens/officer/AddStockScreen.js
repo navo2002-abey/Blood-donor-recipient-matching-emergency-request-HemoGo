@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DateField from '../../components/DateField';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 
@@ -25,12 +26,15 @@ const AddStockScreen = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    // Validation
     if (!bloodGroup) return Alert.alert('Missing', 'Please select a blood group.');
     if (!units || Number(units) <= 0) return Alert.alert('Invalid', 'Enter a valid number of units.');
-    if (!expiryDate) return Alert.alert('Missing', 'Please enter expiry date (YYYY-MM-DD).');
+    if (!expiryDate) return Alert.alert('Missing', 'Please pick an expiry date.');
 
     const parsed = new Date(expiryDate);
-    if (isNaN(parsed.getTime())) return Alert.alert('Invalid date', 'Use format YYYY-MM-DD.');
+    if (isNaN(parsed.getTime())) {
+      return Alert.alert('Invalid date', 'Please pick a valid date.');
+    }
 
     try {
       setSaving(true);
@@ -41,9 +45,12 @@ const AddStockScreen = ({ navigation }) => {
         hospital: HOSPITAL,
         status: 'AVAILABLE',
       });
-      Alert.alert('Success', 'Stock added successfully.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+
+      // ✅ FIX: Navigate FIRST, then show alert (works on web + mobile)
+      navigation.goBack();
+      setTimeout(() => {
+        Alert.alert('Success', 'Stock added successfully.');
+      }, 200);
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to save stock.');
     } finally {
@@ -77,7 +84,9 @@ const AddStockScreen = ({ navigation }) => {
                 style={[styles.chip, bloodGroup === g && styles.chipActive]}
                 onPress={() => setBloodGroup(g)}
               >
-                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>{g}</Text>
+                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
+                  {g}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -93,13 +102,8 @@ const AddStockScreen = ({ navigation }) => {
           />
 
           <Text style={styles.label}>EXPIRY DATE</Text>
-          <TextInput
-            style={styles.input}
-            value={expiryDate}
-            onChangeText={setExpiryDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textMuted}
-          />
+          {/* ✅ FIX: Use DateField instead of plain TextInput */}
+          <DateField value={expiryDate} onChange={setExpiryDate} />
 
           <Text style={styles.label}>LOCATION</Text>
           <View style={[styles.input, styles.readonly]}>
@@ -120,7 +124,9 @@ const AddStockScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-            <Text style={styles.saveText}>{saving ? 'SAVING...' : 'SAVE STOCK UPDATE'}</Text>
+            <Text style={styles.saveText}>
+              {saving ? 'SAVING...' : 'SAVE STOCK UPDATE'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

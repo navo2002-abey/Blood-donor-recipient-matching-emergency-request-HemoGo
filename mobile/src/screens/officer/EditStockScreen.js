@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import DateField from '../../components/DateField';
+
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const STATUSES = ['AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'TRANSFERRED'];
@@ -46,44 +48,42 @@ const EditStockScreen = ({ route, navigation }) => {
     })();
   }, [id, navigation]);
 
-  const handleUpdate = async () => {
+    const handleUpdate = async () => {
     try {
-      setSaving(true);
-      await stockService.update(id, {
+        setSaving(true);
+        await stockService.update(id, {
         bloodGroup,
         units: Number(units),
         expiryDate: new Date(expiryDate).toISOString(),
         status,
-      });
-      Alert.alert('Updated', 'Stock updated successfully.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+        });
+        navigation.goBack();
+        setTimeout(() => Alert.alert('Updated', 'Stock updated successfully.'), 200);
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to update.');
+        Alert.alert('Error', e?.response?.data?.message || 'Failed to update.');
     } finally {
-      setSaving(false);
+        setSaving(false);
     }
-  };
+    };
 
-  const handleDelete = () => {
+    const handleDelete = () => {
     Alert.alert('Delete Stock', 'Are you sure? This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
+        { text: 'Cancel', style: 'cancel' },
+        {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          try {
+            try {
             await stockService.remove(id);
-            Alert.alert('Deleted', 'Stock removed.', [
-              { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
-          } catch (e) {
+            navigation.goBack();
+            setTimeout(() => Alert.alert('Deleted', 'Stock removed.'), 200);
+            } catch (e) {
             Alert.alert('Error', 'Failed to delete.');
-          }
+            }
         },
-      },
+        },
     ]);
-  };
+    };
 
   if (loading) {
     return (
@@ -129,7 +129,7 @@ const EditStockScreen = ({ route, navigation }) => {
         />
 
         <Text style={styles.label}>EXPIRY DATE</Text>
-        <TextInput style={styles.input} value={expiryDate} onChangeText={setExpiryDate} />
+        <DateField value={expiryDate} onChange={setExpiryDate} />
 
         <Text style={styles.label}>STATUS</Text>
         <View style={styles.chipRow}>
