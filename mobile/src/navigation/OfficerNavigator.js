@@ -6,7 +6,6 @@ import React from 'react';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import { colors } from '../utils/colors';
 
-// Officer screens (Rashan's part)
 import InventoryDashboardScreen from '../screens/officer/InventoryDashboardScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
 import EditStockScreen from '../screens/officer/EditStockScreen';
@@ -30,15 +29,23 @@ const tabOptions = (icons) => ({ route }) => ({
   headerShown: false,
   tabBarActiveTintColor: colors.primary,
   tabBarInactiveTintColor: colors.textMuted,
-  tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+  tabBarAllowFontScaling: false,
+  tabBarLabelStyle: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: -2,
+  },
+  tabBarItemStyle: {
+    paddingVertical: 2,
+  },
   tabBarStyle: {
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 8,
+    height: 62,
+    paddingBottom: 6,
+    paddingTop: 6,
     borderTopColor: colors.border,
   },
   tabBarIcon: ({ color, size }) => (
-    <Ionicons name={icons[route.name] || 'ellipse-outline'} size={size} color={color} />
+    <Ionicons name={icons[route.name] || 'ellipse-outline'} size={20} color={color} />
   ),
 });
 
@@ -46,7 +53,7 @@ const OfficerTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
       Home: 'home-outline',
-      Stock: 'file-tray-stacked-outline',
+      Stock: 'business-outline',
       Requests: 'swap-horizontal-outline',
       Alerts: 'hourglass-outline',
       Profile: 'person-outline',
@@ -55,28 +62,31 @@ const OfficerTabs = () => (
     <Tab.Screen
       name="Home"
       component={InventoryDashboardScreen}
-      options={{ title: 'Inventory' }}
+      options={{ tabBarLabel: 'Stock' }}
     />
     <Tab.Screen
       name="Stock"
       component={NearbyBloodBanksScreen}
-      options={{ title: 'Stock' }}
+      options={{ tabBarLabel: 'Banks' }}
     />
     <Tab.Screen
       name="Requests"
       component={PendingTransfersScreen}
-      options={{ title: 'Transfers' }}
+      options={{ tabBarLabel: 'Log' }}
     />
     <Tab.Screen
       name="Alerts"
       component={ExpiryMonitoringScreen}
-      options={{ title: 'Expiry' }}
+      options={{ tabBarLabel: 'Expiry' }}
     />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen
+      name="Profile"
+      component={ProfileScreen}
+      options={{ tabBarLabel: 'Me' }}
+    />
   </Tab.Navigator>
 );
 
-// All officer stack screens (used by navigation.navigate('...'))
 const OfficerNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="OfficerTabs" component={OfficerTabs} />

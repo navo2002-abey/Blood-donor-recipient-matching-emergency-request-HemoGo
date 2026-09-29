@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -18,7 +18,6 @@ import { reservationService, stockService } from '../../services/officerService'
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 
-const { width } = Dimensions.get('window');
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const comingSoon = (feature) => {
@@ -148,7 +147,9 @@ const InventoryDashboardScreen = ({ navigation }) => {
               <View style={[styles.actionIconBg, { backgroundColor: action.color + '15' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
               </View>
-              <Text style={styles.actionLabel}>{action.label}</Text>
+              <Text style={styles.actionLabel} numberOfLines={1}>
+                {action.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -230,7 +231,10 @@ const InventoryDashboardScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: {
+  flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,7 +285,6 @@ const styles = StyleSheet.create({
   subStatValue: { color: colors.white, fontSize: 16, fontWeight: '700' },
   subStatLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
 
-  /* Section titles */
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
@@ -290,10 +293,16 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  /* Quick actions grid */
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+  /* ✅ FIX 2: Quick Actions now 2 columns regardless of screen width */
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
   actionCard: {
-    width: (width - 32 - 12) / 2,
+    width: '48%',
+    marginBottom: 12,
     backgroundColor: colors.white,
     padding: 16,
     borderRadius: 20,
@@ -310,7 +319,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionLabel: { fontSize: 14, fontWeight: '700', color: colors.text },
+  actionLabel: { fontSize: 13, fontWeight: '700', color: colors.text, flex: 1 },
 
   /* Inventory list */
   inventoryList: { gap: 10 },

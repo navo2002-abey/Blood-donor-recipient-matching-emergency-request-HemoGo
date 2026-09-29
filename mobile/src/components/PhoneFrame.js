@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     overflow: 'hidden',
+    paddingTop: 48,
   },
   homeBar: {
     position: 'absolute',
