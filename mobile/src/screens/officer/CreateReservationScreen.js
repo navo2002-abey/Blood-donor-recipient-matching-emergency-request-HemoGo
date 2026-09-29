@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { reservationService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { digitsOnly, isPositiveInt } from '../../utils/numbers';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
@@ -44,7 +45,7 @@ const CreateReservationScreen = ({ navigation }) => {
         status: 'RESERVED',
       });
 
-      // ✅ Navigate first, then alert (works on web + mobile)
+      // Navigate first, then show alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Success', 'Reservation created successfully.');

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { transferService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { digitsOnly, isPositiveInt } from '../../utils/numbers';
 
 const SOURCE_HOSPITAL = 'Colombo General Hospital Blood Bank';
 const DEST_HOSPITAL = 'National Hospital Colombo Blood Bank';
@@ -27,13 +28,14 @@ const TransferRequestScreen = ({ route, navigation }) => {
   const [saving, setSaving] = useState(false);
 
   const handleSend = async () => {
-    const unitsNum = Number(units);
-    if (!unitsNum || unitsNum <= 0) {
-      return Alert.alert('Invalid', 'Please enter a valid number of units.');
+    // ✅ Digits-only validation
+    if (!isPositiveInt(units)) {
+      return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
     }
     if (!reason.trim()) {
       return Alert.alert('Missing', 'Please enter a reason for the transfer.');
     }
+    const unitsNum = Number(units);
 
     try {
       setSaving(true);
@@ -48,7 +50,7 @@ const TransferRequestScreen = ({ route, navigation }) => {
         status: 'PENDING',
       });
 
-      // ✅ Navigate first, then alert
+      // Navigate first, then show alert
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Sent', 'Transfer request sent successfully.');
@@ -94,8 +96,9 @@ const TransferRequestScreen = ({ route, navigation }) => {
               <TextInput
                 style={styles.unitsInput}
                 value={units}
-                onChangeText={setUnits}
+                onChangeText={(text) => setUnits(digitsOnly(text))}
                 keyboardType="number-pad"
+                maxLength={4}
               />
             </View>
           </View>

@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { digitsOnly, isPositiveInt } from '../../utils/numbers';
+
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
@@ -28,7 +30,9 @@ const AddStockScreen = ({ navigation }) => {
   const handleSave = async () => {
     // Validation
     if (!bloodGroup) return Alert.alert('Missing', 'Please select a blood group.');
-    if (!units || Number(units) <= 0) return Alert.alert('Invalid', 'Enter a valid number of units.');
+    if (!isPositiveInt(units)) {
+        return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
+    }
     if (!expiryDate) return Alert.alert('Missing', 'Please pick an expiry date.');
 
     const parsed = new Date(expiryDate);
@@ -92,14 +96,15 @@ const AddStockScreen = ({ navigation }) => {
           </View>
 
           <Text style={styles.label}>NUMBER OF UNITS</Text>
-          <TextInput
+            <TextInput
             style={styles.input}
             keyboardType="number-pad"
             value={units}
-            onChangeText={setUnits}
+            onChangeText={(text) => setUnits(digitsOnly(text))}
             placeholder="Enter quantity"
             placeholderTextColor={colors.textMuted}
-          />
+            maxLength={4}
+            />
 
           <Text style={styles.label}>EXPIRY DATE</Text>
           {/* ✅ FIX: Use DateField instead of plain TextInput */}

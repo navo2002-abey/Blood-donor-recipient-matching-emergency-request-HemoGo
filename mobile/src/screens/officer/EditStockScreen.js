@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,10 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DateField from '../../components/DateField';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import DateField from '../../components/DateField';
-
+import { digitsOnly, isPositiveInt } from '../../utils/numbers';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const STATUSES = ['AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'TRANSFERRED'];
@@ -48,42 +50,60 @@ const EditStockScreen = ({ route, navigation }) => {
     })();
   }, [id, navigation]);
 
-    const handleUpdate = async () => {
+  const handleUpdate = async () => {
+    // ✅ Digits-only validation
+    if (!isPositiveInt(units)) {
+      return Alert.alert('Invalid', 'Please enter a valid number of units (1-9999).');
+    }
+    if (!expiryDate) {
+      return Alert.alert('Missing', 'Please pick an expiry date.');
+    }
+    const parsed = new Date(expiryDate);
+    if (isNaN(parsed.getTime())) {
+      return Alert.alert('Invalid date', 'Please pick a valid date.');
+    }
+
     try {
-        setSaving(true);
-        await stockService.update(id, {
+      setSaving(true);
+      await stockService.update(id, {
         bloodGroup,
         units: Number(units),
-        expiryDate: new Date(expiryDate).toISOString(),
+        expiryDate: parsed.toISOString(),
         status,
-        });
-        navigation.goBack();
-        setTimeout(() => Alert.alert('Updated', 'Stock updated successfully.'), 200);
-    } catch (e) {
-        Alert.alert('Error', e?.response?.data?.message || 'Failed to update.');
-    } finally {
-        setSaving(false);
-    }
-    };
+      });
 
-    const handleDelete = () => {
+      // Navigate first, then show alert
+      navigation.goBack();
+      setTimeout(() => {
+        Alert.alert('Updated', 'Stock updated successfully.');
+      }, 200);
+    } catch (e) {
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to update.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
     Alert.alert('Delete Stock', 'Are you sure? This cannot be undone.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
+      { text: 'Cancel', style: 'cancel' },
+      {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-            try {
+          try {
             await stockService.remove(id);
             navigation.goBack();
-            setTimeout(() => Alert.alert('Deleted', 'Stock removed.'), 200);
-            } catch (e) {
+            setTimeout(() => {
+              Alert.alert('Deleted', 'Stock removed.');
+            }, 200);
+          } catch (e) {
             Alert.alert('Error', 'Failed to delete.');
-            }
+          }
         },
-        },
+      },
     ]);
-    };
+  };
 
   if (loading) {
     return (
@@ -95,94 +115,165 @@ const EditStockScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Blood Stock</Text>
-        <View style={styles.backBtn} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Update Stock</Text>
-        <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
-
-        <Text style={styles.label}>BLOOD GROUP</Text>
-        <View style={styles.chipRow}>
-          {GROUPS.map((g) => (
-            <TouchableOpacity
-              key={g}
-              style={[styles.chip, bloodGroup === g && styles.chipActive]}
-              onPress={() => setBloodGroup(g)}
-            >
-              <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>{g}</Text>
-            </TouchableOpacity>
-          ))}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Blood Stock</Text>
+          <View style={styles.backBtn} />
         </View>
 
-        <Text style={styles.label}>NUMBER OF UNITS</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="number-pad"
-          value={units}
-          onChangeText={setUnits}
-        />
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>Update Stock</Text>
+          <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
-        <Text style={styles.label}>EXPIRY DATE</Text>
-        <DateField value={expiryDate} onChange={setExpiryDate} />
+          <Text style={styles.label}>BLOOD GROUP</Text>
+          <View style={styles.chipRow}>
+            {GROUPS.map((g) => (
+              <TouchableOpacity
+                key={g}
+                style={[styles.chip, bloodGroup === g && styles.chipActive]}
+                onPress={() => setBloodGroup(g)}
+              >
+                <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
+                  {g}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Text style={styles.label}>STATUS</Text>
-        <View style={styles.chipRow}>
-          {STATUSES.map((s) => (
-            <TouchableOpacity
-              key={s}
-              style={[styles.chip, status === s && styles.chipActive]}
-              onPress={() => setStatus(s)}
-            >
-              <Text style={[styles.chipText, status === s && styles.chipTextActive]}>{s}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={styles.label}>NUMBER OF UNITS</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="number-pad"
+            value={units}
+            onChangeText={(text) => setUnits(digitsOnly(text))}
+            placeholder="Enter quantity"
+            placeholderTextColor={colors.textMuted}
+            maxLength={4}
+          />
 
-        <Text style={styles.label}>LOCATION</Text>
-        <View style={[styles.input, styles.readonly]}>
-          <Ionicons name="business-outline" size={16} color={colors.textMuted} />
-          <Text style={styles.readonlyText}>{hospital}</Text>
-        </View>
+          <Text style={styles.label}>EXPIRY DATE</Text>
+          <DateField value={expiryDate} onChange={setExpiryDate} />
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate} disabled={saving}>
-          <Text style={styles.saveText}>{saving ? 'UPDATING...' : 'UPDATE STOCK'}</Text>
-        </TouchableOpacity>
+          <Text style={styles.label}>STATUS</Text>
+          <View style={styles.chipRow}>
+            {STATUSES.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.chip, status === s && styles.chipActive]}
+                onPress={() => setStatus(s)}
+              >
+                <Text style={[styles.chipText, status === s && styles.chipTextActive]}>
+                  {s}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={18} color={colors.primary} />
-          <Text style={styles.deleteText}>DELETE STOCK</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <Text style={styles.label}>LOCATION</Text>
+          <View style={[styles.input, styles.readonly]}>
+            <Ionicons name="business-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.readonlyText}>{hospital}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={handleUpdate}
+            disabled={saving}
+          >
+            <Text style={styles.saveText}>
+              {saving ? 'UPDATING...' : 'UPDATE STOCK'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+            <Ionicons name="trash-outline" size={18} color={colors.primary} />
+            <Text style={styles.deleteText}>DELETE STOCK</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 11, letterSpacing: 1, color: colors.textMuted, fontWeight: '700', marginTop: 4, marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: '800', color: colors.text, marginTop: 18, marginBottom: 10, letterSpacing: 0.4 },
+  subtitle: {
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.textMuted,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: 18,
+    marginBottom: 10,
+    letterSpacing: 0.4,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, backgroundColor: '#F4F4F6' },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 22,
+    backgroundColor: '#F4F4F6',
+  },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
-  input: { height: 54, borderRadius: 16, backgroundColor: '#F4F4F6', paddingHorizontal: 16, fontSize: 15, color: colors.text },
+  input: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#F4F4F6',
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: colors.text,
+  },
   readonly: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   readonlyText: { color: colors.textSecondary, fontWeight: '600', fontSize: 14 },
-  saveBtn: { height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 26 },
+  saveBtn: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+  },
   saveText: { color: colors.white, fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
-  deleteBtn: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: colors.primary, marginTop: 12 },
+  deleteBtn: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    marginTop: 12,
+  },
   deleteText: { color: colors.primary, fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
 });
 
