@@ -5,7 +5,6 @@ import React from 'react';
 
 import { colors } from '../utils/colors';
 
-// Officer screens
 import HomeScreen from '../screens/officer/HomeScreen';
 import InventoryListScreen from '../screens/officer/InventoryListScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
@@ -22,6 +21,7 @@ import NearbyBloodBanksScreen from '../screens/officer/NearbyBloodBanksScreen';
 import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
+import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -54,7 +54,7 @@ const OfficerTabs = () => (
       Inventory: 'water-outline',
       Scan: 'qr-code-outline',
       Requests: 'swap-horizontal-outline',
-      Alerts: 'warning-outline',
+      Alerts: 'notifications-outline',      // ✅ real alerts icon
     })}
   >
     <Tab.Screen
@@ -79,7 +79,7 @@ const OfficerTabs = () => (
     />
     <Tab.Screen
       name="Alerts"
-      component={ExpiryMonitoringScreen}
+      component={AlertsScreen}              // ✅ was ExpiryMonitoringScreen
       options={{ tabBarLabel: 'Alerts' }}
     />
   </Tab.Navigator>
@@ -102,6 +102,7 @@ const OfficerNavigator = () => (
     <Stack.Screen name="BloodBankDetails" component={BloodBankDetailsScreen} />
     <Stack.Screen name="QRScan" component={QRScanScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
+    <Stack.Screen name="Alerts" component={AlertsScreen} />
   </Stack.Navigator>
 );
 
