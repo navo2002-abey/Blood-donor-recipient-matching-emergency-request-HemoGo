@@ -53,6 +53,15 @@ const Sidebar = ({
 
   const handleItem = (item) => {
     onClose();
+    if (item.screen) {
+      // Navigate to a screen (top-level or nested)
+      if (item.params) {
+        navigation.navigate(item.screen, item.params);
+      } else {
+        navigation.navigate(item.screen);
+      }
+      return;
+    }
     if (item.tab) {
       navigation.navigate(item.tab);
       return;

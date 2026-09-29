@@ -42,14 +42,15 @@ export const ADMIN_MENU = [
 ];
 
 export const OFFICER_MENU = [
-  { key: 'Inventory Dashboard', tab: 'Home' },
-  { key: 'Expiry Monitoring', tab: 'Alerts' },
-  { key: 'AI Shortage Prediction' },
-  { key: 'Smart Blood Rescue' },
-  { key: 'Nearby Blood Bank Stock', tab: 'Stock' },
-  { key: 'QR Scan' },
-  { key: 'Emergency Alerts & Logs', tab: 'Requests' },
-  { key: 'Settings', tab: 'Profile' },
+  { key: 'Home', screen: 'OfficerTabs', params: { screen: 'Home' } },
+  { key: 'Inventory List', screen: 'OfficerTabs', params: { screen: 'Inventory' } },
+  { key: 'Reserved Units', screen: 'ReservedUnits' },
+  { key: 'Expiry Monitoring', screen: 'ExpiryMonitoring' },
+  { key: 'AI Shortage Prediction', screen: 'AIPrediction' },
+  { key: 'Smart Blood Rescue', screen: 'BloodRescue' },
+  { key: 'Pending Transfers', screen: 'OfficerTabs', params: { screen: 'Requests' } },
+  { key: 'Nearby Blood Banks', screen: 'NearbyBloodBanks' },
+  { key: 'Organize Donation Drive', screen: 'OrganizeDrive' },
 ];
 
 export const PATIENT_MENU = [
