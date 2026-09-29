@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
 const seedUsers = require('./utils/seedUsers');
 
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -28,6 +29,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/blood-requests', bloodRequestRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

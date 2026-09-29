@@ -52,6 +52,10 @@ const Sidebar = ({
 
   const handleItem = (item) => {
     onClose();
+    if (item.key === 'Create Request' || item.key === 'Request Blood') {
+      navigation.navigate('CreateBloodRequest');
+      return;
+    }
     if (item.tab) {
       navigation.navigate(item.tab);
       return;
