@@ -61,7 +61,9 @@ const ReservedUnitsScreen = ({ navigation }) => {
   const handleRelease = async (item) => {
     const ok = await confirm({
       title: 'Release Unit',
-      message: `Return unit ${item.unitId} to available stock?`,
+      message: `Return unit ${item.unitId} (${item.units || 1} unit${
+        (item.units || 1) > 1 ? 's' : ''
+      }) to available stock?`,
       confirmText: 'Release',
     });
     if (!ok) return;
@@ -101,7 +103,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
   const handleDelete = async (item) => {
     const ok = await confirm({
       title: 'Cancel Reservation',
-      message: `Permanently remove reservation for ${item.patientName}?`,
+      message: `Permanently remove reservation for ${item.patientName}? Units will return to stock.`,
       confirmText: 'Delete',
       destructive: true,
     });
@@ -111,7 +113,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
       setBusyId(item._id);
       await reservationService.remove(item._id);
       await load();
-      Alert.alert('Deleted', 'Reservation removed.');
+      Alert.alert('Deleted', 'Reservation removed, units returned.');
     } catch (e) {
       Alert.alert('Error', 'Failed to delete reservation.');
     } finally {
@@ -122,37 +124,81 @@ const ReservedUnitsScreen = ({ navigation }) => {
   const renderItem = ({ item }) => {
     const isReserved = item.status === 'RESERVED';
     const busy = busyId === item._id;
+    const reservedUnits = item.units || 1;
 
     return (
       <View style={styles.card}>
+        {/* Header row */}
         <View style={styles.cardTop}>
           <View style={styles.unitBadge}>
             <Text style={styles.unitId}>{item.unitId}</Text>
           </View>
           <View style={styles.bloodBadge}>
-            <Text style={styles.bloodText}>{item.bloodGroup}</Text>
+            <Text style={styles.bloodText}>
+              {item.bloodGroup} × {reservedUnits}
+            </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.patient}>{item.patientName}</Text>
-            <Text style={styles.ward}>{item.ward}</Text>
+            <Text style={styles.patient} numberOfLines={1}>
+              {item.patientName}
+            </Text>
+            <Text style={styles.ward} numberOfLines={1}>
+              {item.ward}
+            </Text>
           </View>
-          <View style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}>
+          <View
+            style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}
+          >
             <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
               {item.status}
             </Text>
           </View>
         </View>
 
-        {item.reservedFor ? (
-          <Text style={styles.subInfo}>
-            Reserved for: <Text style={styles.subValue}>{item.reservedFor}</Text>
-          </Text>
-        ) : null}
+        {/* Info rows */}
+        <View style={styles.infoList}>
+          <View style={styles.infoRow}>
+            <Ionicons name="water-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.infoText}>
+              <Text style={styles.infoLabel}>Units: </Text>
+              <Text style={styles.infoValue}>{reservedUnits}</Text>
+            </Text>
+          </View>
 
-        <Text style={styles.subInfo}>
-          Reserved at: {new Date(item.reservedAt || item.createdAt).toLocaleString()}
-        </Text>
+          {item.reservedFor ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.infoText}>
+                <Text style={styles.infoLabel}>Reserved for: </Text>
+                <Text style={styles.infoValue}>{item.reservedFor}</Text>
+              </Text>
+            </View>
+          ) : null}
 
+          {item.stockId && item.stockId.expiryDate ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.infoText}>
+                <Text style={styles.infoLabel}>Batch expiry: </Text>
+                <Text style={styles.infoValue}>
+                  {new Date(item.stockId.expiryDate).toLocaleDateString()}
+                </Text>
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={styles.infoRow}>
+            <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.infoText}>
+              <Text style={styles.infoLabel}>Reserved at: </Text>
+              <Text style={styles.infoValue}>
+                {new Date(item.reservedAt || item.createdAt).toLocaleString()}
+              </Text>
+            </Text>
+          </View>
+        </View>
+
+        {/* Actions */}
         {isReserved && (
           <View style={styles.actionRow}>
             <TouchableOpacity
@@ -163,7 +209,11 @@ const ReservedUnitsScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{busy ? '...' : 'Release'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
+              style={[
+                styles.actionBtn,
+                styles.actionPrimary,
+                busy && styles.actionDisabled,
+              ]}
               onPress={() => handleMarkUsed(item)}
               disabled={busy}
             >
@@ -176,6 +226,23 @@ const ReservedUnitsScreen = ({ navigation }) => {
             >
               <Ionicons name="trash-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
+          </View>
+        )}
+
+        {!isReserved && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.iconBtn, busy && styles.actionDisabled]}
+              onPress={() => handleDelete(item)}
+              disabled={busy}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.hintText}>
+              {item.status === 'RELEASED' && 'Units returned to available stock.'}
+              {item.status === 'USED' && 'Units consumed from stock.'}
+              {item.status === 'EXPIRED' && 'Reservation expired.'}
+            </Text>
           </View>
         )}
       </View>
@@ -208,7 +275,10 @@ const ReservedUnitsScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); load(); }}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
             />
           }
           ListEmptyComponent={
@@ -240,35 +310,100 @@ const ReservedUnitsScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 100 },
-  card: { backgroundColor: colors.white, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: 12 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  unitBadge: { paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.inputBg, borderRadius: 8 },
+
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: 12,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  unitBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: colors.inputBg,
+    borderRadius: 8,
+  },
   unitId: { fontSize: 11, fontWeight: '800', color: colors.text },
-  bloodBadge: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primarySoft, borderRadius: 8 },
+  bloodBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+  },
   bloodText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   patient: { fontSize: 14, fontWeight: '800', color: colors.text },
   ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   statusText: { fontSize: 10, fontWeight: '800' },
-  subInfo: { fontSize: 11, color: colors.textMuted, marginTop: 8 },
-  subValue: { color: colors.text, fontWeight: '700' },
+
+  infoList: { gap: 6 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoText: { fontSize: 11, color: colors.textSecondary, flex: 1 },
+  infoLabel: { color: colors.textMuted, fontWeight: '600' },
+  infoValue: { color: colors.text, fontWeight: '700' },
+
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
-  actionBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  actionBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   actionText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   actionPrimaryText: { fontSize: 12, fontWeight: '800', color: colors.white },
   actionDisabled: { opacity: 0.5 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary, fontSize: 14 },
-  emptyBtn: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 22, backgroundColor: colors.primary },
+  emptyBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+  },
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 13 },
+
   footer: { position: 'absolute', left: 16, right: 16, bottom: 20 },
-  footerBtn: { height: 52, borderRadius: 26, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  footerBtn: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   footerText: { color: colors.white, fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
 });
 

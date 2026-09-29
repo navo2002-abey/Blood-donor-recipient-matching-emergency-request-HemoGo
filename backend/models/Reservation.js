@@ -3,11 +3,13 @@ const mongoose = require('mongoose');
 const reservationSchema = new mongoose.Schema(
   {
     unitId: { type: String, required: true },
+    stockId: { type: mongoose.Schema.Types.ObjectId, ref: 'BloodStock' },
     bloodGroup: { type: String, required: true },
+    units: { type: Number, default: 1, min: 1 },
     patientName: { type: String, required: true },
     ward: { type: String, required: true },
     hospital: { type: String, required: true },
-    reservedFor: { type: String }, // surgery / ward / patient
+    reservedFor: { type: String },
     reservedAt: { type: Date, default: Date.now },
     expiresAt: { type: Date },
     status: {

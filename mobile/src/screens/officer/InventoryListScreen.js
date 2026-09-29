@@ -18,6 +18,21 @@ import { colors } from '../../utils/colors';
 
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
+const daysLeft = (date) => {
+  const diff = new Date(date).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
+
+const statusTheme = (status, expiryDate) => {
+  const days = daysLeft(expiryDate);
+  if (status === 'EXPIRED' || days <= 0) return { bg: '#FEE2E2', text: '#DC2626' };
+  if (status === 'RESERVED') return { bg: '#EFF6FF', text: '#2563EB' };
+  if (status === 'USED' || status === 'TRANSFERRED') return { bg: '#F3F4F6', text: '#6B7280' };
+  if (days <= 5) return { bg: '#FEE2E2', text: '#DC2626' };
+  if (days <= 14) return { bg: '#FFFAF0', text: '#D97706' };
+  return { bg: '#ECFDF5', text: '#059669' };
+};
+
 const InventoryListScreen = ({ navigation }) => {
   const confirm = useConfirm();
   const [activeTab, setActiveTab] = useState('available');
@@ -33,7 +48,12 @@ const InventoryListScreen = ({ navigation }) => {
         stockService.list({ hospital: HOSPITAL }),
         reservationService.list({ hospital: HOSPITAL }),
       ]);
-      setStock(stockRes.data.stock || []);
+      // Sort stock by blood group then earliest expiry
+      const sorted = (stockRes.data.stock || []).sort((a, b) => {
+        if (a.bloodGroup !== b.bloodGroup) return a.bloodGroup.localeCompare(b.bloodGroup);
+        return new Date(a.expiryDate) - new Date(b.expiryDate);
+      });
+      setStock(sorted);
       setReservations(resRes.data.reservations || []);
     } catch (e) {
       Alert.alert('Error', 'Failed to load inventory.');
@@ -48,21 +68,6 @@ const InventoryListScreen = ({ navigation }) => {
     const unsub = navigation.addListener('focus', load);
     return unsub;
   }, [navigation, load]);
-
-  const groupedStock = () => {
-    const map = {};
-    stock.forEach((s) => {
-      if (!map[s.bloodGroup]) {
-        map[s.bloodGroup] = { type: s.bloodGroup, available: 0, reserved: 0, expiry: s.expiryDate };
-      }
-      map[s.bloodGroup].available += s.units;
-      // pick earliest expiry
-      if (new Date(s.expiryDate) < new Date(map[s.bloodGroup].expiry)) {
-        map[s.bloodGroup].expiry = s.expiryDate;
-      }
-    });
-    return Object.values(map).sort((a, b) => a.type.localeCompare(b.type));
-  };
 
   const handleRelease = async (item) => {
     const ok = await confirm({
@@ -82,105 +87,114 @@ const InventoryListScreen = ({ navigation }) => {
     }
   };
 
-  const handleMarkUsed = async (item) => {
-    const ok = await confirm({
-      title: 'Mark Used',
-      message: `Mark unit ${item.unitId} as used?`,
-      confirmText: 'Mark Used',
-    });
-    if (!ok) return;
-    try {
-      setBusyId(item._id);
-      await reservationService.update(item._id, { status: 'USED' });
-      await load();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to update.');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   const renderAvailable = () => (
     <>
       <View style={styles.tableHeaderRow}>
         <Text style={[styles.tableHeader, { flex: 1.2 }]}>Type</Text>
-        <Text style={[styles.tableHeader, { flex: 1.8 }]}>Available</Text>
-        <Text style={[styles.tableHeader, { flex: 1.8 }]}>Reserved</Text>
-        <Text style={[styles.tableHeader, { flex: 2.4 }]}>Expiry Date</Text>
+        <Text style={[styles.tableHeader, { flex: 1.4 }]}>Units</Text>
+        <Text style={[styles.tableHeader, { flex: 2.6 }]}>Expiry Date</Text>
+        <Text style={[styles.tableHeader, { flex: 1.6 }]}>Status</Text>
         <Text style={[styles.tableHeader, { flex: 1.4 }]}>Actions</Text>
       </View>
 
-      {groupedStock().map((item, index) => (
-        <View
-          key={item.type}
-          style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
-        >
-          <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>{item.type}</Text>
-          <Text style={[styles.tableCell, styles.boldText, { flex: 1.8 }]}>{item.available}</Text>
-          <Text style={[styles.tableCell, styles.boldText, { flex: 1.8 }]}>{item.reserved}</Text>
-          <Text style={[styles.tableCell, { flex: 2.4 }]}>
-            {new Date(item.expiry).toLocaleDateString()}
-          </Text>
-          <TouchableOpacity
-            style={{ flex: 1.4, alignItems: 'center' }}
-            onPress={() => navigation.navigate('AddStock')}
-          >
-            <Text style={styles.editLink}>Add</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
-    </>
-  );
-
-  const renderReserved = () => (
-    <>
-      <View style={styles.tableHeaderRow}>
-        <Text style={[styles.tableHeader, { flex: 2 }]}>Unit ID</Text>
-        <Text style={[styles.tableHeader, { flex: 1.2 }]}>Blood</Text>
-        <Text style={[styles.tableHeader, { flex: 2.8 }]}>Reserved For</Text>
-        <Text style={[styles.tableHeader, { flex: 2.2 }]}>Actions</Text>
-      </View>
-
-      {reservations.map((item, index) => {
-        const busy = busyId === item._id;
-        const isReserved = item.status === 'RESERVED';
+      {stock.map((item, index) => {
+        const days = daysLeft(item.expiryDate);
+        const theme = statusTheme(item.status, item.expiryDate);
         return (
           <View
             key={item._id}
             style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
           >
-            <Text style={[styles.tableCell, styles.boldText, { flex: 2 }]}>
-              {item.unitId}
-            </Text>
             <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>
               {item.bloodGroup}
             </Text>
-            <View style={{ flex: 2.8, alignItems: 'center' }}>
-              <Text style={[styles.tableCell, { paddingVertical: 0 }]} numberOfLines={1}>
-                {item.reservedFor || item.ward}
+            <Text style={[styles.tableCell, styles.boldText, { flex: 1.4 }]}>
+              {item.units}
+            </Text>
+            <View style={{ flex: 2.6, alignItems: 'center' }}>
+              <Text style={[styles.tableCell, { paddingVertical: 0 }]}>
+                {new Date(item.expiryDate).toLocaleDateString()}
               </Text>
-              <Text style={styles.expirySubtext}>
-                {item.status}
-              </Text>
+              <Text style={styles.expirySubtext}>{days} day{days === 1 ? '' : 's'} left</Text>
             </View>
-            <View style={{ flex: 2.2, alignItems: 'center' }}>
-              {isReserved ? (
-                <TouchableOpacity
-                  style={[styles.actionBtn, busy && { opacity: 0.5 }]}
-                  onPress={() => handleRelease(item)}
-                  disabled={busy}
-                >
-                  <Text style={styles.actionBtnText}>Release</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.expirySubtext}>—</Text>
-              )}
+            <View style={{ flex: 1.6, alignItems: 'center' }}>
+              <View style={[styles.statusPill, { backgroundColor: theme.bg }]}>
+                <Text style={[styles.statusPillText, { color: theme.text }]}>
+                  {item.status}
+                </Text>
+              </View>
             </View>
+            <TouchableOpacity
+              style={{ flex: 1.4, alignItems: 'center' }}
+              onPress={() => navigation.navigate('EditStock', { id: item._id })}
+            >
+              <Text style={styles.editLink}>Edit</Text>
+            </TouchableOpacity>
           </View>
         );
       })}
+
+      {stock.length === 0 && (
+        <View style={styles.emptyRow}>
+          <Text style={styles.emptyText}>No stock registered yet.</Text>
+        </View>
+      )}
     </>
   );
+
+    const renderReserved = () => (
+    <>
+        <View style={styles.tableHeaderRow}>
+        <Text style={[styles.tableHeader, { flex: 2 }]}>Unit ID</Text>
+        <Text style={[styles.tableHeader, { flex: 1.2 }]}>Blood</Text>
+        <Text style={[styles.tableHeader, { flex: 2.8 }]}>Reserved For</Text>
+        <Text style={[styles.tableHeader, { flex: 2.2 }]}>Actions</Text>
+        </View>
+
+        {reservations.map((item, index) => {
+        const busy = busyId === item._id;
+        const isReserved = item.status === 'RESERVED';
+        return (
+            <View
+            key={item._id}
+            style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
+            >
+            <Text style={[styles.tableCell, styles.boldText, { flex: 2 }]}>
+                {item.unitId}
+            </Text>
+            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>
+                {item.bloodGroup} × {item.units || 1}
+            </Text>
+            <View style={{ flex: 2.8, alignItems: 'center' }}>
+                <Text style={[styles.tableCell, { paddingVertical: 0 }]} numberOfLines={1}>
+                {item.reservedFor || item.ward}
+                </Text>
+                <Text style={styles.expirySubtext}>{item.status}</Text>
+            </View>
+            <View style={{ flex: 2.2, alignItems: 'center' }}>
+                {isReserved ? (
+                <TouchableOpacity
+                    style={[styles.actionBtn, busy && { opacity: 0.5 }]}
+                    onPress={() => handleRelease(item)}
+                    disabled={busy}
+                >
+                    <Text style={styles.actionBtnText}>Release</Text>
+                </TouchableOpacity>
+                ) : (
+                <Text style={styles.expirySubtext}>—</Text>
+                )}
+            </View>
+            </View>
+        );
+        })}
+
+        {reservations.length === 0 && (
+        <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>No reservations yet.</Text>
+        </View>
+        )}
+    </>
+    );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -202,7 +216,10 @@ const InventoryListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(); }}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -212,7 +229,9 @@ const InventoryListScreen = ({ navigation }) => {
 
         <View style={styles.dropdown}>
           <Ionicons name="business" size={16} color={colors.textMuted} />
-          <Text style={styles.dropdownText} numberOfLines={1}>{HOSPITAL}</Text>
+          <Text style={styles.dropdownText} numberOfLines={1}>
+            {HOSPITAL}
+          </Text>
           <Ionicons name="caret-down" size={14} color={colors.textMuted} />
         </View>
 
@@ -221,7 +240,9 @@ const InventoryListScreen = ({ navigation }) => {
             style={[styles.tab, activeTab === 'available' && styles.activeTab]}
             onPress={() => setActiveTab('available')}
           >
-            <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
+            <Text
+              style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}
+            >
               Available Stock
             </Text>
           </TouchableOpacity>
@@ -229,7 +250,9 @@ const InventoryListScreen = ({ navigation }) => {
             style={[styles.tab, activeTab === 'reserved' && styles.activeTab]}
             onPress={() => setActiveTab('reserved')}
           >
-            <Text style={[styles.tabText, activeTab === 'reserved' && styles.activeTabText]}>
+            <Text
+              style={[styles.tabText, activeTab === 'reserved' && styles.activeTabText]}
+            >
               Reserved Units
             </Text>
           </TouchableOpacity>
@@ -237,14 +260,17 @@ const InventoryListScreen = ({ navigation }) => {
 
         <View style={styles.tableContainer}>
           {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={{ marginTop: 40 }}
+            />
           ) : activeTab === 'available' ? (
             renderAvailable()
           ) : (
             renderReserved()
           )}
         </View>
-
       </ScrollView>
 
       <View style={styles.bottomContainer}>
@@ -257,7 +283,9 @@ const InventoryListScreen = ({ navigation }) => {
           }
         >
           <Text style={styles.primaryButtonText}>
-            {activeTab === 'available' ? '+ ADD NEW STOCK' : '+ CREATE NEW RESERVATION'}
+            {activeTab === 'available'
+              ? '+ ADD NEW STOCK'
+              : '+ CREATE NEW RESERVATION'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -312,7 +340,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#FEE2E2',
   },
-  tableHeader: { fontSize: 12, fontWeight: '800', color: colors.text, textAlign: 'center' },
+  tableHeader: { fontSize: 11, fontWeight: '800', color: colors.text, textAlign: 'center' },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,6 +355,8 @@ const styles = StyleSheet.create({
   boldRedText: { fontWeight: '800', color: colors.primary },
   editLink: { fontSize: 12, fontWeight: '700', color: colors.primary },
   expirySubtext: { fontSize: 9, color: colors.textMuted, marginTop: 2 },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  statusPillText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.2 },
   actionBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: 12,
@@ -334,6 +364,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   actionBtnText: { color: colors.white, fontSize: 10, fontWeight: '700' },
+  emptyRow: { padding: 24, alignItems: 'center' },
+  emptyText: { fontSize: 12, color: colors.textSecondary },
   bottomContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
   primaryButton: {
     backgroundColor: colors.primary,

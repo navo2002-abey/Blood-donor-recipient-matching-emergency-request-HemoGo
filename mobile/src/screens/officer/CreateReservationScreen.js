@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,16 +14,27 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '../../components/FormField';
-import { reservationService } from '../../services/officerService';
+import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { minLength, required } from '../../utils/validators';
+import { digitsOnly } from '../../utils/numbers';
+import { minLength, positiveInt, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
+const daysLeft = (date) => {
+  const diff = new Date(date).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+};
+
 const CreateReservationScreen = ({ navigation }) => {
-  const [unitId, setUnitId] = useState('');
+  const [batches, setBatches] = useState([]);
+  const [loadingBatches, setLoadingBatches] = useState(true);
+
   const [bloodGroup, setBloodGroup] = useState('');
+  const [selectedBatchId, setSelectedBatchId] = useState(null);
+  const [units, setUnits] = useState('1');
+  const [unitId, setUnitId] = useState('');
   const [patientName, setPatientName] = useState('');
   const [ward, setWard] = useState('');
   const [reservedFor, setReservedFor] = useState('');
@@ -31,10 +43,55 @@ const CreateReservationScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
+  // Load available batches
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await stockService.list({
+          hospital: HOSPITAL,
+          status: 'AVAILABLE',
+        });
+        const available = (data.stock || []).filter((s) => s.units > 0);
+        setBatches(available);
+      } catch (e) {
+        Alert.alert('Error', 'Failed to load available batches.');
+      } finally {
+        setLoadingBatches(false);
+      }
+    })();
+  }, []);
+
+  // Groups that have stock
+  const groupsWithStock = GROUPS.filter((g) =>
+    batches.some((b) => b.bloodGroup === g)
+  );
+
+  // Batches for the chosen blood group
+  const filteredBatches = batches.filter((b) => b.bloodGroup === bloodGroup);
+
+  // Auto-select earliest-expiring batch when group changes
+  useEffect(() => {
+    if (filteredBatches.length > 0) {
+      setSelectedBatchId(filteredBatches[0]._id);
+    } else {
+      setSelectedBatchId(null);
+    }
+  }, [bloodGroup, batches.length]);
+
+  const selectedBatch = batches.find((b) => b._id === selectedBatchId);
+
+  const maxUnitsForBatch = selectedBatch ? selectedBatch.units : 0;
+
   const validate = () => {
     const next = {
-      unitId: required(unitId, 'Unit ID') || minLength(unitId, 3, 'Unit ID'),
       bloodGroup: required(bloodGroup, 'Blood group'),
+      selectedBatchId: !selectedBatchId ? 'Please select a batch.' : null,
+      units:
+        positiveInt(units, 'Units') ||
+        (Number(units) > maxUnitsForBatch
+          ? `Only ${maxUnitsForBatch} unit(s) available in this batch.`
+          : null),
+      unitId: required(unitId, 'Unit ID') || minLength(unitId, 3, 'Unit ID'),
       patientName:
         required(patientName, 'Patient name') ||
         minLength(patientName, 3, 'Patient name'),
@@ -46,8 +103,10 @@ const CreateReservationScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     setTouched({
-      unitId: true,
       bloodGroup: true,
+      selectedBatchId: true,
+      units: true,
+      unitId: true,
       patientName: true,
       ward: true,
     });
@@ -57,7 +116,9 @@ const CreateReservationScreen = ({ navigation }) => {
       setSaving(true);
       await reservationService.create({
         unitId: unitId.trim(),
+        stockId: selectedBatchId,
         bloodGroup,
+        units: Number(units),
         patientName: patientName.trim(),
         ward: ward.trim(),
         hospital: HOSPITAL,
@@ -67,10 +128,13 @@ const CreateReservationScreen = ({ navigation }) => {
 
       navigation.goBack();
       setTimeout(() => {
-        Alert.alert('Success', 'Reservation created successfully.');
+        Alert.alert('Success', 'Reservation created.');
       }, 200);
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to create reservation.');
+      Alert.alert(
+        'Error',
+        e?.response?.data?.message || 'Failed to create reservation.'
+      );
     } finally {
       setSaving(false);
     }
@@ -95,31 +159,110 @@ const CreateReservationScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Create New Reservation</Text>
-          <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
+          <Text style={styles.title}>Create Reservation</Text>
+          <Text style={styles.subtitle}>Pick from available stock</Text>
 
+          {/* Blood Group */}
           <FormField
             label="BLOOD GROUP"
             error={touched.bloodGroup ? errors.bloodGroup : null}
           >
-            <View style={styles.chipRow}>
-              {GROUPS.map((g) => (
-                <TouchableOpacity
-                  key={g}
-                  style={[styles.chip, bloodGroup === g && styles.chipActive]}
-                  onPress={() => {
-                    setBloodGroup(g);
-                    setTouched((t) => ({ ...t, bloodGroup: true }));
-                  }}
-                >
-                  <Text
-                    style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}
+            {groupsWithStock.length === 0 && !loadingBatches ? (
+              <View style={styles.noStock}>
+                <Ionicons name="alert-circle-outline" size={20} color={colors.primary} />
+                <Text style={styles.noStockText}>
+                  No stock available. Add stock first.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.chipRow}>
+                {groupsWithStock.map((g) => {
+                  const totalForGroup = batches
+                    .filter((b) => b.bloodGroup === g)
+                    .reduce((sum, b) => sum + b.units, 0);
+                  return (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.chip, bloodGroup === g && styles.chipActive]}
+                      onPress={() => {
+                        setBloodGroup(g);
+                        setTouched((t) => ({ ...t, bloodGroup: true }));
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          bloodGroup === g && styles.chipTextActive,
+                        ]}
+                      >
+                        {g} · {totalForGroup}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </FormField>
+
+          {/* Batch picker */}
+          {bloodGroup && filteredBatches.length > 0 && (
+            <>
+              <Text style={styles.label}>SELECT BATCH (oldest expiry first)</Text>
+              {filteredBatches.map((b) => {
+                const selected = selectedBatchId === b._id;
+                const days = daysLeft(b.expiryDate);
+                return (
+                  <TouchableOpacity
+                    key={b._id}
+                    style={[styles.batchCard, selected && styles.batchCardActive]}
+                    onPress={() => setSelectedBatchId(b._id)}
                   >
-                    {g}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <View style={styles.batchLeft}>
+                      <View style={styles.radioOuter}>
+                        {selected ? <View style={styles.radioInner} /> : null}
+                      </View>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.batchUnits}>
+                        {b.units} unit{b.units === 1 ? '' : 's'} available
+                      </Text>
+                      <Text style={styles.batchExpiry}>
+                        Expires {new Date(b.expiryDate).toLocaleDateString()} ·{' '}
+                        {days} day{days === 1 ? '' : 's'} left
+                      </Text>
+                    </View>
+                    {days <= 5 && (
+                      <View style={styles.urgentPill}>
+                        <Text style={styles.urgentText}>SOON</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {touched.selectedBatchId && errors.selectedBatchId ? (
+                <Text style={styles.inlineError}>{errors.selectedBatchId}</Text>
+              ) : null}
+            </>
+          )}
+
+          {/* Units to reserve */}
+          <FormField label="UNITS TO RESERVE" error={touched.units ? errors.units : null}>
+            <TextInput
+              style={styles.input}
+              keyboardType="number-pad"
+              inputMode="numeric"
+              value={units}
+              onChangeText={(t) => setUnits(digitsOnly(t))}
+              onBlur={() => setTouched((t) => ({ ...t, units: true }))}
+              placeholder="1"
+              placeholderTextColor={colors.textMuted}
+              maxLength={4}
+            />
+            {selectedBatch && (
+              <Text style={styles.hint}>
+                Max {maxUnitsForBatch} unit(s) in this batch
+              </Text>
+            )}
           </FormField>
 
           <FormField label="UNIT ID" error={touched.unitId ? errors.unitId : null}>
@@ -179,26 +322,8 @@ const CreateReservationScreen = ({ navigation }) => {
             />
           </FormField>
 
-          <Text style={styles.label}>LOCATION</Text>
-          <View style={[styles.input, styles.readonly]}>
-            <Ionicons name="business-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.readonlyText}>{HOSPITAL}</Text>
-          </View>
-
-          <View style={styles.tipBox}>
-            <View style={styles.tipIcon}>
-              <Ionicons name="bulb-outline" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.tipTitle}>STAFF TIP</Text>
-              <Text style={styles.tipText}>
-                Ensure blood bags are scanned before manual entry to maintain real-time accuracy.
-              </Text>
-            </View>
-          </View>
-
           <TouchableOpacity
-            style={styles.saveBtn}
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -251,6 +376,62 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
+  noStock: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#FFF1F3',
+    borderRadius: 12,
+    padding: 12,
+  },
+  noStockText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  batchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  batchCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#FFF8F9',
+  },
+  batchLeft: { width: 24 },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  batchUnits: { fontSize: 14, fontWeight: '800', color: colors.text },
+  batchExpiry: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  urgentPill: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  urgentText: { color: colors.primary, fontSize: 9, fontWeight: '800' },
+  inlineError: {
+    marginTop: 4,
+    marginLeft: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   input: {
     height: 54,
     borderRadius: 16,
@@ -259,26 +440,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-  readonly: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  readonlyText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
-  tipBox: {
-    flexDirection: 'row',
-    gap: 12,
-    backgroundColor: '#FFF1F3',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 24,
-  },
-  tipIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tipTitle: { fontSize: 11, fontWeight: '800', color: colors.primary, letterSpacing: 0.5 },
-  tipText: { fontSize: 12, color: colors.text, marginTop: 4, lineHeight: 17 },
+  hint: { marginTop: 6, marginLeft: 4, fontSize: 11, color: colors.textMuted },
   saveBtn: {
     height: 56,
     borderRadius: 28,

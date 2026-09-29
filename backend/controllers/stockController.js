@@ -19,8 +19,12 @@ exports.getStock = async (req, res) => {
     const filter = {};
     if (req.query.hospital) filter.hospital = req.query.hospital;
     if (req.query.status) filter.status = req.query.status;
+    if (req.query.bloodGroup) filter.bloodGroup = req.query.bloodGroup;
 
-    const stock = await BloodStock.find(filter).sort({ bloodGroup: 1 });
+    const stock = await BloodStock.find(filter).sort({
+      bloodGroup: 1,
+      expiryDate: 1,
+    });
     res.json({ success: true, count: stock.length, stock });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -55,13 +59,31 @@ exports.deleteStock = async (req, res) => {
   res.json({ success: true, message: 'Deleted' });
 };
 
-// Expiry monitoring
+// Expiry monitoring — units expiring within N days
 exports.getExpiring = async (req, res) => {
-  const days = Number(req.query.days) || 7;
-  const threshold = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  const stock = await BloodStock.find({
-    expiryDate: { $lte: threshold, $gte: new Date() },
-    status: 'AVAILABLE',
-  }).sort({ expiryDate: 1 });
-  res.json({ success: true, count: stock.length, stock });
+  try {
+    const days = Number(req.query.days) || 7;
+    const threshold = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const stock = await BloodStock.find({
+      expiryDate: { $lte: threshold, $gte: new Date() },
+      status: 'AVAILABLE',
+    }).sort({ expiryDate: 1 });
+    res.json({ success: true, count: stock.length, stock });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ✅ NEW: Available batches — for the Create Reservation batch picker
+exports.getAvailableBatches = async (req, res) => {
+  try {
+    const filter = { status: 'AVAILABLE', units: { $gt: 0 } };
+    if (req.query.hospital) filter.hospital = req.query.hospital;
+    if (req.query.bloodGroup) filter.bloodGroup = req.query.bloodGroup;
+
+    const batches = await BloodStock.find(filter).sort({ expiryDate: 1 });
+    res.json({ success: true, count: batches.length, batches });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
