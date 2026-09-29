@@ -245,14 +245,6 @@ const InventoryListScreen = ({ navigation }) => {
           )}
         </View>
 
-        {activeTab === 'reserved' && (
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => navigation.navigate('CreateReservation')}
-          >
-            <Text style={styles.secondaryBtnText}>+ CREATE NEW RESERVATION</Text>
-          </TouchableOpacity>
-        )}
       </ScrollView>
 
       <View style={styles.bottomContainer}>
@@ -342,15 +334,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   actionBtnText: { color: colors.white, fontSize: 10, fontWeight: '700' },
-  secondaryBtn: {
-    marginTop: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    borderRadius: 14,
-  },
-  secondaryBtnText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
   bottomContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
   primaryButton: {
     backgroundColor: colors.primary,

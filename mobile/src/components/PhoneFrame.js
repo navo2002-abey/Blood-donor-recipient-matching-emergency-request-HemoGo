@@ -18,8 +18,35 @@ const PhoneFrame = ({ children }) => {
     body.style.margin = '0';
     body.style.height = '100%';
     body.style.background = '#D7D9DE';
+    body.style.overflow = 'hidden';
     if (root) {
       root.style.height = '100%';
+      root.style.overflow = 'hidden';
+    }
+
+    const styleId = 'hide-scrollbars';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.innerHTML = `
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        *::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+        * {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `;
+      document.head.appendChild(style);
     }
 
     return undefined;
