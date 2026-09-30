@@ -140,7 +140,7 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.smallCard}
-            onPress={() => comingSoon('Check Eligibility')}
+            onPress={() => navigation.navigate('CheckEligibility')}
             activeOpacity={0.7}
           >
             <View style={styles.cardIcon}>

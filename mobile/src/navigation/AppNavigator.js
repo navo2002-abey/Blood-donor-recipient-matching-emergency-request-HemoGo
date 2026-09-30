@@ -12,6 +12,7 @@ import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import AppointmentBookedScreen from '../screens/AppointmentBookedScreen';
 import BloodRequestListScreen from '../screens/BloodRequestListScreen';
 import BookAppointmentScreen from '../screens/BookAppointmentScreen';
+import CheckEligibilityScreen from '../screens/CheckEligibilityScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import ConfirmBloodRequestScreen from '../screens/ConfirmBloodRequestScreen';
 import CreateBloodRequestScreen from '../screens/CreateBloodRequestScreen';
@@ -169,6 +170,7 @@ const AppNavigator = () => {
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
         <Stack.Screen name="RewardsGift" component={RewardsGiftScreen} />
+        <Stack.Screen name="CheckEligibility" component={CheckEligibilityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
