@@ -126,6 +126,31 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.grid}>
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => navigation.navigate('BookAppointment')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="calendar-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Book Appointment</Text>
+            <Text style={styles.cardSub}>Schedule your donation appointment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => navigation.navigate('CheckEligibility')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Check Eligibility</Text>
+            <Text style={styles.cardSub}>Verify your donation eligibility</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.mapCard}>
           <View style={styles.mapHeader}>
             <Text style={styles.mapTitle}>Live Nearby Donors</Text>

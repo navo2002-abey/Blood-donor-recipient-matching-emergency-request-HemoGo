@@ -11,16 +11,23 @@ import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen'
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
 import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AppointmentBookedScreen from '../screens/AppointmentBookedScreen';
 import BloodRequestListScreen from '../screens/BloodRequestListScreen';
+import BookAppointmentScreen from '../screens/BookAppointmentScreen';
+import CheckEligibilityScreen from '../screens/CheckEligibilityScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import ConfirmBloodRequestScreen from '../screens/ConfirmBloodRequestScreen';
 import CreateBloodRequestScreen from '../screens/CreateBloodRequestScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import HistoryDetailScreen from '../screens/HistoryDetailScreen';
+import HistoryScreen from '../screens/HistoryScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
+import RewardsGiftScreen from '../screens/RewardsGiftScreen';
+import RewardsScreen from '../screens/RewardsScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
@@ -65,12 +72,17 @@ const DonorTabs = () => (
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
     <Tab.Screen name="Map" component={MapScreen} />
+<<<<<<< HEAD
+    <Tab.Screen name="Requests" component={CreateBloodRequestScreen} options={{ title: 'Request' }} />
+    <Tab.Screen name="Rewards" component={RewardsScreen} />
+=======
     <Tab.Screen
       name="Requests"
       component={CreateBloodRequestScreen}
       options={{ title: 'Request' }}
     />
     <Tab.Screen name="Rewards" component={soon('Rewards')} />
+>>>>>>> origin/dev
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
@@ -153,6 +165,12 @@ const AppNavigator = () => {
         <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
         <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />
         <Stack.Screen name="MyRequests" component={MyRequestsScreen} />
+        <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
+        <Stack.Screen name="AppointmentBooked" component={AppointmentBookedScreen} />
+        <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
+        <Stack.Screen name="RewardsGift" component={RewardsGiftScreen} />
+        <Stack.Screen name="CheckEligibility" component={CheckEligibilityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
