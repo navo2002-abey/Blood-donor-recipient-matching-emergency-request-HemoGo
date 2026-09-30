@@ -39,7 +39,10 @@ const PatientDashboardScreen = ({ navigation }) => {
         <View style={styles.emergency}>
           <Text style={styles.emergencyTitle}>Need Blood?</Text>
           <Text style={styles.emergencyText}>Send a request to nearby donors and blood banks.</Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => comingSoon('Create Blood Request')}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.navigate('CreateBloodRequest')}
+          >
             <Text style={styles.primaryText}>Create Blood Request</Text>
           </TouchableOpacity>
         </View>
@@ -50,7 +53,10 @@ const PatientDashboardScreen = ({ navigation }) => {
             <Text style={styles.cardTitle}>Find Donors</Text>
             <Text style={styles.cardSub}>Search compatible nearby donors</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.card} onPress={() => comingSoon('My Requests')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('MyRequests')}
+          >
             <Ionicons name="document-text-outline" size={20} color={colors.text} />
             <Text style={styles.cardTitle}>My Requests</Text>
             <Text style={styles.cardSub}>Track request status and responses</Text>

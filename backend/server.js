@@ -6,12 +6,15 @@ const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+// Rashan's routes
 const stockRoutes = require('./routes/stockRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
 const transferRoutes = require('./routes/transferRoutes');
 const predictionRoutes = require('./routes/predictionRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const bloodBankRoutes = require('./routes/bloodBankRoutes');
+// Teammate's routes
+const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
 
 const seedUsers = require('./utils/seedUsers');
 const seedBloodBanks = require('./utils/seedBloodBanks');
@@ -39,6 +42,7 @@ app.get('/api/health', (req, res) => {
 // -------------------- ROUTES --------------------
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/blood-requests', bloodRequestRoutes);
 
 // Blood Bank Officer + Advanced Features (Rashan's part)
 app.use('/api/stock', stockRoutes);
@@ -77,6 +81,7 @@ const startServer = async () => {
     console.log('Registered routes:');
     console.log('  /api/auth');
     console.log('  /api/admin');
+    console.log('  /api/blood-requests');
     console.log('  /api/stock');
     console.log('  /api/reservations');
     console.log('  /api/transfers');

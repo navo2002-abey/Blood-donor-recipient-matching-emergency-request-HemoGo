@@ -4,21 +4,32 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+
+// Teammate's screens
+import ActiveRequestCompletedScreen from '../screens/ActiveRequestCompletedScreen';
+import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen';
+import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
+import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import BloodRequestListScreen from '../screens/BloodRequestListScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
+import ConfirmBloodRequestScreen from '../screens/ConfirmBloodRequestScreen';
+import CreateBloodRequestScreen from '../screens/CreateBloodRequestScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
+import MyRequestsScreen from '../screens/MyRequestsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
+import TrackingRequestScreen from '../screens/TrackingRequestScreen';
 
+// Rashan's navigator
 import OfficerNavigator from './OfficerNavigator';
 
 import { colors } from '../utils/colors';
 import { ROLES } from '../utils/roles';
-
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,7 +65,11 @@ const DonorTabs = () => (
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
     <Tab.Screen name="Map" component={MapScreen} />
-    <Tab.Screen name="Requests" component={soon('Requests')} />
+    <Tab.Screen
+      name="Requests"
+      component={CreateBloodRequestScreen}
+      options={{ title: 'Request' }}
+    />
     <Tab.Screen name="Rewards" component={soon('Rewards')} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
@@ -88,7 +103,11 @@ const PatientTabs = () => (
     })}
   >
     <Tab.Screen name="Home" component={PatientDashboardScreen} />
-    <Tab.Screen name="Requests" component={soon('My Requests')} />
+    <Tab.Screen
+      name="Requests"
+      component={MyRequestsScreen}
+      options={{ title: 'My Requests' }}
+    />
     <Tab.Screen name="Donors" component={soon('Find Donors')} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
@@ -102,6 +121,9 @@ const RoleRoot = () => {
   }
   if (user?.role === ROLES.BLOOD_BANK_OFFICER) {
     return <OfficerNavigator />;
+  }
+  if (user?.role === ROLES.PATIENT_FAMILY) {
+    return <PatientTabs />;
   }
   return <DonorTabs />;
 };
@@ -121,6 +143,16 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Main" component={RoleRoot} />
+        <Stack.Screen name="CreateBloodRequest" component={CreateBloodRequestScreen} />
+        <Stack.Screen name="ConfirmBloodRequest" component={ConfirmBloodRequestScreen} />
+        <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />
+        <Stack.Screen name="ActiveRequests" component={ActiveRequestsScreen} />
+        <Stack.Screen name="ActiveRequestProgress" component={ActiveRequestProgressScreen} />
+        <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestProgressScreen} />
+        <Stack.Screen name="ActiveRequestQRVerify" component={ActiveRequestQRVerifyScreen} />
+        <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
+        <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />
+        <Stack.Screen name="MyRequests" component={MyRequestsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

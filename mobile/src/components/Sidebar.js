@@ -53,8 +53,9 @@ const Sidebar = ({
 
   const handleItem = (item) => {
     onClose();
+
+    // Rashan's officer screens (top-level or nested tab navigation)
     if (item.screen) {
-      // Navigate to a screen (top-level or nested)
       if (item.params) {
         navigation.navigate(item.screen, item.params);
       } else {
@@ -62,10 +63,19 @@ const Sidebar = ({
       }
       return;
     }
+
+    // Teammate's donor screens
+    if (item.key === 'Create Request' || item.key === 'Request Blood') {
+      navigation.navigate('CreateBloodRequest');
+      return;
+    }
+
+    // Legacy: navigate to a tab by name
     if (item.tab) {
       navigation.navigate(item.tab);
       return;
     }
+
     onComingSoon(item.key);
   };
 
