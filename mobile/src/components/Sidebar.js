@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -52,14 +53,29 @@ const Sidebar = ({
 
   const handleItem = (item) => {
     onClose();
+
+    // Rashan's officer screens (top-level or nested tab navigation)
+    if (item.screen) {
+      if (item.params) {
+        navigation.navigate(item.screen, item.params);
+      } else {
+        navigation.navigate(item.screen);
+      }
+      return;
+    }
+
+    // Teammate's donor screens
     if (item.key === 'Create Request' || item.key === 'Request Blood') {
       navigation.navigate('CreateBloodRequest');
       return;
     }
+
+    // Legacy: navigate to a tab by name
     if (item.tab) {
       navigation.navigate(item.tab);
       return;
     }
+
     onComingSoon(item.key);
   };
 
@@ -97,99 +113,114 @@ const Sidebar = ({
     </>
   );
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <SafeAreaView
-          style={[styles.panel, isStaff && styles.staffPanel]}
-          edges={['top', 'bottom']}
-        >
-          {isStaff ? (
-            <>
-              <View style={styles.staffTopRow}>
-                <View />
-                <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-                  <Ionicons name="close" size={22} color={colors.white} />
-                </TouchableOpacity>
-              </View>
+  const panelContent = (
+    <View style={styles.overlay}>
+      <SafeAreaView
+        style={[styles.panel, isStaff && styles.staffPanel]}
+        edges={['top', 'bottom']}
+      >
+        {isStaff ? (
+          <>
+            <View style={styles.staffTopRow}>
+              <View />
+              <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+                <Ionicons name="close" size={22} color={colors.white} />
+              </TouchableOpacity>
+            </View>
 
-              <View style={styles.staffProfile}>
-                <View style={styles.staffAvatarRing}>
-                  <View style={styles.staffAvatar}>
-                    <Text style={styles.staffAvatarText}>{getInitials(name) || 'AF'}</Text>
-                  </View>
-                </View>
-                <Text style={styles.staffName}>{name}</Text>
-                <Text style={styles.staffHospital}>{orgLine}</Text>
-                <Text style={styles.staffRole}>Role: {roleLabel}</Text>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.staffMenu}>
-                {renderMenu(
-                  styles.staffItem,
-                  styles.staffItemText,
-                  styles.staffItemActive,
-                  styles.staffItemTextActive
-                )}
-              </ScrollView>
-            </>
-          ) : (
-            <>
-              <View style={styles.topRow}>
-                <View />
-                <TouchableOpacity onPress={onClose} hitSlop={12}>
-                  <Ionicons name="close" size={22} color={colors.white} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.profile}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
-                </View>
-                <View style={styles.profileMeta}>
-                  <Text style={styles.name}>{name}</Text>
-                  <Text style={styles.group}>{subtitle}</Text>
-                </View>
-                <View style={styles.bellWrap}>
-                  <Ionicons name="notifications-outline" size={20} color={colors.white} />
-                  <View style={styles.badge} />
+            <View style={styles.staffProfile}>
+              <View style={styles.staffAvatarRing}>
+                <View style={styles.staffAvatar}>
+                  <Text style={styles.staffAvatarText}>{getInitials(name) || 'AF'}</Text>
                 </View>
               </View>
+              <Text style={styles.staffName}>{name}</Text>
+              <Text style={styles.staffHospital}>{orgLine}</Text>
+              <Text style={styles.staffRole}>Role: {roleLabel}</Text>
+            </View>
 
-              <View style={styles.search}>
-                <Ionicons name="search-outline" size={16} color={colors.sidebarMuted} />
-                <TextInput
-                  placeholder=""
-                  placeholderTextColor={colors.sidebarMuted}
-                  style={styles.searchInput}
-                  editable={false}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.staffMenu}>
+              {renderMenu(
+                styles.staffItem,
+                styles.staffItemText,
+                styles.staffItemActive,
+                styles.staffItemTextActive
+              )}
+            </ScrollView>
+          </>
+        ) : (
+          <>
+            <View style={styles.topRow}>
+              <View />
+              <TouchableOpacity onPress={onClose} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.profile}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.profileMeta}>
+                <Text style={styles.name}>{name}</Text>
+                <Text style={styles.group}>{subtitle}</Text>
+              </View>
+              <View style={styles.bellWrap}>
+                <Ionicons name="notifications-outline" size={20} color={colors.white} />
+                <View style={styles.badge} />
+              </View>
+            </View>
+
+            <View style={styles.search}>
+              <Ionicons name="search-outline" size={16} color={colors.sidebarMuted} />
+              <TextInput
+                placeholder=""
+                placeholderTextColor={colors.sidebarMuted}
+                style={styles.searchInput}
+                editable={false}
+              />
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menu}>
+              {renderMenu(styles.menuItem, styles.menuText)}
+            </ScrollView>
+
+            {showAvailability ? (
+              <View style={styles.footer}>
+                <Text style={styles.footerLabel}>{available ? 'Active' : 'Inactive'}</Text>
+                <Switch
+                  value={available}
+                  onValueChange={setAvailable}
+                  trackColor={{ false: '#374151', true: colors.primary }}
+                  thumbColor={colors.white}
                 />
               </View>
+            ) : (
+              <View style={styles.footer}>
+                <Text style={styles.footerLabel}>{roleLabel}</Text>
+              </View>
+            )}
+          </>
+        )}
+      </SafeAreaView>
+      <Pressable style={styles.dim} onPress={onClose} />
+    </View>
+  );
 
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menu}>
-                {renderMenu(styles.menuItem, styles.menuText)}
-              </ScrollView>
-
-              {showAvailability ? (
-                <View style={styles.footer}>
-                  <Text style={styles.footerLabel}>{available ? 'Active' : 'Inactive'}</Text>
-                  <Switch
-                    value={available}
-                    onValueChange={setAvailable}
-                    trackColor={{ false: '#374151', true: colors.primary }}
-                    thumbColor={colors.white}
-                  />
-                </View>
-              ) : (
-                <View style={styles.footer}>
-                  <Text style={styles.footerLabel}>{roleLabel}</Text>
-                </View>
-              )}
-            </>
-          )}
-        </SafeAreaView>
-        <Pressable style={styles.dim} onPress={onClose} />
+  // ✅ WEB: render inside phone frame with absolute positioning
+  if (Platform.OS === 'web') {
+    if (!visible) return null;
+    return (
+      <View style={styles.webWrap} pointerEvents="box-none">
+        {panelContent}
       </View>
+    );
+  }
+
+  // ✅ NATIVE: keep using Modal
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      {panelContent}
     </Modal>
   );
 };
@@ -198,6 +229,11 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     flexDirection: 'row',
+  },
+  // FIX: on web, wrap the sidebar inside absolute bounds of the phone frame
+  webWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
   },
   panel: {
     width: '78%',
