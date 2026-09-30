@@ -4,6 +4,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+
+// Teammate's screens
 import ActiveRequestCompletedScreen from '../screens/ActiveRequestCompletedScreen';
 import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen';
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
@@ -22,7 +24,6 @@ import HistoryScreen from '../screens/HistoryScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
-import OfficerDashboardScreen from '../screens/OfficerDashboardScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
 import RewardsGiftScreen from '../screens/RewardsGiftScreen';
@@ -30,6 +31,10 @@ import RewardsScreen from '../screens/RewardsScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
+
+// Rashan's navigator
+import OfficerNavigator from './OfficerNavigator';
+
 import { colors } from '../utils/colors';
 import { ROLES } from '../utils/roles';
 
@@ -67,8 +72,17 @@ const DonorTabs = () => (
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
     <Tab.Screen name="Map" component={MapScreen} />
+<<<<<<< HEAD
     <Tab.Screen name="Requests" component={CreateBloodRequestScreen} options={{ title: 'Request' }} />
     <Tab.Screen name="Rewards" component={RewardsScreen} />
+=======
+    <Tab.Screen
+      name="Requests"
+      component={CreateBloodRequestScreen}
+      options={{ title: 'Request' }}
+    />
+    <Tab.Screen name="Rewards" component={soon('Rewards')} />
+>>>>>>> origin/dev
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
@@ -91,24 +105,6 @@ const AdminTabs = () => (
   </Tab.Navigator>
 );
 
-const OfficerTabs = () => (
-  <Tab.Navigator
-    screenOptions={tabOptions({
-      Home: 'home-outline',
-      Stock: 'file-tray-stacked-outline',
-      Requests: 'water-outline',
-      Alerts: 'warning-outline',
-      Profile: 'person-outline',
-    })}
-  >
-    <Tab.Screen name="Home" component={OfficerDashboardScreen} options={{ title: 'Inventory' }} />
-    <Tab.Screen name="Stock" component={soon('Nearby Blood Bank Stock')} options={{ title: 'Stock' }} />
-    <Tab.Screen name="Requests" component={soon('Emergency Alerts & Logs')} />
-    <Tab.Screen name="Alerts" component={soon('Expiry Monitoring')} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
-  </Tab.Navigator>
-);
-
 const PatientTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
@@ -119,7 +115,11 @@ const PatientTabs = () => (
     })}
   >
     <Tab.Screen name="Home" component={PatientDashboardScreen} />
-    <Tab.Screen name="Requests" component={MyRequestsScreen} options={{ title: 'My Requests' }} />
+    <Tab.Screen
+      name="Requests"
+      component={MyRequestsScreen}
+      options={{ title: 'My Requests' }}
+    />
     <Tab.Screen name="Donors" component={soon('Find Donors')} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
@@ -132,7 +132,7 @@ const RoleRoot = () => {
     return <AdminTabs />;
   }
   if (user?.role === ROLES.BLOOD_BANK_OFFICER) {
-    return <OfficerTabs />;
+    return <OfficerNavigator />;
   }
   if (user?.role === ROLES.PATIENT_FAMILY) {
     return <PatientTabs />;
