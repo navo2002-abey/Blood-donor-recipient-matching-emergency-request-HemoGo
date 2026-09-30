@@ -168,11 +168,14 @@ const MapScreen = ({ navigation, route }) => {
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.callBtn}
-                onPress={() => Alert.alert('Call', `Calling ${selected.name}...`)}
+                onPress={() => navigation.navigate('Call', { donorId: selected.id })}
               >
                 <Text style={styles.callText}>Call</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.requestBtn} onPress={() => comingSoon('Direct Request')}>
+              <TouchableOpacity
+                style={styles.requestBtn}
+                onPress={() => navigation.navigate('DirectRequest', { donorId: selected.id })}
+              >
                 <Text style={styles.requestText}>Direct Request</Text>
               </TouchableOpacity>
             </View>

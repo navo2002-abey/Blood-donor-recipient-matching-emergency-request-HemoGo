@@ -6,7 +6,11 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
+import AvailableDonorsScreen from '../screens/AvailableDonorsScreen';
+import CallScreen from '../screens/CallScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import DirectRequestScreen from '../screens/DirectRequestScreen';
+import DonorDetailScreen from '../screens/DonorDetailScreen';
 import FindDonorsScreen from '../screens/FindDonorsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
@@ -138,6 +142,10 @@ const AppNavigator = () => {
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Main" component={RoleRoot} />
         <Stack.Screen name="FindDonors" component={FindDonorsScreen} />
+        <Stack.Screen name="AvailableDonors" component={AvailableDonorsScreen} />
+        <Stack.Screen name="DonorDetail" component={DonorDetailScreen} />
+        <Stack.Screen name="DirectRequest" component={DirectRequestScreen} />
+        <Stack.Screen name="Call" component={CallScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

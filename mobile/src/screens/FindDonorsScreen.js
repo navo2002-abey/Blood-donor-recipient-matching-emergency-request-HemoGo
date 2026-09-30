@@ -201,7 +201,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.requestBtn} onPress={() => comingSoon('Request Blood')}>
+        <TouchableOpacity style={styles.requestBtn} onPress={() => navigation.navigate('AvailableDonors')}>
           <Text style={styles.requestText}>Request Blood</Text>
         </TouchableOpacity>
       </View>

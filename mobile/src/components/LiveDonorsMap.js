@@ -39,6 +39,7 @@ const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, plac
       const map = L.map('map', {
         zoomControl: interactive,
         dragging: interactive,
+        touchZoom: interactive,
         scrollWheelZoom: interactive,
         doubleClickZoom: interactive,
         boxZoom: false,

@@ -88,7 +88,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.cardTitle}>Find Donors</Text>
             <Text style={styles.cardSub}>Locate nearby blood donors in real-time</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.smallCard} onPress={() => comingSoon('Request Blood')}>
+          <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('AvailableDonors')}>
             <View style={styles.cardIcon}>
               <BloodDrop size={18} />
             </View>
