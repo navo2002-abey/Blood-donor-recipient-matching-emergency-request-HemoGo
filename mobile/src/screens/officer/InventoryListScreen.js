@@ -72,7 +72,7 @@ const InventoryListScreen = ({ navigation, route }) => {
     try {
       const [stockRes, resRes] = await Promise.all([
         stockService.list({ hospital: HOSPITAL }),
-        reservationService.list({ hospital: HOSPITAL }),
+        reservationService.list({ hospital: HOSPITAL, includeTransfers: true }),
       ]);
 
       // ✅ Available tab: only AVAILABLE batches with units > 0
@@ -87,7 +87,16 @@ const InventoryListScreen = ({ navigation, route }) => {
       });
 
       setStock(sorted);
-      setReservations(resRes.data.reservations || []);
+
+      // ✅ Reserved tab:
+      // - Manual reservations: show all (history)
+      // - Transfer reservations: only show active (RESERVED) ones
+      const allReservations = resRes.data.reservations || [];
+      const visible = allReservations.filter((r) => {
+        if (!r.isTransfer) return true;
+        return r.status === 'RESERVED';
+      });
+      setReservations(visible);
     } catch (e) {
       Alert.alert('Error', 'Failed to load inventory.');
     } finally {
@@ -227,7 +236,7 @@ const InventoryListScreen = ({ navigation, route }) => {
 
       {stock.length === 0 && (
         <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No stock registered yet.</Text>
+          <Text style={styles.emptyText}>No available stock.</Text>
         </View>
       )}
     </>
@@ -254,6 +263,7 @@ const InventoryListScreen = ({ navigation, route }) => {
       const isReserved = item.status === 'RESERVED';
       const busy = busyId === item._id;
       const reservedUnits = item.units || 1;
+      const isTransfer = item.isTransfer === true;
 
       return (
         <View key={item._id} style={styles.card}>
@@ -266,6 +276,12 @@ const InventoryListScreen = ({ navigation, route }) => {
                 {item.bloodGroup} × {reservedUnits}
               </Text>
             </View>
+            {isTransfer ? (
+              <View style={styles.transferBadge}>
+                <Ionicons name="swap-horizontal" size={10} color="#7C3AED" />
+                <Text style={styles.transferBadgeText}>TRANSFER</Text>
+              </View>
+            ) : null}
             <View style={{ flex: 1 }}>
               <Text style={styles.patient} numberOfLines={1}>
                 {item.patientName}
@@ -321,7 +337,17 @@ const InventoryListScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {isReserved ? (
+          {/* ✅ Transfer reservations — no manual actions */}
+          {isTransfer ? (
+            <View style={styles.actionRow}>
+              <View style={styles.transferHintBox}>
+                <Ionicons name="information-circle" size={14} color="#7C3AED" />
+                <Text style={styles.transferHintText}>
+                  Incoming transfer — manage via Transfer Log
+                </Text>
+              </View>
+            </View>
+          ) : isReserved ? (
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={[styles.actionBtn, busy && styles.actionDisabled]}
@@ -570,7 +596,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   unitBadge: {
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -588,6 +614,22 @@ const styles = StyleSheet.create({
   patient: { fontSize: 14, fontWeight: '800', color: colors.text },
   ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   statusText: { fontSize: 10, fontWeight: '800' },
+
+  transferBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#F3E8FF',
+  },
+  transferBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#7C3AED',
+    letterSpacing: 0.3,
+  },
 
   infoList: { gap: 6 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -623,6 +665,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontStyle: 'italic',
+  },
+
+  transferHintBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F3E8FF',
+    padding: 10,
+    borderRadius: 8,
+  },
+  transferHintText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#7C3AED',
+    fontWeight: '700',
   },
 
   /* Empty */

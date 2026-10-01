@@ -18,6 +18,9 @@ const reservationSchema = new mongoose.Schema(
       default: 'RESERVED',
     },
     reservedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // ✅ NEW — links this reservation to a transfer
+    transferId: { type: mongoose.Schema.Types.ObjectId, ref: 'TransferRequest' },
+    isTransfer: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

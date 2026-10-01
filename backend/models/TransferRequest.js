@@ -15,10 +15,24 @@ const transferSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED'],
+      enum: ['PENDING', 'APPROVED', 'DELIVERED', 'COMPLETED', 'CANCELLED'],
       default: 'PENDING',
     },
     requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: Date,
+    deliveredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    deliveredAt: Date,
+    confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    confirmedAt: Date,
+    // ✅ NEW — records which source batches were drawn (with their expiry dates)
+    // So on completion, destination stock is created with the SAME expiry dates
+    sourceBatches: [
+      {
+        expiryDate: { type: Date, required: true },
+        units: { type: Number, required: true },
+      },
+    ],
   },
   { timestamps: true }
 );

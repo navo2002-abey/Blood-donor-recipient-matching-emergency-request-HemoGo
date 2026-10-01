@@ -11,37 +11,25 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
-import { useAlerts } from '../../context/AlertsContext';
-import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../context/ConfirmContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { transferService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 
-const FILTERS = [
+const DIRECTION_FILTERS = [
   { key: 'ALL', label: 'All' },
-  { key: 'PENDING', label: 'Pending' },
-  { key: 'APPROVED', label: 'Approved' },
-  { key: 'COMPLETED', label: 'Done' },
+  { key: 'INCOMING', label: 'Incoming' },
+  { key: 'OUTGOING', label: 'Outgoing' },
 ];
 
-const statusTheme = (status) => {
-  switch (status) {
-    case 'PENDING':
-      return { color: '#D97706', bg: '#FFFBEB', label: 'PENDING' };
-    case 'APPROVED':
-      return { color: '#2563EB', bg: '#EFF6FF', label: 'APPROVED' };
-    case 'COMPLETED':
-      return { color: '#059669', bg: '#ECFDF5', label: 'COMPLETED' };
-    case 'CANCELLED':
-    case 'REJECTED':
-      return { color: '#DC2626', bg: '#FEE2E2', label: 'CANCELLED' };
-    default:
-      return { color: colors.textSecondary, bg: '#F3F4F6', label: status };
-  }
-};
+const URGENCY_FILTERS = [
+  { key: 'ALL', label: 'Show All' },
+  { key: 'CRITICAL', label: 'Critical' },
+  { key: 'HIGH', label: 'High' },
+];
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -55,25 +43,29 @@ const timeAgo = (date) => {
   return `${Math.floor(hrs / 24)}d ago`;
 };
 
+const urgencyColor = (u) => {
+  if (u === 'CRITICAL') return colors.primary;
+  if (u === 'HIGH') return '#F59E0B';
+  if (u === 'MEDIUM') return '#3B82F6';
+  return colors.textSecondary;
+};
+
 const BloodRescueScreen = ({ navigation }) => {
   const confirm = useConfirm();
-  const { unreadCount } = useAlerts();
-  const { user } = useAuth();
-
-  // ✅ STRICT: use user.hospital directly — no fallback
-  const myHospital = user?.hospital;
+  const myHospital = useMyHospital();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [filter, setFilter] = useState('ALL');
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  const [directionFilter, setDirectionFilter] = useState('ALL');
+  const [urgencyFilter, setUrgencyFilter] = useState('ALL');
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
     if (!myHospital) {
-      setError('No hospital assigned to your account. Please contact admin.');
+      setError('No hospital assigned to your account.');
       setLoading(false);
       setRefreshing(false);
       return;
@@ -81,20 +73,31 @@ const BloodRescueScreen = ({ navigation }) => {
     try {
       setError(null);
       const { data } = await transferService.list({ hospital: myHospital });
-      setTransfers(data.transfers || []);
+      // Action items:
+      // - INCOMING + PENDING  → I approve/reject
+      // - OUTGOING + PENDING  → I wait (or cancel)
+      // - OUTGOING + APPROVED → I mark delivered
+      // - INCOMING + DELIVERED → I confirm received
+      const actionItems = (data.transfers || []).filter((t) => {
+        const isIncoming = t.destinationHospital === myHospital;
+        const isOutgoing = t.sourceBank === myHospital;
+        if (isIncoming && t.status === 'PENDING') return true;
+        if (isOutgoing && t.status === 'PENDING') return true;
+        if (isOutgoing && t.status === 'APPROVED') return true;
+        if (isIncoming && t.status === 'DELIVERED') return true;
+        return false;
+      });
+      setTransfers(actionItems);
     } catch (e) {
       console.error('Load transfers error:', e?.response?.data || e.message);
-      setError(e?.response?.data?.message || 'Failed to load exchange requests.');
+      setError(e?.response?.data?.message || 'Failed to load.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [myHospital]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     const unsub = navigation.addListener('focus', load);
     return unsub;
@@ -105,7 +108,6 @@ const BloodRescueScreen = ({ navigation }) => {
     load();
   };
 
-  // Direction based on hospital names (more reliable than requestedBy)
   const getDirection = (t) => {
     if (t.destinationHospital === myHospital) return 'OUTGOING';
     if (t.sourceBank === myHospital) return 'INCOMING';
@@ -119,13 +121,10 @@ const BloodRescueScreen = ({ navigation }) => {
       confirmText: 'Approve',
     });
     if (!ok) return;
-
     try {
       setBusyId(t._id);
       await transferService.update(t._id, { status: 'APPROVED' });
       await load();
-
-      // ✅ Navigate to confirmation screen
       navigation.navigate('TransferConfirmation', {
         mode: 'approved',
         bloodGroup: t.bloodGroup,
@@ -141,15 +140,72 @@ const BloodRescueScreen = ({ navigation }) => {
     }
   };
 
+  const handleMarkDelivered = async (t) => {
+    const ok = await confirm({
+      title: 'Mark Delivered',
+      message: `Confirm ${t.units} unit(s) of ${t.bloodGroup} were sent to ${t.destinationHospital}?`,
+      confirmText: 'Mark Delivered',
+    });
+    if (!ok) return;
+    try {
+      setBusyId(t._id);
+      await transferService.update(t._id, { status: 'DELIVERED' });
+      await load();
+      Alert.alert('Sent', 'Waiting for destination to confirm receipt.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleConfirmReceived = async (t) => {
+    const ok = await confirm({
+      title: 'Confirm Received',
+      message: `Confirm you received ${t.units} unit(s) of ${t.bloodGroup}?`,
+      confirmText: 'Confirm Received',
+    });
+    if (!ok) return;
+    try {
+      setBusyId(t._id);
+      await transferService.update(t._id, { status: 'COMPLETED' });
+      await load();
+      Alert.alert('Received', `${t.units} unit(s) added to your stock.`);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to confirm.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleReject = async (t) => {
+    const ok = await confirm({
+      title: 'Reject Exchange',
+      message: `Reject the request for ${t.units} unit(s) of ${t.bloodGroup}?`,
+      confirmText: 'Reject',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      setBusyId(t._id);
+      await transferService.update(t._id, { status: 'CANCELLED' });
+      await load();
+      Alert.alert('Rejected', 'Request rejected.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to reject.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleCancel = async (t) => {
     const ok = await confirm({
       title: 'Cancel Request',
-      message: `Cancel exchange request for ${t.bloodGroup}?`,
+      message: `Cancel your request for ${t.bloodGroup}?`,
       confirmText: 'Cancel Request',
       destructive: true,
     });
     if (!ok) return;
-
     try {
       setBusyId(t._id);
       await transferService.update(t._id, { status: 'CANCELLED' });
@@ -161,97 +217,62 @@ const BloodRescueScreen = ({ navigation }) => {
     }
   };
 
+  // Filtered list
   const filtered = useMemo(() => {
-    if (filter === 'ALL') return transfers;
-    return transfers.filter((t) => t.status === filter);
-  }, [filter, transfers]);
+    return transfers.filter((t) => {
+      const dir = getDirection(t);
+      if (directionFilter !== 'ALL' && dir !== directionFilter) return false;
+      if (urgencyFilter !== 'ALL' && t.urgency !== urgencyFilter) return false;
+      return true;
+    });
+  }, [transfers, directionFilter, urgencyFilter, myHospital]);
 
   const counts = useMemo(
     () => ({
       ALL: transfers.length,
-      PENDING: transfers.filter((t) => t.status === 'PENDING').length,
-      APPROVED: transfers.filter((t) => t.status === 'APPROVED').length,
-      COMPLETED: transfers.filter((t) => t.status === 'COMPLETED').length,
+      INCOMING: transfers.filter((t) => getDirection(t) === 'INCOMING').length,
+      OUTGOING: transfers.filter((t) => getDirection(t) === 'OUTGOING').length,
     }),
-    [transfers]
+    [transfers, myHospital]
   );
 
-  const incomingPending = transfers.filter(
-    (t) => getDirection(t) === 'INCOMING' && t.status === 'PENDING'
-  ).length;
+  const incomingCount = counts.INCOMING;
 
   // ---------- ERROR STATE ----------
   if (error) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            hitSlop={10}
-            style={styles.headerBtn}
-            onPress={() => setSidebarOpen(true)}
-          >
-            <Ionicons name="menu-outline" size={26} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.brand}>
-            <BloodDrop size={16} />
-            <Text style={styles.brandText}>HemoGo</Text>
-          </View>
-          <View style={styles.headerBtn} />
-        </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <AppHeader
+          navigation={navigation}
+          onMenuPress={() => setSidebarOpen(true)}
+        />
+        <View style={styles.errorWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.primary} />
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: '800',
-              color: colors.text,
-              marginTop: 16,
-              textAlign: 'center',
-            }}
-          >
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={{
-              marginTop: 20,
-              paddingHorizontal: 24,
-              paddingVertical: 12,
-              borderRadius: 20,
-              backgroundColor: colors.primary,
-            }}
-            onPress={load}
-          >
-            <Text style={{ color: colors.white, fontWeight: '800' }}>Retry</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
+        <Sidebar
+          visible={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          navigation={navigation}
+          onComingSoon={comingSoon}
+          menu={OFFICER_MENU}
+          variant="staff"
+          activeKey="Blood Bank Exchange"
+          hospital={myHospital || 'HemoGo'}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          hitSlop={10}
-          style={styles.headerBtn}
-          onPress={() => setSidebarOpen(true)}
-        >
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.brand}>
-          <BloodDrop size={16} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity
-          hitSlop={10}
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -266,7 +287,7 @@ const BloodRescueScreen = ({ navigation }) => {
           <Text style={styles.title}>Blood Bank Exchange</Text>
         </View>
         <Text style={styles.subtitle}>
-          Request blood from other banks, or respond to incoming requests.
+          Request blood from another bank, or respond to incoming requests.
         </Text>
 
         {/* Your bank */}
@@ -299,26 +320,39 @@ const BloodRescueScreen = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={20} color={colors.white} />
         </TouchableOpacity>
 
-        {/* Alert if incoming pending */}
-        {incomingPending > 0 ? (
+        {/* Incoming alert */}
+        {incomingCount > 0 ? (
           <View style={styles.alertBanner}>
             <Ionicons name="alert-circle" size={20} color="#D97706" />
             <Text style={styles.alertText}>
-              {incomingPending} incoming request
-              {incomingPending > 1 ? 's' : ''} need your approval
+              {incomingCount} incoming request
+              {incomingCount > 1 ? 's' : ''} need your approval
             </Text>
           </View>
         ) : null}
 
-        {/* Filter chips */}
+        {/* Section title — pending actions */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            PENDING ACTIONS ({transfers.length})
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PendingTransfers')}
+          >
+            <Text style={styles.sectionLink}>View Full Log</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Direction filter */}
+        <Text style={styles.filterLabel}>DIRECTION</Text>
         <View style={styles.filterRow}>
-          {FILTERS.map((f) => {
-            const active = filter === f.key;
+          {DIRECTION_FILTERS.map((f) => {
+            const active = directionFilter === f.key;
             return (
               <TouchableOpacity
                 key={f.key}
                 style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setFilter(f.key)}
+                onPress={() => setDirectionFilter(f.key)}
               >
                 <Text
                   style={[styles.filterText, active && styles.filterTextActive]}
@@ -331,39 +365,59 @@ const BloodRescueScreen = ({ navigation }) => {
           })}
         </View>
 
+        {/* Urgency filter */}
+        <Text style={styles.filterLabel}>URGENCY</Text>
+        <View style={styles.filterRow}>
+          {URGENCY_FILTERS.map((f) => {
+            const active = urgencyFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setUrgencyFilter(f.key)}
+              >
+                <Text
+                  style={[styles.filterText, active && styles.filterTextActive]}
+                  numberOfLines={1}
+                >
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* List */}
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
         ) : filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons
-              name="swap-horizontal-outline"
+              name="checkmark-circle-outline"
               size={44}
-              color={colors.textMuted}
+              color={colors.success}
             />
             <Text style={styles.emptyTitle}>
-              {filter === 'ALL'
-                ? 'No exchange requests yet'
-                : `No ${filter.toLowerCase()} requests`}
+              {transfers.length === 0
+                ? 'No pending actions'
+                : 'No matches for filters'}
             </Text>
             <Text style={styles.emptySub}>
-              {filter === 'ALL'
-                ? 'Tap "New Exchange Request" to request blood from another bank.'
-                : 'Try switching the filter.'}
+              {transfers.length === 0
+                ? 'All transfers have been handled.'
+                : 'Try changing the direction or urgency filter.'}
             </Text>
           </View>
         ) : (
           filtered.map((t) => {
             const direction = getDirection(t);
-            const theme = statusTheme(t.status);
             const busy = busyId === t._id;
             const isIncoming = direction === 'INCOMING';
-            const canApprove = isIncoming && t.status === 'PENDING';
-            const canCancel = !isIncoming && t.status === 'PENDING';
+            const uColor = urgencyColor(t.urgency);
 
             return (
               <View key={t._id} style={styles.card}>
-                {/* Direction + status */}
+                {/* Top row */}
                 <View style={styles.cardTop}>
                   <View
                     style={[
@@ -375,7 +429,7 @@ const BloodRescueScreen = ({ navigation }) => {
                   >
                     <Ionicons
                       name={isIncoming ? 'arrow-down' : 'arrow-up'}
-                      size={12}
+                      size={11}
                       color={isIncoming ? '#7C3AED' : '#2563EB'}
                     />
                     <Text
@@ -387,15 +441,17 @@ const BloodRescueScreen = ({ navigation }) => {
                       {isIncoming ? 'INCOMING' : 'OUTGOING'}
                     </Text>
                   </View>
-                  <View style={[styles.statusPill, { backgroundColor: theme.bg }]}>
-                    <Text style={[styles.statusText, { color: theme.color }]}>
-                      {theme.label}
+                  <View
+                    style={[styles.urgencyPill, { backgroundColor: `${uColor}20` }]}
+                  >
+                    <Text style={[styles.urgencyText, { color: uColor }]}>
+                      {t.urgency || 'MEDIUM'}
                     </Text>
                   </View>
                   <Text style={styles.timeText}>{timeAgo(t.createdAt)}</Text>
                 </View>
 
-                {/* Blood + units */}
+                {/* Blood row */}
                 <View style={styles.bloodRow}>
                   <View style={styles.bloodBadge}>
                     <Text style={styles.bloodBadgeText}>{t.bloodGroup}</Text>
@@ -403,12 +459,6 @@ const BloodRescueScreen = ({ navigation }) => {
                   <Text style={styles.unitsText}>
                     {t.units} unit{t.units > 1 ? 's' : ''}
                   </Text>
-                  <View style={{ flex: 1 }} />
-                  {t.urgency ? (
-                    <View style={styles.urgencyPill}>
-                      <Text style={styles.urgencyText}>{t.urgency}</Text>
-                    </View>
-                  ) : null}
                 </View>
 
                 {/* Route */}
@@ -421,7 +471,7 @@ const BloodRescueScreen = ({ navigation }) => {
                   </View>
                   <Ionicons
                     name="arrow-forward"
-                    size={16}
+                    size={14}
                     color={colors.textMuted}
                   />
                   <View style={styles.routeCol}>
@@ -439,51 +489,72 @@ const BloodRescueScreen = ({ navigation }) => {
                 ) : null}
 
                 {/* Actions */}
-                {canApprove || canCancel ? (
-                  <View style={styles.actionRow}>
-                    {canApprove ? (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.primaryBtn, busy && styles.disabled]}
-                          onPress={() => handleApprove(t)}
-                          disabled={busy}
-                        >
-                          <Ionicons
-                            name="checkmark"
-                            size={16}
-                            color={colors.white}
-                          />
-                          <Text style={styles.primaryBtnText}>
-                            {busy ? '...' : 'Approve'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.outlineBtn, busy && styles.disabled]}
-                          onPress={() => handleCancel(t)}
-                          disabled={busy}
-                        >
-                          <Text style={styles.outlineBtnText}>Reject</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : (
+                <View style={styles.actionRow}>
+                  {direction === 'INCOMING' && t.status === 'PENDING' && (
+                    <>
                       <TouchableOpacity
-                        style={[styles.outlineBtnWide, busy && styles.disabled]}
-                        onPress={() => handleCancel(t)}
+                        style={[styles.primaryBtn, busy && styles.disabled]}
+                        onPress={() => handleApprove(t)}
                         disabled={busy}
                       >
-                        <Ionicons name="close" size={14} color={colors.primary} />
-                        <Text style={styles.outlineBtnTextPrimary}>
-                          Cancel Request
+                        <Ionicons name="checkmark" size={15} color={colors.white} />
+                        <Text style={styles.primaryBtnText}>
+                          {busy ? '...' : 'Approve'}
                         </Text>
                       </TouchableOpacity>
-                    )}
-                  </View>
-                ) : null}
+                      <TouchableOpacity
+                        style={[styles.outlineBtn, busy && styles.disabled]}
+                        onPress={() => handleReject(t)}
+                        disabled={busy}
+                      >
+                        <Text style={styles.outlineBtnText}>Reject</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  {direction === 'OUTGOING' && t.status === 'PENDING' && (
+                    <TouchableOpacity
+                      style={[styles.outlineBtnWide, busy && styles.disabled]}
+                      onPress={() => handleCancel(t)}
+                      disabled={busy}
+                    >
+                      <Ionicons name="close" size={14} color={colors.primary} />
+                      <Text style={styles.outlineBtnTextPrimary}>Cancel Request</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {direction === 'OUTGOING' && t.status === 'APPROVED' && (
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, busy && styles.disabled]}
+                      onPress={() => handleMarkDelivered(t)}
+                      disabled={busy}
+                    >
+                      <Ionicons name="paper-plane-outline" size={15} color={colors.white} />
+                      <Text style={styles.primaryBtnText}>
+                        {busy ? '...' : 'Mark Delivered'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {direction === 'INCOMING' && t.status === 'DELIVERED' && (
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, busy && styles.disabled]}
+                      onPress={() => handleConfirmReceived(t)}
+                      disabled={busy}
+                    >
+                      <Ionicons name="checkmark-done" size={15} color={colors.white} />
+                      <Text style={styles.primaryBtnText}>
+                        {busy ? '...' : 'Confirm Received'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             );
           })
         )}
 
+        {/* View Full Log button */}
         <TouchableOpacity
           style={styles.logBtn}
           onPress={() => navigation.navigate('PendingTransfers')}
@@ -501,7 +572,7 @@ const BloodRescueScreen = ({ navigation }) => {
         onComingSoon={comingSoon}
         menu={OFFICER_MENU}
         variant="staff"
-        activeKey="Smart Blood Rescue"
+        activeKey="Blood Bank Exchange"
         hospital={myHospital || 'HemoGo'}
       />
     </SafeAreaView>
@@ -510,44 +581,14 @@ const BloodRescueScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  bellBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 10,
-  },
+
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   subtitle: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 8,
+    marginTop: 6,
     marginBottom: 16,
   },
 
@@ -590,7 +631,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   newRequestIcon: {
     width: 44,
@@ -616,7 +657,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#FDE68A',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   alertText: {
     flex: 1,
@@ -625,14 +666,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+  },
+  sectionLink: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+
+  filterLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+
   filterRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   filterChip: {
     flex: 1,
     paddingVertical: 9,
+    paddingHorizontal: 4,
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -676,8 +745,8 @@ const styles = StyleSheet.create({
   directionIncoming: { backgroundColor: '#F3E8FF' },
   directionOutgoing: { backgroundColor: '#DBEAFE' },
   directionText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  urgencyPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  urgencyText: { fontSize: 9, fontWeight: '800' },
   timeText: { flex: 1, textAlign: 'right', fontSize: 10, color: colors.textMuted },
 
   bloodRow: {
@@ -694,13 +763,6 @@ const styles = StyleSheet.create({
   },
   bloodBadgeText: { fontSize: 14, fontWeight: '900', color: colors.primary },
   unitsText: { fontSize: 14, fontWeight: '800', color: colors.text },
-  urgencyPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  urgencyText: { fontSize: 9, fontWeight: '800', color: colors.textSecondary },
 
   routeRow: {
     flexDirection: 'row',
@@ -778,9 +840,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    padding: 18,
+    padding: 16,
     borderRadius: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
   logText: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
 
@@ -803,6 +865,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
+
+  errorWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+  },
+  retryText: { color: colors.white, fontWeight: '800' },
 });
 
 export default BloodRescueScreen;
