@@ -141,11 +141,10 @@ const CampaignListScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* ✅ Menu icon (sidebar) — no back arrow */}
       <AppHeader
         navigation={navigation}
         onMenuPress={() => setSidebarOpen(true)}
-        showBack
-        onBackPress={() => navigation.goBack()}
       />
 
       {loading ? (
@@ -191,7 +190,7 @@ const CampaignListScreen = ({ navigation }) => {
         onComingSoon={comingSoon}
         menu={OFFICER_MENU}
         variant="staff"
-        activeKey="Organize Donation Drive"
+        activeKey="Donation Campaigns"
         hospital={HOSPITAL}
       />
     </SafeAreaView>

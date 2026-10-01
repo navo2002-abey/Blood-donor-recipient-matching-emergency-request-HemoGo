@@ -53,7 +53,6 @@ export const OFFICER_MENU = [
   { key: 'Blood Bank Exchange', screen: 'BloodRescue' },
   { key: 'Nearby Blood Banks', screen: 'NearbyBloodBanks' },
   { key: 'Donation Campaigns', screen: 'CampaignList' },   // ✅ NEW
-  { key: 'Organize Donation Drive', screen: 'OrganizeDrive' },
   { key: 'Settings', screen: 'Settings' },
 ];
 
