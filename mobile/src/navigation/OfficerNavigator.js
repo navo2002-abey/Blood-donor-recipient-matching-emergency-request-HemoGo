@@ -9,7 +9,6 @@ import HomeScreen from '../screens/officer/HomeScreen';
 import InventoryListScreen from '../screens/officer/InventoryListScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
 import EditStockScreen from '../screens/officer/EditStockScreen';
-import ReservedUnitsScreen from '../screens/officer/ReservedUnitsScreen';
 import CreateReservationScreen from '../screens/officer/CreateReservationScreen';
 import ExpiryMonitoringScreen from '../screens/officer/ExpiryMonitoringScreen';
 import AIPredictionScreen from '../screens/officer/AIPredictionScreen';
@@ -96,7 +95,6 @@ const OfficerNavigator = () => (
     <Stack.Screen name="OfficerTabs" component={OfficerTabs} />
     <Stack.Screen name="AddStock" component={AddStockScreen} />
     <Stack.Screen name="EditStock" component={EditStockScreen} />
-    <Stack.Screen name="ReservedUnits" component={ReservedUnitsScreen} />
     <Stack.Screen name="CreateReservation" component={CreateReservationScreen} />
     <Stack.Screen name="ExpiryMonitoring" component={ExpiryMonitoringScreen} />
     <Stack.Screen name="AIPrediction" component={AIPredictionScreen} />

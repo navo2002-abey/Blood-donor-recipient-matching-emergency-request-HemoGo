@@ -27,7 +27,7 @@ const daysLeft = (date) => {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 };
 
-const statusTheme = (status, expiryDate) => {
+const stockStatusTheme = (status, expiryDate) => {
   const days = daysLeft(expiryDate);
   if (status === 'EXPIRED' || days <= 0) return { bg: '#FEE2E2', text: '#DC2626' };
   if (status === 'RESERVED') return { bg: '#EFF6FF', text: '#2563EB' };
@@ -38,11 +38,30 @@ const statusTheme = (status, expiryDate) => {
   return { bg: '#ECFDF5', text: '#059669' };
 };
 
-const InventoryListScreen = ({ navigation }) => {
+const reservationStatusColor = (status) => {
+  if (status === 'RESERVED') return '#F59E0B';
+  if (status === 'RELEASED') return colors.success;
+  if (status === 'USED') return '#3B82F6';
+  if (status === 'EXPIRED') return colors.primary;
+  return colors.textSecondary;
+};
+
+const reservationStatusBg = (status) => {
+  if (status === 'RESERVED') return '#FFFBEB';
+  if (status === 'RELEASED') return '#ECFDF5';
+  if (status === 'USED') return '#EFF6FF';
+  if (status === 'EXPIRED') return '#FFF1F3';
+  return '#F4F4F6';
+};
+
+const InventoryListScreen = ({ navigation, route }) => {
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
+
+  // Support opening directly on Reserved tab via route param
+  const initialTab = route?.params?.initialTab || 'available';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('available');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stock, setStock] = useState([]);
@@ -76,10 +95,25 @@ const InventoryListScreen = ({ navigation }) => {
     return unsub;
   }, [navigation, load]);
 
+  // If a new initialTab param is passed while already on this screen
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
+
+  // ---------- STOCK ACTIONS ----------
+  const goEditStock = (item) => {
+    navigation.navigate('EditStock', { id: item._id });
+  };
+
+  // ---------- RESERVATION ACTIONS ----------
   const handleRelease = async (item) => {
     const ok = await confirm({
       title: 'Release Unit',
-      message: `Return unit ${item.unitId} to available stock?`,
+      message: `Return unit ${item.unitId} (${item.units || 1} unit${
+        (item.units || 1) > 1 ? 's' : ''
+      }) to available stock?`,
       confirmText: 'Release',
     });
     if (!ok) return;
@@ -87,13 +121,54 @@ const InventoryListScreen = ({ navigation }) => {
       setBusyId(item._id);
       await reservationService.update(item._id, { status: 'RELEASED' });
       await load();
+      Alert.alert('Released', 'Unit returned to available stock.');
     } catch (e) {
-      Alert.alert('Error', 'Failed to release.');
+      Alert.alert('Error', 'Failed to release unit.');
     } finally {
       setBusyId(null);
     }
   };
 
+  const handleMarkUsed = async (item) => {
+    const ok = await confirm({
+      title: 'Mark Used',
+      message: `Mark unit ${item.unitId} as used?`,
+      confirmText: 'Mark Used',
+    });
+    if (!ok) return;
+    try {
+      setBusyId(item._id);
+      await reservationService.update(item._id, { status: 'USED' });
+      await load();
+      Alert.alert('Updated', 'Unit marked as used.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update unit.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDeleteReservation = async (item) => {
+    const ok = await confirm({
+      title: 'Cancel Reservation',
+      message: `Permanently remove reservation for ${item.patientName}? Units will return to stock.`,
+      confirmText: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      setBusyId(item._id);
+      await reservationService.remove(item._id);
+      await load();
+      Alert.alert('Deleted', 'Reservation removed.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete reservation.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // ---------- AVAILABLE STOCK TABLE ----------
   const renderAvailable = () => (
     <>
       <View style={styles.tableHeaderRow}>
@@ -106,7 +181,7 @@ const InventoryListScreen = ({ navigation }) => {
 
       {stock.map((item, index) => {
         const days = daysLeft(item.expiryDate);
-        const theme = statusTheme(item.status, item.expiryDate);
+        const theme = stockStatusTheme(item.status, item.expiryDate);
         return (
           <View
             key={item._id}
@@ -135,7 +210,7 @@ const InventoryListScreen = ({ navigation }) => {
             </View>
             <TouchableOpacity
               style={{ flex: 1.4, alignItems: 'center' }}
-              onPress={() => navigation.navigate('EditStock', { id: item._id })}
+              onPress={() => goEditStock(item)}
             >
               <Text style={styles.editLink}>Edit</Text>
             </TouchableOpacity>
@@ -151,62 +226,144 @@ const InventoryListScreen = ({ navigation }) => {
     </>
   );
 
-  const renderReserved = () => (
-    <>
-      <View style={styles.tableHeaderRow}>
-        <Text style={[styles.tableHeader, { flex: 2 }]}>Unit ID</Text>
-        <Text style={[styles.tableHeader, { flex: 1.2 }]}>Blood</Text>
-        <Text style={[styles.tableHeader, { flex: 2.8 }]}>Reserved For</Text>
-        <Text style={[styles.tableHeader, { flex: 2.2 }]}>Actions</Text>
-      </View>
-
-      {reservations.map((item, index) => {
-        const busy = busyId === item._id;
-        const isReserved = item.status === 'RESERVED';
-        return (
-          <View
-            key={item._id}
-            style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
+  // ---------- RESERVED UNITS CARDS ----------
+  const renderReserved = () => {
+    if (reservations.length === 0) {
+      return (
+        <View style={styles.empty}>
+          <Ionicons name="bookmark-outline" size={40} color={colors.textMuted} />
+          <Text style={styles.emptyText}>No reservations yet.</Text>
+          <TouchableOpacity
+            style={styles.emptyBtn}
+            onPress={() => navigation.navigate('CreateReservation')}
           >
-            <Text style={[styles.tableCell, styles.boldText, { flex: 2 }]}>
-              {item.unitId}
-            </Text>
-            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>
-              {item.bloodGroup}
-            </Text>
-            <View style={{ flex: 2.8, alignItems: 'center' }}>
-              <Text
-                style={[styles.tableCell, { paddingVertical: 0 }]}
-                numberOfLines={1}
-              >
-                {item.reservedFor || item.ward}
-              </Text>
-              <Text style={styles.expirySubtext}>{item.status}</Text>
+            <Text style={styles.emptyBtnText}>Create New Reservation</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return reservations.map((item) => {
+      const isReserved = item.status === 'RESERVED';
+      const busy = busyId === item._id;
+      const reservedUnits = item.units || 1;
+
+      return (
+        <View key={item._id} style={styles.card}>
+          <View style={styles.cardTop}>
+            <View style={styles.unitBadge}>
+              <Text style={styles.unitId}>{item.unitId}</Text>
             </View>
-            <View style={{ flex: 2.2, alignItems: 'center' }}>
-              {isReserved ? (
-                <TouchableOpacity
-                  style={[styles.actionBtn, busy && { opacity: 0.5 }]}
-                  onPress={() => handleRelease(item)}
-                  disabled={busy}
-                >
-                  <Text style={styles.actionBtnText}>Release</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.expirySubtext}>—</Text>
-              )}
+            <View style={styles.bloodBadge}>
+              <Text style={styles.bloodText}>
+                {item.bloodGroup} × {reservedUnits}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.patient} numberOfLines={1}>
+                {item.patientName}
+              </Text>
+              <Text style={styles.ward} numberOfLines={1}>
+                {item.ward}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statusPill,
+                { backgroundColor: reservationStatusBg(item.status) },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: reservationStatusColor(item.status) },
+                ]}
+              >
+                {item.status}
+              </Text>
             </View>
           </View>
-        );
-      })}
 
-      {reservations.length === 0 && (
-        <View style={styles.emptyRow}>
-          <Text style={styles.emptyText}>No reservations yet.</Text>
+          <View style={styles.infoList}>
+            <View style={styles.infoRow}>
+              <Ionicons name="water-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.infoText}>
+                <Text style={styles.infoLabel}>Units: </Text>
+                <Text style={styles.infoValue}>{reservedUnits}</Text>
+              </Text>
+            </View>
+
+            {item.reservedFor ? (
+              <View style={styles.infoRow}>
+                <Ionicons name="person-outline" size={13} color={colors.textMuted} />
+                <Text style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Reserved for: </Text>
+                  <Text style={styles.infoValue}>{item.reservedFor}</Text>
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.infoRow}>
+              <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.infoText}>
+                <Text style={styles.infoLabel}>Reserved at: </Text>
+                <Text style={styles.infoValue}>
+                  {new Date(item.reservedAt || item.createdAt).toLocaleString()}
+                </Text>
+              </Text>
+            </View>
+          </View>
+
+          {isReserved ? (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.actionBtn, busy && styles.actionDisabled]}
+                onPress={() => handleRelease(item)}
+                disabled={busy}
+              >
+                <Text style={styles.actionText}>{busy ? '...' : 'Release'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  styles.actionPrimary,
+                  busy && styles.actionDisabled,
+                ]}
+                onPress={() => handleMarkUsed(item)}
+                disabled={busy}
+              >
+                <Text style={styles.actionPrimaryText}>
+                  {busy ? '...' : 'Mark Used'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.iconBtn, busy && styles.actionDisabled]}
+                onPress={() => handleDeleteReservation(item)}
+                disabled={busy}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.iconBtn, busy && styles.actionDisabled]}
+                onPress={() => handleDeleteReservation(item)}
+                disabled={busy}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.hintText}>
+                {item.status === 'RELEASED' && 'Units returned to available stock.'}
+                {item.status === 'USED' && 'Units consumed from stock.'}
+                {item.status === 'EXPIRED' && 'Reservation expired.'}
+              </Text>
+            </View>
+          )}
         </View>
-      )}
-    </>
-  );
+      );
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -234,6 +391,7 @@ const InventoryListScreen = ({ navigation }) => {
           <Ionicons name="caret-down" size={14} color={colors.textMuted} />
         </View>
 
+        {/* Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'available' && styles.activeTab]}
@@ -245,7 +403,7 @@ const InventoryListScreen = ({ navigation }) => {
                 activeTab === 'available' && styles.activeTabText,
               ]}
             >
-              Available Stock
+              Available ({stock.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -258,22 +416,26 @@ const InventoryListScreen = ({ navigation }) => {
                 activeTab === 'reserved' && styles.activeTabText,
               ]}
             >
-              Reserved Units
+              Reserved ({reservations.length})
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tableContainer}>
-          {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-          ) : activeTab === 'available' ? (
-            renderAvailable()
-          ) : (
-            renderReserved()
-          )}
-        </View>
+        {/* Content */}
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={{ marginTop: 40 }}
+          />
+        ) : activeTab === 'available' ? (
+          <View style={styles.tableContainer}>{renderAvailable()}</View>
+        ) : (
+          <View style={styles.cardList}>{renderReserved()}</View>
+        )}
       </ScrollView>
 
+      {/* Bottom CTA */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={styles.primaryButton}
@@ -283,8 +445,16 @@ const InventoryListScreen = ({ navigation }) => {
               : navigation.navigate('CreateReservation')
           }
         >
+          <Ionicons
+            name="add"
+            size={16}
+            color={colors.white}
+            style={{ marginRight: 6 }}
+          />
           <Text style={styles.primaryButtonText}>
-            {activeTab === 'available' ? '+ ADD NEW STOCK' : '+ CREATE NEW RESERVATION'}
+            {activeTab === 'available'
+              ? 'ADD NEW STOCK'
+              : 'CREATE NEW RESERVATION'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -306,6 +476,7 @@ const InventoryListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
   scroll: { paddingHorizontal: 20, paddingBottom: 120 },
+
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 6 },
   pageSubtitle: {
     fontSize: 12,
@@ -313,6 +484,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 20,
   },
+
   dropdown: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -323,9 +495,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   dropdownText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#FFF1F3',
@@ -335,8 +508,10 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
   activeTab: { backgroundColor: colors.primary },
-  tabText: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  tabText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   activeTabText: { color: colors.white },
+
+  /* Available table */
   tableContainer: {
     borderWidth: 1,
     borderColor: '#FEF2F2',
@@ -365,30 +540,110 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
   },
   tableRowAlt: { backgroundColor: '#FAFAFA' },
-  tableCell: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
+  tableCell: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   boldText: { fontWeight: '700', color: colors.text },
   boldRedText: { fontWeight: '800', color: colors.primary },
   editLink: { fontSize: 12, fontWeight: '700', color: colors.primary },
   expirySubtext: { fontSize: 9, color: colors.textMuted, marginTop: 2 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   statusPillText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.2 },
-  actionBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  actionBtnText: { color: colors.white, fontSize: 10, fontWeight: '700' },
   emptyRow: { padding: 24, alignItems: 'center' },
   emptyText: { fontSize: 12, color: colors.textSecondary },
+
+  /* Reserved cards */
+  cardList: { gap: 12 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  unitBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: colors.inputBg,
+    borderRadius: 8,
+  },
+  unitId: { fontSize: 11, fontWeight: '800', color: colors.text },
+  bloodBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+  },
+  bloodText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  patient: { fontSize: 14, fontWeight: '800', color: colors.text },
+  ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  statusText: { fontSize: 10, fontWeight: '800' },
+
+  infoList: { gap: 6 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoText: { fontSize: 11, color: colors.textSecondary, flex: 1 },
+  infoLabel: { color: colors.textMuted, fontWeight: '600' },
+  infoValue: { color: colors.text, fontWeight: '700' },
+
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
+  actionBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
+  actionText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  actionPrimaryText: { fontSize: 12, fontWeight: '800', color: colors.white },
+  actionDisabled: { opacity: 0.5 },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+
+  /* Empty */
+  empty: { alignItems: 'center', paddingVertical: 60 },
+  emptyBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+  },
+  emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 13 },
+
   bottomContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
-  primaryButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
 });
 
 export default InventoryListScreen;

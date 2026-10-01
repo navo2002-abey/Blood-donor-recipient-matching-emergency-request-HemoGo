@@ -83,10 +83,31 @@ const HomeScreen = ({ navigation }) => {
   ).length;
 
   const actions = [
-    { label: 'Add Stock', icon: 'add-circle', color: colors.primary, screen: 'AddStock' },
-    { label: 'Expiry', icon: 'hourglass-outline', color: '#F59E0B', screen: 'ExpiryMonitoring' },
-    { label: 'Reservations', icon: 'bookmark-outline', color: '#3B82F6', screen: 'ReservedUnits' },
-    { label: 'Rescue', icon: 'swap-horizontal-outline', color: '#8B5CF6', screen: 'BloodRescue' },
+    {
+      label: 'Add Stock',
+      icon: 'add-circle',
+      color: colors.primary,
+      onPress: () => navigation.navigate('AddStock'),
+    },
+    {
+      label: 'Expiry',
+      icon: 'hourglass-outline',
+      color: '#F59E0B',
+      onPress: () => navigation.navigate('ExpiryMonitoring'),
+    },
+    {
+      label: 'Reservations',
+      icon: 'bookmark-outline',
+      color: '#3B82F6',
+      onPress: () =>
+        navigation.navigate('Inventory', { initialTab: 'reserved' }),
+    },
+    {
+      label: 'Rescue',
+      icon: 'swap-horizontal-outline',
+      color: '#8B5CF6',
+      onPress: () => navigation.navigate('BloodRescue'),
+    },
   ];
 
   return (
@@ -127,7 +148,7 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity
               key={i}
               style={styles.actionCard}
-              onPress={() => navigation.navigate(action.screen)}
+              onPress={action.onPress}
             >
               <View style={[styles.actionIconBg, { backgroundColor: action.color + '15' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
