@@ -8,23 +8,22 @@ import React, {
   useState,
 } from 'react';
 
-const STORAGE_KEY = 'hemogo_dismissed_alerts';
+const STORAGE_KEY = 'hemogo_read_alerts';
 
 const AlertsContext = createContext(null);
 
 export const AlertsProvider = ({ children }) => {
-  const [dismissedIds, setDismissedIds] = useState([]);
+  const [readIds, setReadIds] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [ready, setReady] = useState(false);
 
-  // Load dismissed IDs from storage on mount
   useEffect(() => {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) setDismissedIds(parsed);
+          if (Array.isArray(parsed)) setReadIds(parsed);
         }
       } catch (e) {
         // ignore
@@ -34,7 +33,6 @@ export const AlertsProvider = ({ children }) => {
     })();
   }, []);
 
-  // Persist dismissed IDs whenever they change
   const persist = useCallback(async (ids) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
@@ -47,9 +45,9 @@ export const AlertsProvider = ({ children }) => {
     setAlerts(Array.isArray(list) ? list : []);
   }, []);
 
-  const dismissOne = useCallback(
+  const markOneRead = useCallback(
     async (id) => {
-      setDismissedIds((prev) => {
+      setReadIds((prev) => {
         if (prev.includes(id)) return prev;
         const next = [...prev, id];
         persist(next);
@@ -60,51 +58,57 @@ export const AlertsProvider = ({ children }) => {
   );
 
   const markAllRead = useCallback(async () => {
-    const ids = alerts.map((a) => a.id);
-    setDismissedIds(ids);
-    await persist(ids);
-  }, [alerts, persist]);
+    const currentIds = alerts.map((a) => a.id);
+    const merged = Array.from(new Set([...readIds, ...currentIds]));
+    setReadIds(merged);
+    await persist(merged);
+  }, [alerts, readIds, persist]);
 
-  const resetAlerts = useCallback(async () => {
-    setDismissedIds([]);
+  // ✅ Keep history but reset read state (user can re-see unread)
+  const clearAll = useCallback(async () => {
+    setReadIds([]);
     await persist([]);
   }, [persist]);
 
-  // Count of alerts not yet dismissed
+  const isRead = useCallback((id) => readIds.includes(id), [readIds]);
+
   const unreadCount = useMemo(
-    () => alerts.filter((a) => !dismissedIds.includes(a.id)).length,
-    [alerts, dismissedIds]
+    () => alerts.filter((a) => !readIds.includes(a.id)).length,
+    [alerts, readIds]
   );
 
-  // Total alerts (regardless of dismissed)
   const totalCount = alerts.length;
 
   const value = useMemo(
     () => ({
       ready,
       alerts,
-      dismissedIds,
+      readIds,
       unreadCount,
       totalCount,
       setAlertList,
-      dismissOne,
+      markOneRead,
       markAllRead,
-      resetAlerts,
+      clearAll,
+      isRead,
     }),
     [
       ready,
       alerts,
-      dismissedIds,
+      readIds,
       unreadCount,
       totalCount,
       setAlertList,
-      dismissOne,
+      markOneRead,
       markAllRead,
-      resetAlerts,
+      clearAll,
+      isRead,
     ]
   );
 
-  return <AlertsContext.Provider value={value}>{children}</AlertsContext.Provider>;
+  return (
+    <AlertsContext.Provider value={value}>{children}</AlertsContext.Provider>
+  );
 };
 
 export const useAlerts = () => {

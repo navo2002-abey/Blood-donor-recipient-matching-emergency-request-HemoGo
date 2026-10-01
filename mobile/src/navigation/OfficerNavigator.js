@@ -57,8 +57,8 @@ const OfficerTabs = () => (
       Home: 'home-outline',
       Inventory: 'water-outline',
       Scan: 'qr-code-outline',
-      Log: 'list-outline',               // ← renamed from Requests
       Alerts: 'notifications-outline',
+      Log: 'list-outline',
     })}
   >
     <Tab.Screen
@@ -77,14 +77,14 @@ const OfficerTabs = () => (
       options={{ tabBarLabel: 'Scan' }}
     />
     <Tab.Screen
-      name="Log"
-      component={PendingTransfersScreen}   // ← was "Requests"
-      options={{ tabBarLabel: 'Log' }}
-    />
-    <Tab.Screen
       name="Alerts"
       component={AlertsScreen}
       options={{ tabBarLabel: 'Alerts' }}
+    />
+    <Tab.Screen
+      name="Log"
+      component={PendingTransfersScreen}
+      options={{ tabBarLabel: 'Log' }}
     />
   </Tab.Navigator>
 );
