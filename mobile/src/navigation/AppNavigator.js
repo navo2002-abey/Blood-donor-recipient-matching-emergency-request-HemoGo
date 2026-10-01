@@ -16,9 +16,14 @@ import BloodRequestListScreen from '../screens/BloodRequestListScreen';
 import BookAppointmentScreen from '../screens/BookAppointmentScreen';
 import CheckEligibilityScreen from '../screens/CheckEligibilityScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
+import AvailableDonorsScreen from '../screens/AvailableDonorsScreen';
+import CallScreen from '../screens/CallScreen';
 import ConfirmBloodRequestScreen from '../screens/ConfirmBloodRequestScreen';
 import CreateBloodRequestScreen from '../screens/CreateBloodRequestScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import DirectRequestScreen from '../screens/DirectRequestScreen';
+import DonorDetailScreen from '../screens/DonorDetailScreen';
+import FindDonorsScreen from '../screens/FindDonorsScreen';
 import HistoryDetailScreen from '../screens/HistoryDetailScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -26,6 +31,8 @@ import MapScreen from '../screens/MapScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import RequestMatchScreen from '../screens/RequestMatchScreen';
 import RewardsGiftScreen from '../screens/RewardsGiftScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import SignUpScreen from '../screens/SignUpScreen';
@@ -42,7 +49,7 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const soon = (title) => (props) => <ComingSoonScreen title={title} {...props} />;
-const ProfileScreen = (props) => <ComingSoonScreen title="Profile" showLogout {...props} />;
+const PatientProfileScreen = (props) => <ComingSoonScreen title="Profile" showLogout {...props} />;
 
 const tabOptions = (icons) => ({ route }) => ({
   headerShown: false,
@@ -72,17 +79,12 @@ const DonorTabs = () => (
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
     <Tab.Screen name="Map" component={MapScreen} />
-<<<<<<< HEAD
-    <Tab.Screen name="Requests" component={CreateBloodRequestScreen} options={{ title: 'Request' }} />
-    <Tab.Screen name="Rewards" component={RewardsScreen} />
-=======
     <Tab.Screen
       name="Requests"
       component={CreateBloodRequestScreen}
       options={{ title: 'Request' }}
     />
-    <Tab.Screen name="Rewards" component={soon('Rewards')} />
->>>>>>> origin/dev
+    <Tab.Screen name="Rewards" component={RewardsScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
@@ -120,8 +122,8 @@ const PatientTabs = () => (
       component={MyRequestsScreen}
       options={{ title: 'My Requests' }}
     />
-    <Tab.Screen name="Donors" component={soon('Find Donors')} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="Donors" component={FindDonorsScreen} options={{ tabBarStyle: { display: 'none' } }} />
+    <Tab.Screen name="Profile" component={PatientProfileScreen} />
   </Tab.Navigator>
 );
 
@@ -155,6 +157,12 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Main" component={RoleRoot} />
+        <Stack.Screen name="FindDonors" component={FindDonorsScreen} />
+        <Stack.Screen name="AvailableDonors" component={AvailableDonorsScreen} />
+        <Stack.Screen name="DonorDetail" component={DonorDetailScreen} />
+        <Stack.Screen name="DirectRequest" component={DirectRequestScreen} />
+        <Stack.Screen name="Call" component={CallScreen} />
+        <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
         <Stack.Screen name="CreateBloodRequest" component={CreateBloodRequestScreen} />
         <Stack.Screen name="ConfirmBloodRequest" component={ConfirmBloodRequestScreen} />
         <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />
