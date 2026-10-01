@@ -11,25 +11,37 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path, Rect } from 'react-native-svg';
+import { BloodDrop } from '../../components/Logo';
+import Sidebar from '../../components/Sidebar';
 import { predictionService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
 
-const riskColor = (level) => {
-  if (level === 'CRITICAL') return colors.primary;
-  if (level === 'HIGH') return '#F59E0B';
-  return '#3B82F6';
-};
+const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
-const riskBg = (level) => {
-  if (level === 'CRITICAL') return '#FFF1F3';
-  if (level === 'HIGH') return '#FFFBEB';
-  return '#EFF6FF';
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
+
+// Map backend riskLevel -> display label + theme
+const riskTheme = (riskLevel) => {
+  switch (riskLevel) {
+    case 'CRITICAL':
+      return { label: 'Critical', color: '#DC2626', bg: '#FEE2E2', border: '#FECACA' };
+    case 'HIGH':
+      return { label: 'High', color: colors.primary, bg: '#FFF1F3', border: '#FEE2E2' };
+    case 'MEDIUM':
+      return { label: 'Medium', color: '#D97706', bg: '#FFFBEB', border: '#FEF3C7' };
+    default:
+      return { label: 'Low', color: '#059669', bg: '#ECFDF5', border: '#D1FAE5' };
+  }
 };
 
 const AIPredictionScreen = ({ navigation }) => {
-  const [predictions, setPredictions] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [predictions, setPredictions] = useState([]);
 
   const load = useCallback(async () => {
     try {
@@ -43,99 +55,373 @@ const AIPredictionScreen = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', load);
+    return unsub;
+  }, [navigation, load]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    load();
+  };
+
+  // Compute chart data from real predictions
+  // Fallback to sample values if no predictions available
+  const chartValues =
+    predictions.length > 0
+      ? predictions.slice(0, 6).map((p) => p.predictedDays || 3)
+      : [5, 3, 7, 4, 6, 2];
+
+  // Build SVG path from values (scaled to chart area 300x120)
+  const buildChartPath = () => {
+    const count = chartValues.length;
+    if (count === 0) return 'M 20 90';
+
+    const maxVal = Math.max(...chartValues, 1);
+    const step = 280 / Math.max(count - 1, 1);
+    const points = chartValues.map((val, i) => {
+      const x = 20 + step * i;
+      // Higher value = higher peak = lower y
+      const y = 100 - (val / maxVal) * 70;
+      return { x, y };
+    });
+
+    return points
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+      .join(' ');
+  };
+
+  const renderChart = () => (
+    <View style={styles.chartCard}>
+      <View style={styles.chartHeader}>
+        <Text style={styles.chartTitle}>Demand Forecast</Text>
+        <TouchableOpacity
+          style={styles.dropdownBtn}
+          onPress={() => comingSoon('Change window')}
+        >
+          <Text style={styles.dropdownText}>Next 7 days</Text>
+          <Ionicons name="caret-down" size={12} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.chartContent}>
+        <Svg width="100%" height="120" viewBox="0 0 300 120">
+          {/* Background bars for scale reference */}
+          <Rect x="20" y="60" width="10" height="40" fill="#FFF1F3" rx="2" />
+          <Rect x="80" y="45" width="10" height="55" fill="#FFF1F3" rx="2" />
+          <Rect x="140" y="55" width="10" height="45" fill="#FFF1F3" rx="2" />
+          <Rect x="200" y="35" width="10" height="65" fill="#FFF1F3" rx="2" />
+          <Rect x="260" y="25" width="10" height="75" fill="#FCA5A5" rx="2" />
+
+          {/* Line chart built from real data */}
+          <Path
+            d={buildChartPath()}
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="4"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </Svg>
+      </View>
+
+      <View style={styles.chartLabels}>
+        <Text style={styles.axisLabel}>Day 1</Text>
+        <Text style={styles.axisLabel}>Day 3</Text>
+        <Text style={styles.axisLabel}>Day 5</Text>
+        <Text style={styles.axisLabel}>Day 7</Text>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        <TouchableOpacity
+          hitSlop={10}
+          style={styles.headerBtn}
+          onPress={() => setSidebarOpen(true)}
+        >
+          <Ionicons name="menu-outline" size={26} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Shortage Predictions</Text>
-        <View style={styles.backBtn} />
+        <View style={styles.brand}>
+          <BloodDrop size={16} />
+          <Text style={styles.brandText}>HemoGo</Text>
+        </View>
+        <TouchableOpacity
+          hitSlop={10}
+          style={styles.headerBtn}
+          onPress={() => comingSoon('Notifications')}
+        >
+          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          <View style={styles.bellBadge} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        <Text style={styles.title}>AI Shortage Predictions</Text>
-        <Text style={styles.subtitle}>
+        <Text style={styles.pageTitle}>AI Shortage Predictions</Text>
+        <Text style={styles.pageSubtitle}>
           AI-powered prediction for upcoming blood demand and potential shortages.
         </Text>
 
+        {renderChart()}
+
         {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+            style={{ marginTop: 40 }}
+          />
         ) : predictions.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={40} color={colors.success} />
-            <Text style={styles.emptyText}>All blood groups are well stocked.</Text>
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={44}
+              color={colors.success}
+            />
+            <Text style={styles.emptyTitle}>All blood groups well stocked</Text>
+            <Text style={styles.emptySub}>
+              No shortage predictions at this time.
+            </Text>
           </View>
         ) : (
-          predictions.map((p, idx) => (
-            <View
-              key={`${p.bloodGroup}-${idx}`}
-              style={[styles.card, { backgroundColor: riskBg(p.riskLevel), borderColor: riskColor(p.riskLevel) }]}
-            >
-              <View style={styles.cardTop}>
-                <View style={styles.iconCircle}>
-                  <Ionicons name="warning-outline" size={18} color={riskColor(p.riskLevel)} />
+          predictions.map((p, idx) => {
+            const theme = riskTheme(p.riskLevel);
+            return (
+              <View
+                key={`${p.bloodGroup}-${idx}`}
+                style={[
+                  styles.predictionCard,
+                  { backgroundColor: theme.bg, borderColor: theme.border },
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.titleWrap}>
+                    <Ionicons
+                      name="warning"
+                      size={20}
+                      color={theme.color}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={[styles.cardTitle, { color: theme.color }]}>
+                      {theme.label} Prediction ({p.bloodGroup})
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.riskBadge,
+                      { backgroundColor: theme.border },
+                    ]}
+                  >
+                    <Text style={[styles.riskBadgeText, { color: theme.color }]}>
+                      {theme.label}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={[styles.cardTitle, { color: riskColor(p.riskLevel) }]}>
-                  {p.riskLevel} Prediction ({p.bloodGroup})
+
+                <Text style={styles.cardBoldText}>
+                  Potential {p.bloodGroup} shortage within {p.predictedDays} days.
                 </Text>
-                <View style={[styles.riskPill, { backgroundColor: riskColor(p.riskLevel) }]}>
-                  <Text style={styles.riskPillText}>{p.riskLevel}</Text>
-                </View>
+                <Text style={styles.cardReasonText}>Reason: {p.reason}</Text>
+
+                <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+                <TouchableOpacity
+                  style={styles.actionRow}
+                  onPress={() => navigation.navigate('OrganizeDrive')}
+                >
+                  <Text style={[styles.actionText, { color: theme.color }]}>
+                    Recommended Action: {p.recommendedAction}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.color} />
+                </TouchableOpacity>
               </View>
-
-              <Text style={styles.cardBody}>
-                Potential {p.bloodGroup} shortage within {p.predictedDays} days.
-              </Text>
-              <Text style={styles.cardReason}>Reason: {p.reason}</Text>
-
-              <View style={styles.divider} />
-
-              <Text style={[styles.recommend, { color: riskColor(p.riskLevel) }]}>
-                Recommended Action: {p.recommendedAction}
-              </Text>
-            </View>
-          ))
+            );
+          })
         )}
+      </ScrollView>
 
+      <View style={styles.bottomContainer}>
         <TouchableOpacity
-          style={styles.organizeBtn}
+          style={styles.primaryButton}
           onPress={() => navigation.navigate('OrganizeDrive')}
         >
-          <Text style={styles.organizeText}>Organize donation drive</Text>
+          <Text style={styles.primaryButtonText}>Organize donation drive</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="AI Shortage Prediction"
+        hospital={HOSPITAL}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
-  scroll: { padding: 16, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 6, marginBottom: 16 },
-  card: { borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  iconCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { flex: 1, fontSize: 15, fontWeight: '800' },
-  riskPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  riskPillText: { color: colors.white, fontSize: 10, fontWeight: '800' },
-  cardBody: { fontSize: 14, fontWeight: '700', color: colors.text },
-  cardReason: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
-  divider: { height: 1, backgroundColor: '#00000010', marginVertical: 12 },
-  recommend: { fontSize: 13, fontWeight: '800' },
-  organizeBtn: { height: 54, borderRadius: 27, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
-  organizeText: { color: colors.white, fontWeight: '800', fontSize: 14 },
-  empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { marginTop: 10, color: colors.textSecondary },
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  scroll: { paddingHorizontal: 20, paddingBottom: 100 },
+
+  pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 10 },
+  pageSubtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+
+  chartCard: {
+    borderWidth: 1,
+    borderColor: '#FEF2F2',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  chartTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  dropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  dropdownText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
+    marginRight: 6,
+  },
+  chartContent: { height: 120, position: 'relative' },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  axisLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+
+  predictionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  titleWrap: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '800' },
+  riskBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  riskBadgeText: { fontSize: 10, fontWeight: '800' },
+  cardBoldText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  cardReasonText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  divider: { height: 1, width: '100%', marginBottom: 12 },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  actionText: { fontSize: 12, fontWeight: '800', flex: 1 },
+
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: 4,
+  },
+  emptySub: { fontSize: 12, color: colors.textSecondary },
+
+  bottomContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  primaryButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
 });
 
 export default AIPredictionScreen;
