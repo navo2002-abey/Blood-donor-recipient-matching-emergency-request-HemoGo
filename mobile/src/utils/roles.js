@@ -20,7 +20,7 @@ export const DEMO_ACCOUNTS = [
 
 export const DONOR_MENU = [
   { key: 'Dashboard', tab: 'Home' },
-  { key: 'Find Donors', screen: 'FindDonors' },
+  { key: 'Find Donors', tab: 'Donors' },
   { key: 'Request Blood', screen: 'AvailableDonors' },
   { key: 'History' },
   { key: 'Live Map', tab: 'Map' },

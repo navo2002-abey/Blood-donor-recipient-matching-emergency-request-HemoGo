@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -44,9 +44,18 @@ const FindDonorsScreen = ({ navigation, route }) => {
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [bloodGroup, setBloodGroup] = useState('A+');
-  const [availability, setAvailability] = useState('Available Now');
+  const [bloodGroup, setBloodGroup] = useState(route.params?.bloodGroup || 'A+');
+  const [availability, setAvailability] = useState(route.params?.availability || 'Available Now');
   const [openFilter, setOpenFilter] = useState(null);
+
+  useEffect(() => {
+    if (route.params?.bloodGroup) {
+      setBloodGroup(route.params.bloodGroup);
+    }
+    if (route.params?.availability) {
+      setAvailability(route.params.availability);
+    }
+  }, [route.params?.availability, route.params?.bloodGroup]);
 
   const filtered = useMemo(() => {
     const text = query.trim().toLowerCase();

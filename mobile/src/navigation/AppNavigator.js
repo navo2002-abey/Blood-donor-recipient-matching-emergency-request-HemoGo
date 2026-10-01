@@ -26,6 +26,7 @@ import MapScreen from '../screens/MapScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
+import RequestMatchScreen from '../screens/RequestMatchScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
@@ -62,6 +63,7 @@ const DonorTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
       Home: 'home-outline',
+      Donors: 'search-outline',
       Map: 'map-outline',
       Requests: 'water-outline',
       Rewards: 'ribbon-outline',
@@ -69,6 +71,7 @@ const DonorTabs = () => (
     })}
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
+    <Tab.Screen name="Donors" component={FindDonorsScreen} options={{ title: 'Donors' }} />
     <Tab.Screen name="Map" component={MapScreen} />
     <Tab.Screen
       name="Requests"
@@ -153,6 +156,7 @@ const AppNavigator = () => {
         <Stack.Screen name="DonorDetail" component={DonorDetailScreen} />
         <Stack.Screen name="DirectRequest" component={DirectRequestScreen} />
         <Stack.Screen name="Call" component={CallScreen} />
+        <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
         <Stack.Screen name="CreateBloodRequest" component={CreateBloodRequestScreen} />
         <Stack.Screen name="ConfirmBloodRequest" component={ConfirmBloodRequestScreen} />
         <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />
