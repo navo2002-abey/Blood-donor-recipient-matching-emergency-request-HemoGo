@@ -54,7 +54,7 @@ const Sidebar = ({
   const handleItem = (item) => {
     onClose();
 
-    // Rashan's officer screens (top-level or nested tab navigation)
+    // 1. Stack-level screen (ReservedUnits, ExpiryMonitoring, etc.)
     if (item.screen) {
       if (item.params) {
         navigation.navigate(item.screen, item.params);
@@ -64,15 +64,25 @@ const Sidebar = ({
       return;
     }
 
-    // Teammate's donor screens
+    // 2. Legacy donor flow
     if (item.key === 'Create Request' || item.key === 'Request Blood') {
       navigation.navigate('CreateBloodRequest');
       return;
     }
 
-    // Legacy: navigate to a tab by name
+    // 3. Tab-level navigation — needs different handling depending on context
     if (item.tab) {
-      navigation.navigate(item.tab);
+      const state = navigation.getState?.();
+      const routes = state?.routes || [];
+      const isOnStack = routes.some((r) => r.name === 'OfficerTabs');
+
+      if (isOnStack) {
+        // We're on a stack screen — navigate to nested tab inside OfficerTabs
+        navigation.navigate('OfficerTabs', { screen: item.tab });
+      } else {
+        // We're inside OfficerTabs — direct tab switch
+        navigation.navigate(item.tab);
+      }
       return;
     }
 
