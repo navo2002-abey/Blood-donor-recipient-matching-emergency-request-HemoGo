@@ -97,13 +97,31 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.wideCard} onPress={() => comingSoon('Blood Banks')}>
-          <View style={styles.cardIcon}>
-            <Ionicons name="business-outline" size={20} color={colors.text} />
-          </View>
-          <Text style={styles.cardTitle}>Blood Banks</Text>
-          <Text style={styles.cardSub}>Check local stock & inventory availability</Text>
-        </TouchableOpacity>
+        <View style={styles.grid}>
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => navigation.navigate('ActiveRequests')}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.cardIcon, styles.listIconWrap]}>
+              <Ionicons name="reorder-three-outline" size={22} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Request List</Text>
+            <Text style={styles.cardSub}>View All blood requests</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => comingSoon('Blood Banks')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="business-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Blood Banks</Text>
+            <Text style={styles.cardSub}>Check local stock & inventory</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.mapCard}>
           <View style={styles.mapHeader}>
@@ -379,6 +397,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  listIconWrap: {
+    backgroundColor: '#FFF1F3',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   },
   cardTitle: {
     fontSize: 15,
