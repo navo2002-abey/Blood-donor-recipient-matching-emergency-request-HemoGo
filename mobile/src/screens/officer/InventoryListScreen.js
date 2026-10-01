@@ -74,11 +74,18 @@ const InventoryListScreen = ({ navigation, route }) => {
         stockService.list({ hospital: HOSPITAL }),
         reservationService.list({ hospital: HOSPITAL }),
       ]);
-      const sorted = (stockRes.data.stock || []).sort((a, b) => {
+
+      // ✅ Available tab: only AVAILABLE batches with units > 0
+      const availableOnly = (stockRes.data.stock || []).filter(
+        (s) => s.status === 'AVAILABLE' && Number(s.units) > 0
+      );
+
+      const sorted = availableOnly.sort((a, b) => {
         if (a.bloodGroup !== b.bloodGroup)
           return a.bloodGroup.localeCompare(b.bloodGroup);
         return new Date(a.expiryDate) - new Date(b.expiryDate);
       });
+
       setStock(sorted);
       setReservations(resRes.data.reservations || []);
     } catch (e) {
