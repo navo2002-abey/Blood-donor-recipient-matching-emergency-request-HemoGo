@@ -22,6 +22,9 @@ import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
 import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
+import CampaignConfirmationScreen from '../screens/officer/CampaignConfirmationScreen';
+import CampaignListScreen from '../screens/officer/CampaignListScreen';
+import EditCampaignScreen from '../screens/officer/EditCampaignScreen';
 import TransferConfirmationScreen from '../screens/officer/TransferConfirmationScreen';
 import CreateExchangeRequestScreen from '../screens/officer/CreateExchangeRequestScreen';
 
@@ -108,6 +111,9 @@ const OfficerNavigator = () => (
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="Alerts" component={AlertsScreen} />
     <Stack.Screen name="CreateExchangeRequest" component={CreateExchangeRequestScreen} />
+    <Stack.Screen name="CampaignConfirmation" component={CampaignConfirmationScreen} />
+    <Stack.Screen name="CampaignList" component={CampaignListScreen} />
+    <Stack.Screen name="EditCampaign" component={EditCampaignScreen} />
   </Stack.Navigator>
 );
 
