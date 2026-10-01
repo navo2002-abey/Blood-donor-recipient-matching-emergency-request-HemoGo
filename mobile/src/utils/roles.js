@@ -20,8 +20,8 @@ export const DEMO_ACCOUNTS = [
 
 export const DONOR_MENU = [
   { key: 'Dashboard', tab: 'Home' },
-  { key: 'Find Donors' },
-  { key: 'Request Blood', tab: 'Requests' },
+  { key: 'Find Donors', screen: 'FindDonors' },
+  { key: 'Request Blood', screen: 'AvailableDonors' },
   { key: 'History' },
   { key: 'Live Map', tab: 'Map' },
   { key: 'Rewards', tab: 'Rewards' },
@@ -45,19 +45,19 @@ export const OFFICER_MENU = [
   { key: 'Home', tab: 'Home' },
   { key: 'Inventory List', tab: 'Inventory' },
   { key: 'Scan Donor QR', tab: 'Scan' },
-  { key: 'Transfer Log', tab: 'Requests' },
+  { key: 'Transfer Log', tab: 'Log' },            
   { key: 'Expiry Monitoring', screen: 'ExpiryMonitoring' },
   { key: 'AI Shortage Prediction', screen: 'AIPrediction' },
   { key: 'Blood Bank Exchange', screen: 'BloodRescue' },
   { key: 'Nearby Blood Banks', screen: 'NearbyBloodBanks' },
-  { key: 'Donation Campaigns', screen: 'CampaignList' },   // ✅ NEW
+  { key: 'Donation Campaigns', screen: 'CampaignList' },
   { key: 'Settings', screen: 'Settings' },
 ];
 
 export const PATIENT_MENU = [
   { key: 'Dashboard', tab: 'Home' },
   { key: 'Create Request', tab: 'Requests' },
-  { key: 'Find Donors', tab: 'Donors' },
+  { key: 'Find Donors', screen: 'FindDonors' },
   { key: 'My Requests', tab: 'Requests' },
   { key: 'Profile & Settings', tab: 'Profile' },
   { key: 'Help & Support' },

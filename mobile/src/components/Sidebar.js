@@ -44,17 +44,21 @@ const Sidebar = ({
   const isStaff = variant === 'staff';
   const isOfficer = user?.role === 'BLOOD_BANK_OFFICER';
   const rawName =
-    user?.name || (isOfficer ? 'Nimal Perera' : isStaff ? 'Anusha Fernando' : 'HemoGo User');
+    user?.name ||
+    (isOfficer ? 'Nimal Perera' : isStaff ? 'Anusha Fernando' : 'HemoGo User');
   const name =
-    isOfficer && !/^dr\.?\s/i.test(rawName) ? `Dr. ${rawName}` : rawName || 'HemoGo User';
+    isOfficer && !/^dr\.?\s/i.test(rawName)
+      ? `Dr. ${rawName}`
+      : rawName || 'HemoGo User';
   const roleLabel = ROLE_LABELS[user?.role] || 'HemoGo User';
-  const subtitle = user?.role === 'DONOR' ? `${user?.bloodGroup || 'O+'} Blood Group` : roleLabel;
+  const subtitle =
+    user?.role === 'DONOR' ? `${user?.bloodGroup || 'O+'} Blood Group` : roleLabel;
   const orgLine = org || hospital;
 
   const handleItem = (item) => {
     onClose();
 
-    // 1. Stack-level screen (ReservedUnits, ExpiryMonitoring, etc.)
+    // 1. Stack-level screen (ExpiryMonitoring, AIPrediction, etc.)
     if (item.screen) {
       if (item.params) {
         navigation.navigate(item.screen, item.params);
@@ -70,19 +74,38 @@ const Sidebar = ({
       return;
     }
 
-    // 3. Tab-level navigation — needs different handling depending on context
-    if (item.tab) {
-      const state = navigation.getState?.();
-      const routes = state?.routes || [];
-      const isOnStack = routes.some((r) => r.name === 'OfficerTabs');
+    if (item.key === 'History') {
+      navigation.navigate('History');
+      return;
+    }
 
-      if (isOnStack) {
-        // We're on a stack screen — navigate to nested tab inside OfficerTabs
-        navigation.navigate('OfficerTabs', { screen: item.tab });
-      } else {
-        // We're inside OfficerTabs — direct tab switch
+    // 3. Tab-level navigation — bulletproof
+    if (item.tab) {
+      // Get current navigator state
+      const state = navigation.getState?.();
+
+      // ✅ Correct check: does the CURRENT navigator own this tab route?
+      const currentRouteNames = state?.routeNames || [];
+
+      if (currentRouteNames.includes(item.tab)) {
+        // We're already inside the tab navigator (or it owns this route)
+        // → direct tab switch
         navigation.navigate(item.tab);
+        return;
       }
+
+      // Otherwise we're on a stack screen — go through OfficerTabs
+      // (for officer) or Main (for donor)
+      const officerTabsAvailable =
+        state?.routeNames?.includes('OfficerTabs');
+
+      if (officerTabsAvailable) {
+        navigation.navigate('OfficerTabs', { screen: item.tab });
+        return;
+      }
+
+      // Fallback for donor flow
+      navigation.navigate('Main', { screen: item.tab });
       return;
     }
 
@@ -92,7 +115,9 @@ const Sidebar = ({
   const handleLogout = async () => {
     onClose();
     await logout();
-    navigation.getParent()?.reset({
+    const parent = navigation.getParent?.();
+    const navigator = parent || navigation;
+    navigator.reset({
       index: 0,
       routes: [{ name: 'Login' }],
     });
@@ -108,7 +133,9 @@ const Sidebar = ({
             style={[itemStyle, active && activeStyle]}
             onPress={() => handleItem(item)}
           >
-            {isStaff ? <View style={[styles.staffBar, active && styles.staffBarActive]} /> : null}
+            {isStaff ? (
+              <View style={[styles.staffBar, active && styles.staffBarActive]} />
+            ) : null}
             <Text style={[textStyle, active && activeTextStyle]}>{item.key}</Text>
           </TouchableOpacity>
         );
@@ -141,7 +168,9 @@ const Sidebar = ({
             <View style={styles.staffProfile}>
               <View style={styles.staffAvatarRing}>
                 <View style={styles.staffAvatar}>
-                  <Text style={styles.staffAvatarText}>{getInitials(name) || 'AF'}</Text>
+                  <Text style={styles.staffAvatarText}>
+                    {getInitials(name) || 'AF'}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.staffName}>{name}</Text>
@@ -149,7 +178,10 @@ const Sidebar = ({
               <Text style={styles.staffRole}>Role: {roleLabel}</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.staffMenu}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.staffMenu}
+            >
               {renderMenu(
                 styles.staffItem,
                 styles.staffItemText,
@@ -169,20 +201,30 @@ const Sidebar = ({
 
             <View style={styles.profile}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                <Text style={styles.avatarText}>
+                  {name.charAt(0).toUpperCase()}
+                </Text>
               </View>
               <View style={styles.profileMeta}>
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.group}>{subtitle}</Text>
               </View>
               <View style={styles.bellWrap}>
-                <Ionicons name="notifications-outline" size={20} color={colors.white} />
+                <Ionicons
+                  name="notifications-outline"
+                  size={20}
+                  color={colors.white}
+                />
                 <View style={styles.badge} />
               </View>
             </View>
 
             <View style={styles.search}>
-              <Ionicons name="search-outline" size={16} color={colors.sidebarMuted} />
+              <Ionicons
+                name="search-outline"
+                size={16}
+                color={colors.sidebarMuted}
+              />
               <TextInput
                 placeholder=""
                 placeholderTextColor={colors.sidebarMuted}
@@ -191,13 +233,18 @@ const Sidebar = ({
               />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.menu}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.menu}
+            >
               {renderMenu(styles.menuItem, styles.menuText)}
             </ScrollView>
 
             {showAvailability ? (
               <View style={styles.footer}>
-                <Text style={styles.footerLabel}>{available ? 'Active' : 'Inactive'}</Text>
+                <Text style={styles.footerLabel}>
+                  {available ? 'Active' : 'Inactive'}
+                </Text>
                 <Switch
                   value={available}
                   onValueChange={setAvailable}
@@ -217,7 +264,7 @@ const Sidebar = ({
     </View>
   );
 
-  // ✅ WEB: render inside phone frame with absolute positioning
+  // Web: render inside the phone frame with absolute positioning
   if (Platform.OS === 'web') {
     if (!visible) return null;
     return (
@@ -227,7 +274,6 @@ const Sidebar = ({
     );
   }
 
-  // ✅ NATIVE: keep using Modal
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {panelContent}
@@ -240,7 +286,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
-  // FIX: on web, wrap the sidebar inside absolute bounds of the phone frame
   webWrap: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,
