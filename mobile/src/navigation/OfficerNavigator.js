@@ -9,7 +9,6 @@ import HomeScreen from '../screens/officer/HomeScreen';
 import InventoryListScreen from '../screens/officer/InventoryListScreen';
 import AddStockScreen from '../screens/officer/AddStockScreen';
 import EditStockScreen from '../screens/officer/EditStockScreen';
-import ReservedUnitsScreen from '../screens/officer/ReservedUnitsScreen';
 import CreateReservationScreen from '../screens/officer/CreateReservationScreen';
 import ExpiryMonitoringScreen from '../screens/officer/ExpiryMonitoringScreen';
 import AIPredictionScreen from '../screens/officer/AIPredictionScreen';
@@ -21,7 +20,12 @@ import NearbyBloodBanksScreen from '../screens/officer/NearbyBloodBanksScreen';
 import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
-import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
+import AlertsScreen from '../screens/officer/AlertsScreen';
+import CampaignConfirmationScreen from '../screens/officer/CampaignConfirmationScreen';
+import CampaignListScreen from '../screens/officer/CampaignListScreen';
+import EditCampaignScreen from '../screens/officer/EditCampaignScreen';
+import TransferConfirmationScreen from '../screens/officer/TransferConfirmationScreen';
+import CreateExchangeRequestScreen from '../screens/officer/CreateExchangeRequestScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -53,8 +57,8 @@ const OfficerTabs = () => (
       Home: 'home-outline',
       Inventory: 'water-outline',
       Scan: 'qr-code-outline',
-      Requests: 'swap-horizontal-outline',
-      Alerts: 'notifications-outline',      // ✅ real alerts icon
+      Alerts: 'notifications-outline',
+      Log: 'list-outline',
     })}
   >
     <Tab.Screen
@@ -73,14 +77,14 @@ const OfficerTabs = () => (
       options={{ tabBarLabel: 'Scan' }}
     />
     <Tab.Screen
-      name="Requests"
-      component={PendingTransfersScreen}
-      options={{ tabBarLabel: 'Requests' }}
+      name="Alerts"
+      component={AlertsScreen}
+      options={{ tabBarLabel: 'Alerts' }}
     />
     <Tab.Screen
-      name="Alerts"
-      component={AlertsScreen}              // ✅ was ExpiryMonitoringScreen
-      options={{ tabBarLabel: 'Alerts' }}
+      name="Log"
+      component={PendingTransfersScreen}
+      options={{ tabBarLabel: 'Log' }}
     />
   </Tab.Navigator>
 );
@@ -90,19 +94,23 @@ const OfficerNavigator = () => (
     <Stack.Screen name="OfficerTabs" component={OfficerTabs} />
     <Stack.Screen name="AddStock" component={AddStockScreen} />
     <Stack.Screen name="EditStock" component={EditStockScreen} />
-    <Stack.Screen name="ReservedUnits" component={ReservedUnitsScreen} />
     <Stack.Screen name="CreateReservation" component={CreateReservationScreen} />
     <Stack.Screen name="ExpiryMonitoring" component={ExpiryMonitoringScreen} />
     <Stack.Screen name="AIPrediction" component={AIPredictionScreen} />
     <Stack.Screen name="OrganizeDrive" component={OrganizeDonationDriveScreen} />
     <Stack.Screen name="BloodRescue" component={BloodRescueScreen} />
     <Stack.Screen name="TransferRequest" component={TransferRequestScreen} />
+    <Stack.Screen name="TransferConfirmation" component={TransferConfirmationScreen} />
     <Stack.Screen name="PendingTransfers" component={PendingTransfersScreen} />
     <Stack.Screen name="NearbyBloodBanks" component={NearbyBloodBanksScreen} />
     <Stack.Screen name="BloodBankDetails" component={BloodBankDetailsScreen} />
     <Stack.Screen name="QRScan" component={QRScanScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="Alerts" component={AlertsScreen} />
+    <Stack.Screen name="CreateExchangeRequest" component={CreateExchangeRequestScreen} />
+    <Stack.Screen name="CampaignConfirmation" component={CampaignConfirmationScreen} />
+    <Stack.Screen name="CampaignList" component={CampaignListScreen} />
+    <Stack.Screen name="EditCampaign" component={EditCampaignScreen} />
   </Stack.Navigator>
 );
 

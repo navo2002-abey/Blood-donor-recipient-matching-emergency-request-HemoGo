@@ -11,14 +11,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
-import { useAlerts } from '../../context/AlertsContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
-
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -36,15 +34,13 @@ const getStatusTheme = (status) => {
     case 'USED':
     case 'TRANSFERRED':
       return { bg: '#F3F4F6', text: '#6B7280', progress: '#9CA3AF' };
-    case 'AVAILABLE':
-    case 'Good':
     default:
       return { bg: '#ECFDF5', text: '#059669', progress: '#10B981' };
   }
 };
 
 const HomeScreen = ({ navigation }) => {
-  const { unreadCount } = useAlerts();
+  const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -65,7 +61,7 @@ const HomeScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [HOSPITAL]);
 
   useEffect(() => {
     load();
@@ -87,38 +83,45 @@ const HomeScreen = ({ navigation }) => {
   ).length;
 
   const actions = [
-    { label: 'Add Stock', icon: 'add-circle', color: colors.primary, screen: 'AddStock' },
-    { label: 'Expiry', icon: 'hourglass-outline', color: '#F59E0B', screen: 'ExpiryMonitoring' },
-    { label: 'Reservations', icon: 'bookmark-outline', color: '#3B82F6', screen: 'ReservedUnits' },
-    { label: 'Rescue', icon: 'swap-horizontal-outline', color: '#8B5CF6', screen: 'BloodRescue' },
+    {
+      label: 'Add Stock',
+      icon: 'add-circle',
+      color: colors.primary,
+      onPress: () => navigation.navigate('AddStock'),
+    },
+    {
+      label: 'Expiry',
+      icon: 'hourglass-outline',
+      color: '#F59E0B',
+      onPress: () => navigation.navigate('ExpiryMonitoring'),
+    },
+    {
+      label: 'Reservations',
+      icon: 'bookmark-outline',
+      color: '#3B82F6',
+      onPress: () =>
+        navigation.navigate('Inventory', { initialTab: 'reserved' }),
+    },
+    {
+      label: 'Rescue',
+      icon: 'swap-horizontal-outline',
+      color: '#8B5CF6',
+      onPress: () => navigation.navigate('BloodRescue'),
+    },
   ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.headerBtn}>
-          <Ionicons name="grid-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.brand}>
-          <BloodDrop size={20} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Stats */}
         <View style={styles.heroStats}>
           <View style={styles.heroMain}>
             <Text style={styles.heroLabel}>Total Inventory</Text>
@@ -139,14 +142,13 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickGrid}>
           {actions.map((action, i) => (
             <TouchableOpacity
               key={i}
               style={styles.actionCard}
-              onPress={() => navigation.navigate(action.screen)}
+              onPress={action.onPress}
             >
               <View style={[styles.actionIconBg, { backgroundColor: action.color + '15' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
@@ -236,37 +238,7 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
 
   heroStats: {
     backgroundColor: '#1E293B',

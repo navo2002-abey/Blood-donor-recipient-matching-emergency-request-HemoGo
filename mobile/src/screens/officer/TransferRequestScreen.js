@@ -59,10 +59,14 @@ const TransferRequestScreen = ({ route, navigation }) => {
         status: 'PENDING',
       });
 
-      navigation.goBack();
-      setTimeout(() => {
-        Alert.alert('Sent', 'Transfer request sent successfully.');
-      }, 200);
+      // ✅ Navigate to confirmation screen with all details
+      navigation.replace('TransferConfirmation', {
+        bloodGroup,
+        quantity: Number(units),
+        sourceHospital: SOURCE_HOSPITAL,
+        destinationHospital: DEST_HOSPITAL,
+        urgency,
+      });
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to send request.');
     } finally {

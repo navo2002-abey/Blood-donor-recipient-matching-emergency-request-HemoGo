@@ -12,9 +12,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const QRScanScreen = ({ navigation }) => {
+  const myHospital = useMyHospital();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [manualCode, setManualCode] = useState('');
   const [scanning, setScanning] = useState(true);
   const [result, setResult] = useState(null);
@@ -24,10 +34,8 @@ const QRScanScreen = ({ navigation }) => {
     if (!code || code.length < 4) {
       return Alert.alert('Invalid', 'Please enter a valid code (min 4 characters).');
     }
-
     setBusy(true);
     setTimeout(() => {
-      // Simulated verification — replace with real API call to backend
       const isValid = /^HG-/i.test(code);
       setResult({
         code,
@@ -68,16 +76,11 @@ const QRScanScreen = ({ navigation }) => {
   if (result) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={reset} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verification Result</Text>
-          <View style={styles.backBtn} />
-        </View>
-
+        <AppHeader
+          navigation={navigation}
+          onMenuPress={() => setSidebarOpen(true)}
+        />
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Status Card */}
           <View
             style={[
               styles.resultBanner,
@@ -89,13 +92,17 @@ const QRScanScreen = ({ navigation }) => {
               size={54}
               color={result.valid ? colors.success : colors.primary}
             />
-            <Text style={[styles.resultTitle, { color: result.valid ? colors.success : colors.primary }]}>
+            <Text
+              style={[
+                styles.resultTitle,
+                { color: result.valid ? colors.success : colors.primary },
+              ]}
+            >
               {result.valid ? 'Verified' : 'Verification Failed'}
             </Text>
             <Text style={styles.resultSub}>{result.message}</Text>
           </View>
 
-          {/* Donor Info */}
           {result.valid && result.donor ? (
             <View style={styles.donorCard}>
               <View style={styles.donorTop}>
@@ -105,7 +112,8 @@ const QRScanScreen = ({ navigation }) => {
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.donorName}>{result.donor.name}</Text>
                   <Text style={styles.donorMeta}>
-                    {result.donor.bloodGroup} · {result.donor.age} years · {result.donor.weight} kg
+                    {result.donor.bloodGroup} · {result.donor.age} years ·{' '}
+                    {result.donor.weight} kg
                   </Text>
                 </View>
                 <View style={styles.eligiblePill}>
@@ -129,7 +137,6 @@ const QRScanScreen = ({ navigation }) => {
             </View>
           ) : null}
 
-          {/* Actions */}
           <TouchableOpacity style={styles.primaryBtn} onPress={reset}>
             <Ionicons name="scan-outline" size={18} color={colors.white} />
             <Text style={styles.primaryBtnText}>Scan Another</Text>
@@ -138,12 +145,25 @@ const QRScanScreen = ({ navigation }) => {
           {result.valid ? (
             <TouchableOpacity
               style={styles.outlineBtn}
-              onPress={() => Alert.alert('Success', 'Donor marked as eligible for donation.')}
+              onPress={() =>
+                Alert.alert('Success', 'Donor marked as eligible for donation.')
+              }
             >
               <Text style={styles.outlineBtnText}>Confirm & Log Donation</Text>
             </TouchableOpacity>
           ) : null}
         </ScrollView>
+
+        <Sidebar
+          visible={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          navigation={navigation}
+          onComingSoon={comingSoon}
+          menu={OFFICER_MENU}
+          variant="staff"
+          activeKey="Scan Donor QR"
+          hospital={myHospital}
+        />
       </SafeAreaView>
     );
   }
@@ -151,18 +171,15 @@ const QRScanScreen = ({ navigation }) => {
   // ---------- SCANNER VIEW ----------
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={styles.header}>
-          <View style={styles.headerLeft} />
-          <Text style={styles.headerTitle}>Scan Donor QR</Text>
-          <TouchableOpacity onPress={simulate} style={styles.headerRight}>
-            <Ionicons name="flash-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -171,7 +188,6 @@ const QRScanScreen = ({ navigation }) => {
           <Text style={styles.title}>Scan Donor QR</Text>
           <Text style={styles.subtitle}>Point camera at the donor's QR code</Text>
 
-          {/* Camera placeholder / viewfinder */}
           <View style={styles.viewfinder}>
             <View style={[styles.corner, styles.cornerTopLeft]} />
             <View style={[styles.corner, styles.cornerTopRight]} />
@@ -185,17 +201,22 @@ const QRScanScreen = ({ navigation }) => {
             <View style={styles.scanLine} />
           </View>
 
-          {/* Info card */}
           <View style={styles.infoCard}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color={colors.primary}
+            />
             <Text style={styles.infoCardText}>
-              Point the camera at the donor's HemoGo QR code. Verification starts automatically.
+              Point the camera at the donor's HemoGo QR code. Verification starts
+              automatically.
             </Text>
           </View>
 
-          {/* Manual entry fallback */}
           <Text style={styles.sectionTitle}>MANUAL ENTRY</Text>
-          <Text style={styles.sectionSub}>Or enter the code manually if scanning fails</Text>
+          <Text style={styles.sectionSub}>
+            Or enter the code manually if scanning fails
+          </Text>
 
           <View style={styles.manualRow}>
             <TextInput
@@ -212,11 +233,14 @@ const QRScanScreen = ({ navigation }) => {
               onPress={handleManualVerify}
               disabled={busy}
             >
-              <Ionicons name={busy ? 'hourglass-outline' : 'checkmark'} size={20} color={colors.white} />
+              <Ionicons
+                name={busy ? 'hourglass-outline' : 'checkmark'}
+                size={20}
+                color={colors.white}
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Demo buttons */}
           <TouchableOpacity style={styles.primaryBtn} onPress={simulate} disabled={busy}>
             <Text style={styles.primaryBtnText}>
               {busy ? 'Verifying...' : 'Simulate Successful Scan'}
@@ -231,28 +255,28 @@ const QRScanScreen = ({ navigation }) => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Scan Donor QR"
+        hospital={myHospital}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  headerLeft: { width: 40, height: 40 },
-  headerRight: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 20, paddingBottom: 40 },
+
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 6, marginBottom: 20 },
 
-  /* Viewfinder */
   viewfinder: {
     height: 280,
     borderRadius: 24,
@@ -272,7 +296,12 @@ const styles = StyleSheet.create({
   cornerTopRight: { top: 30, right: 30, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 10 },
   cornerBottomLeft: { bottom: 30, left: 30, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 10 },
   cornerBottomRight: { bottom: 30, right: 30, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 10 },
-  viewfinderText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 12, fontWeight: '600' },
+  viewfinderText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 12,
+    fontWeight: '600',
+  },
   scanLine: {
     position: 'absolute',
     top: '50%',
@@ -294,7 +323,13 @@ const styles = StyleSheet.create({
   },
   infoCardText: { flex: 1, fontSize: 12, color: colors.text, lineHeight: 17 },
 
-  sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.text, letterSpacing: 0.6, marginBottom: 4 },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
   sectionSub: { fontSize: 12, color: colors.textSecondary, marginBottom: 12 },
 
   manualRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
@@ -328,7 +363,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
-  primaryBtnText: { color: colors.white, fontWeight: '800', fontSize: 14, letterSpacing: 0.4 },
+  primaryBtnText: {
+    color: colors.white,
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.4,
+  },
   outlineBtn: {
     height: 52,
     borderRadius: 26,
@@ -341,16 +381,17 @@ const styles = StyleSheet.create({
   outlineBtnText: { color: colors.primary, fontWeight: '800', fontSize: 13 },
 
   /* Result view */
-  resultBanner: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    borderRadius: 22,
-    marginBottom: 20,
-  },
+  resultBanner: { alignItems: 'center', paddingVertical: 30, borderRadius: 22, marginBottom: 20 },
   resultBannerSuccess: { backgroundColor: '#ECFDF5' },
   resultBannerFail: { backgroundColor: '#FFF1F3' },
   resultTitle: { fontSize: 22, fontWeight: '900', marginTop: 12 },
-  resultSub: { fontSize: 13, color: colors.textSecondary, marginTop: 4, textAlign: 'center', paddingHorizontal: 20 },
+  resultSub: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
 
   donorCard: {
     backgroundColor: colors.white,
@@ -381,7 +422,12 @@ const styles = StyleSheet.create({
   eligibleText: { color: colors.success, fontSize: 10, fontWeight: '800' },
   divider: { height: 1, backgroundColor: '#F0F0F2', marginVertical: 14 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  infoLabel: { flex: 1, fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  infoLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
   infoValue: { fontSize: 13, fontWeight: '700', color: colors.text },
 });
 

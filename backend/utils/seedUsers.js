@@ -8,6 +8,7 @@ const DEMO_USERS = [
     phone: '0770000001',
     password: 'Admin@123',
     role: 'ADMIN',
+    hospital: 'HemoGo National Network',
   },
   {
     name: 'Amal Silva',
@@ -15,13 +16,34 @@ const DEMO_USERS = [
     phone: '0770000002',
     password: 'Donor@123',
     role: 'DONOR',
+    hospital: null,
   },
+  // Officer 1 — Colombo General
   {
-    name: 'Dr. Nimal Perera',
+    name: 'Nimal Perera',
     email: 'officer@hemogo.com',
     phone: '0770000003',
     password: 'Officer@123',
     role: 'BLOOD_BANK_OFFICER',
+    hospital: 'Colombo General Hospital Blood Bank',
+  },
+  // Officer 2 — National Hospital Colombo
+  {
+    name: 'Priya Jayawardena',
+    email: 'officer.national@hemogo.com',
+    phone: '0770000004',
+    password: 'Officer@123',
+    role: 'BLOOD_BANK_OFFICER',
+    hospital: 'National Hospital Colombo Blood Bank',
+  },
+  // Officer 3 — Kandy
+  {
+    name: 'Rohan Silva',
+    email: 'officer.kandy@hemogo.com',
+    phone: '0770000005',
+    password: 'Officer@123',
+    role: 'BLOOD_BANK_OFFICER',
+    hospital: 'Kandy Teaching Hospital Blood Bank',
   },
 ];
 
@@ -29,10 +51,17 @@ const seedUsers = async () => {
   for (const account of DEMO_USERS) {
     const existing = await User.findOne({ email: account.email });
     if (existing) {
+      // Update name + hospital in case they changed
+      let changed = false;
       if (existing.name !== account.name) {
         existing.name = account.name;
-        await existing.save();
+        changed = true;
       }
+      if (account.hospital && existing.hospital !== account.hospital) {
+        existing.hospital = account.hospital;
+        changed = true;
+      }
+      if (changed) await existing.save();
       continue;
     }
 

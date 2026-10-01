@@ -42,16 +42,15 @@ export const ADMIN_MENU = [
 ];
 
 export const OFFICER_MENU = [
-  { key: 'Home', screen: 'OfficerTabs', params: { screen: 'Home' } },
-  { key: 'Inventory List', screen: 'OfficerTabs', params: { screen: 'Inventory' } },
-  { key: 'Reserved Units', screen: 'ReservedUnits' },
-  { key: 'Scan Donor QR', screen: 'QRScan' },
+  { key: 'Home', tab: 'Home' },
+  { key: 'Inventory List', tab: 'Inventory' },
+  { key: 'Scan Donor QR', tab: 'Scan' },
+  { key: 'Transfer Log', tab: 'Log' },            
   { key: 'Expiry Monitoring', screen: 'ExpiryMonitoring' },
   { key: 'AI Shortage Prediction', screen: 'AIPrediction' },
-  { key: 'Smart Blood Rescue', screen: 'BloodRescue' },
-  { key: 'Pending Transfers', screen: 'OfficerTabs', params: { screen: 'Requests' } },
+  { key: 'Blood Bank Exchange', screen: 'BloodRescue' },
   { key: 'Nearby Blood Banks', screen: 'NearbyBloodBanks' },
-  { key: 'Organize Donation Drive', screen: 'OrganizeDrive' },
+  { key: 'Donation Campaigns', screen: 'CampaignList' },
   { key: 'Settings', screen: 'Settings' },
 ];
 
