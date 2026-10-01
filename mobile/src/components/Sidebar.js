@@ -66,6 +66,12 @@ const Sidebar = ({
       navigation.navigate('CreateBloodRequest');
       return;
     }
+
+    if (item.key === 'History') {
+      navigation.navigate('History');
+      return;
+    }
+
     if (item.tab) {
       const routeNames = navigation.getState?.()?.routeNames || [];
       if (routeNames.includes(item.tab)) {
@@ -209,7 +215,7 @@ const Sidebar = ({
     </View>
   );
 
-  // ✅ WEB: render inside phone frame with absolute positioning
+  // Web: render inside the phone frame with absolute positioning
   if (Platform.OS === 'web') {
     if (!visible) return null;
     return (
@@ -219,7 +225,6 @@ const Sidebar = ({
     );
   }
 
-  // ✅ NATIVE: keep using Modal
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {panelContent}
@@ -232,7 +237,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
-  // FIX: on web, wrap the sidebar inside absolute bounds of the phone frame
   webWrap: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 999,

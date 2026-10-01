@@ -11,7 +11,10 @@ import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen'
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
 import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AppointmentBookedScreen from '../screens/AppointmentBookedScreen';
 import BloodRequestListScreen from '../screens/BloodRequestListScreen';
+import BookAppointmentScreen from '../screens/BookAppointmentScreen';
+import CheckEligibilityScreen from '../screens/CheckEligibilityScreen';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import AvailableDonorsScreen from '../screens/AvailableDonorsScreen';
 import CallScreen from '../screens/CallScreen';
@@ -21,12 +24,17 @@ import DashboardScreen from '../screens/DashboardScreen';
 import DirectRequestScreen from '../screens/DirectRequestScreen';
 import DonorDetailScreen from '../screens/DonorDetailScreen';
 import FindDonorsScreen from '../screens/FindDonorsScreen';
+import HistoryDetailScreen from '../screens/HistoryDetailScreen';
+import HistoryScreen from '../screens/HistoryScreen';
 import LoginScreen from '../screens/LoginScreen';
 import MapScreen from '../screens/MapScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import PatientDashboardScreen from '../screens/PatientDashboardScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import RequestMatchScreen from '../screens/RequestMatchScreen';
+import RewardsGiftScreen from '../screens/RewardsGiftScreen';
+import RewardsScreen from '../screens/RewardsScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
@@ -41,7 +49,7 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const soon = (title) => (props) => <ComingSoonScreen title={title} {...props} />;
-const ProfileScreen = (props) => <ComingSoonScreen title="Profile" showLogout {...props} />;
+const PatientProfileScreen = (props) => <ComingSoonScreen title="Profile" showLogout {...props} />;
 
 const tabOptions = (icons) => ({ route }) => ({
   headerShown: false,
@@ -63,7 +71,6 @@ const DonorTabs = () => (
   <Tab.Navigator
     screenOptions={tabOptions({
       Home: 'home-outline',
-      Donors: 'search-outline',
       Map: 'map-outline',
       Requests: 'water-outline',
       Rewards: 'ribbon-outline',
@@ -71,14 +78,13 @@ const DonorTabs = () => (
     })}
   >
     <Tab.Screen name="Home" component={DashboardScreen} />
-    <Tab.Screen name="Donors" component={FindDonorsScreen} options={{ title: 'Donors' }} />
     <Tab.Screen name="Map" component={MapScreen} />
     <Tab.Screen
       name="Requests"
       component={CreateBloodRequestScreen}
       options={{ title: 'Request' }}
     />
-    <Tab.Screen name="Rewards" component={soon('Rewards')} />
+    <Tab.Screen name="Rewards" component={RewardsScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
   </Tab.Navigator>
 );
@@ -117,7 +123,7 @@ const PatientTabs = () => (
       options={{ title: 'My Requests' }}
     />
     <Tab.Screen name="Donors" component={FindDonorsScreen} options={{ tabBarStyle: { display: 'none' } }} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="Profile" component={PatientProfileScreen} />
   </Tab.Navigator>
 );
 
@@ -167,6 +173,12 @@ const AppNavigator = () => {
         <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
         <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />
         <Stack.Screen name="MyRequests" component={MyRequestsScreen} />
+        <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />
+        <Stack.Screen name="AppointmentBooked" component={AppointmentBookedScreen} />
+        <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
+        <Stack.Screen name="RewardsGift" component={RewardsGiftScreen} />
+        <Stack.Screen name="CheckEligibility" component={CheckEligibilityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

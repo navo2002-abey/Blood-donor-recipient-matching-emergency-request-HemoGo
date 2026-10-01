@@ -81,7 +81,7 @@ const DashboardScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.grid}>
-          <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('Donors')}>
+          <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('FindDonors')}>
             <View style={styles.cardIcon}>
               <Ionicons name="search-outline" size={20} color={colors.text} />
             </View>
@@ -111,20 +111,6 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.smallCard}
-            onPress={() => comingSoon('Book appointment')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.cardIcon, styles.listIconWrap]}>
-              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.cardTitle}>Book appointment</Text>
-            <Text style={styles.cardSub}>Schedule appointment or view</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.grid}>
-          <TouchableOpacity
-            style={styles.smallCard}
             onPress={() => navigation.navigate('ActiveRequests')}
             activeOpacity={0.7}
           >
@@ -134,16 +120,30 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.cardTitle}>Request List</Text>
             <Text style={styles.cardSub}>View All blood requests</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.grid}>
           <TouchableOpacity
             style={styles.smallCard}
-            onPress={() => comingSoon('Check Eligibility')}
+            onPress={() => navigation.navigate('BookAppointment')}
             activeOpacity={0.7}
           >
-            <View style={[styles.cardIcon, styles.listIconWrap]}>
-              <Ionicons name="document-text-outline" size={20} color={colors.text} />
+            <View style={styles.cardIcon}>
+              <Ionicons name="calendar-outline" size={20} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Book Appointment</Text>
+            <Text style={styles.cardSub}>Schedule your donation appointment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => navigation.navigate('CheckEligibility')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardIcon}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
             </View>
             <Text style={styles.cardTitle}>Check Eligibility</Text>
-            <Text style={styles.cardSub}>Check your eligibility before give blood</Text>
+            <Text style={styles.cardSub}>Verify your donation eligibility</Text>
           </TouchableOpacity>
         </View>
 
