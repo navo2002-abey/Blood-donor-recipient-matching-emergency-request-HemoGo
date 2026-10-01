@@ -124,7 +124,16 @@ const BloodRescueScreen = ({ navigation }) => {
       setBusyId(t._id);
       await transferService.update(t._id, { status: 'APPROVED' });
       await load();
-      Alert.alert('Approved', 'Blood transferred. Stock updated on both sides.');
+
+      // ✅ Navigate to confirmation screen
+      navigation.navigate('TransferConfirmation', {
+        mode: 'approved',
+        bloodGroup: t.bloodGroup,
+        quantity: t.units,
+        sourceHospital: t.sourceBank,
+        destinationHospital: t.destinationHospital,
+        urgency: t.urgency || 'HIGH',
+      });
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to approve.');
     } finally {

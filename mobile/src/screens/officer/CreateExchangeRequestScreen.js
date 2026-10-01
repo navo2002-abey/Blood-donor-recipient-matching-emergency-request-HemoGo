@@ -61,43 +61,43 @@ const CreateExchangeRequestScreen = ({ navigation }) => {
     }
   };
 
-  const handleSend = async () => {
+    const handleSend = async () => {
     if (!bloodGroup) return Alert.alert('Missing', 'Select blood group.');
-    if (!selectedBank)
-      return Alert.alert('Missing', 'Select a source bank.');
+    if (!selectedBank) return Alert.alert('Missing', 'Select a source bank.');
     if (!units || Number(units) <= 0)
-      return Alert.alert('Invalid', 'Enter a valid number of units.');
+        return Alert.alert('Invalid', 'Enter a valid number of units.');
     if (Number(units) > selectedBank.totalUnits)
-      return Alert.alert(
+        return Alert.alert(
         'Too many units',
         `Only ${selectedBank.totalUnits} units available at ${selectedBank.hospital}.`
-      );
+        );
 
     try {
-      setSaving(true);
-      await transferService.create({
+        setSaving(true);
+        await transferService.create({
         bloodGroup,
         units: Number(units),
-        sourceBank: selectedBank.hospital,      // has the blood
-        destinationHospital: myHospital,        // needs it (my bank)
+        sourceBank: selectedBank.hospital,
+        destinationHospital: myHospital,
         reason: reason.trim() || `${bloodGroup} needed at ${myHospital}`,
         urgency,
         status: 'PENDING',
-      });
+        });
 
-      navigation.goBack();
-      setTimeout(() => {
-        Alert.alert(
-          'Request Sent',
-          `${selectedBank.hospital} will review your request.`
-        );
-      }, 200);
+        // ✅ Go to confirmation screen
+        navigation.replace('TransferConfirmation', {
+        bloodGroup,
+        quantity: Number(units),
+        sourceHospital: selectedBank.hospital,
+        destinationHospital: myHospital,
+        urgency,
+        });
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to send.');
+        Alert.alert('Error', e?.response?.data?.message || 'Failed to send.');
     } finally {
-      setSaving(false);
+        setSaving(false);
     }
-  };
+    };
 
   const daysLeft = (date) => {
     const diff = new Date(date).getTime() - Date.now();

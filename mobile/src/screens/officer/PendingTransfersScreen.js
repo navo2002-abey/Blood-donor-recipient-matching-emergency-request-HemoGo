@@ -82,7 +82,15 @@ const PendingTransfersScreen = ({ navigation }) => {
       setBusyId(item._id);
       await transferService.update(item._id, { status: 'APPROVED' });
       await load();
-      Alert.alert('Approved', 'Transfer approved. Stock will move.');
+
+      navigation.navigate('TransferConfirmation', {
+        mode: 'approved',
+        bloodGroup: item.bloodGroup,
+        quantity: item.units,
+        sourceHospital: item.sourceBank,
+        destinationHospital: item.destinationHospital,
+        urgency: item.urgency || 'HIGH',
+      });
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Failed to approve.');
     } finally {

@@ -22,6 +22,7 @@ import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
 import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
+import TransferConfirmationScreen from '../screens/officer/TransferConfirmationScreen';
 import CreateExchangeRequestScreen from '../screens/officer/CreateExchangeRequestScreen';
 
 
@@ -99,17 +100,14 @@ const OfficerNavigator = () => (
     <Stack.Screen name="OrganizeDrive" component={OrganizeDonationDriveScreen} />
     <Stack.Screen name="BloodRescue" component={BloodRescueScreen} />
     <Stack.Screen name="TransferRequest" component={TransferRequestScreen} />
+    <Stack.Screen name="TransferConfirmation" component={TransferConfirmationScreen} />
     <Stack.Screen name="PendingTransfers" component={PendingTransfersScreen} />
     <Stack.Screen name="NearbyBloodBanks" component={NearbyBloodBanksScreen} />
     <Stack.Screen name="BloodBankDetails" component={BloodBankDetailsScreen} />
     <Stack.Screen name="QRScan" component={QRScanScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="Alerts" component={AlertsScreen} />
-    {/* ✅ NEW */}
-    <Stack.Screen
-      name="CreateExchangeRequest"
-      component={CreateExchangeRequestScreen}
-    />
+    <Stack.Screen name="CreateExchangeRequest" component={CreateExchangeRequestScreen} />
   </Stack.Navigator>
 );
 
