@@ -105,10 +105,13 @@ const RequestMatchScreen = ({ navigation, route }) => {
       return;
     }
 
-    navigation.navigate('FindDonors', {
+    navigation.navigate('SmartMatch', {
       menu,
+      patientName: patientName.trim(),
+      hospital: hospital.trim(),
       bloodGroup,
-      availability: 'Available Now',
+      urgency,
+      details: details.trim(),
     });
   };
 

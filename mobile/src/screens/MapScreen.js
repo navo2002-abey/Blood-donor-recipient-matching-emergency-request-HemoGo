@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { BLOOD_GROUPS, getNearbyDonors } from '../utils/nearbyDonors';
+import { placeCall } from '../utils/phone';
 
 const AVAILABILITY = ['All', 'Available Now', 'Unavailable'];
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
@@ -168,7 +169,7 @@ const MapScreen = ({ navigation, route }) => {
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.callBtn}
-                onPress={() => navigation.navigate('Call', { donorId: selected.id })}
+                onPress={() => placeCall(selected.phone)}
               >
                 <Text style={styles.callText}>Call</Text>
               </TouchableOpacity>
