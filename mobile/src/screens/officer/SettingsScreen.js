@@ -10,13 +10,17 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
 
 const SettingsScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const confirm = useConfirm();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [pushAlerts, setPushAlerts] = useState(true);
   const [expiryReminders, setExpiryReminders] = useState(true);
@@ -49,7 +53,8 @@ const SettingsScreen = ({ navigation }) => {
     });
   };
 
-  const comingSoon = (label) => Alert.alert('Coming Soon', `${label} will be available soon.`);
+  const comingSoon = (label) =>
+    Alert.alert('Coming Soon', `${label} will be available soon.`);
 
   const Row = ({ icon, label, value, onPress, danger }) => (
     <TouchableOpacity
@@ -86,13 +91,10 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard}>
@@ -106,41 +108,90 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.roleText} numberOfLines={1}>{hospital}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.editBtn} onPress={() => comingSoon('Edit Profile')}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => comingSoon('Edit Profile')}
+          >
             <Ionicons name="pencil" size={16} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
         <View style={styles.group}>
-          <ToggleRow icon="notifications-outline" label="Push Alerts" value={pushAlerts} onValueChange={setPushAlerts} />
+          <ToggleRow
+            icon="notifications-outline"
+            label="Push Alerts"
+            value={pushAlerts}
+            onValueChange={setPushAlerts}
+          />
           <View style={styles.divider} />
-          <ToggleRow icon="hourglass-outline" label="Expiry Reminders" value={expiryReminders} onValueChange={setExpiryReminders} />
+          <ToggleRow
+            icon="hourglass-outline"
+            label="Expiry Reminders"
+            value={expiryReminders}
+            onValueChange={setExpiryReminders}
+          />
           <View style={styles.divider} />
-          <ToggleRow icon="alert-outline" label="Low Stock Alerts" value={lowStockAlerts} onValueChange={setLowStockAlerts} />
+          <ToggleRow
+            icon="alert-outline"
+            label="Low Stock Alerts"
+            value={lowStockAlerts}
+            onValueChange={setLowStockAlerts}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>ACCOUNT</Text>
         <View style={styles.group}>
-          <Row icon="person-outline" label="Edit Profile" onPress={() => comingSoon('Edit Profile')} />
+          <Row
+            icon="person-outline"
+            label="Edit Profile"
+            onPress={() => comingSoon('Edit Profile')}
+          />
           <View style={styles.divider} />
-          <Row icon="business-outline" label="Hospital" value={hospital} onPress={() => comingSoon('Change Hospital')} />
+          <Row
+            icon="business-outline"
+            label="Hospital"
+            value={hospital}
+            onPress={() => comingSoon('Change Hospital')}
+          />
           <View style={styles.divider} />
-          <Row icon="lock-closed-outline" label="Change Password" onPress={() => comingSoon('Change Password')} />
+          <Row
+            icon="lock-closed-outline"
+            label="Change Password"
+            onPress={() => comingSoon('Change Password')}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>PREFERENCES</Text>
         <View style={styles.group}>
-          <Row icon="language-outline" label="Language" value="English" onPress={() => comingSoon('Language')} />
+          <Row
+            icon="language-outline"
+            label="Language"
+            value="English"
+            onPress={() => comingSoon('Language')}
+          />
           <View style={styles.divider} />
-          <Row icon="moon-outline" label="Dark Mode" value="Off" onPress={() => comingSoon('Dark Mode')} />
+          <Row
+            icon="moon-outline"
+            label="Dark Mode"
+            value="Off"
+            onPress={() => comingSoon('Dark Mode')}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.group}>
-          <Row icon="help-circle-outline" label="Help & Support" onPress={() => comingSoon('Help')} />
+          <Row
+            icon="help-circle-outline"
+            label="Help & Support"
+            onPress={() => comingSoon('Help')}
+          />
           <View style={styles.divider} />
-          <Row icon="document-text-outline" label="Privacy Policy" onPress={() => comingSoon('Privacy')} />
+          <Row
+            icon="document-text-outline"
+            label="Privacy Policy"
+            onPress={() => comingSoon('Privacy')}
+          />
           <View style={styles.divider} />
           <Row icon="information-circle-outline" label="App Version" value="v1.0.0" />
         </View>
@@ -152,34 +203,126 @@ const SettingsScreen = ({ navigation }) => {
 
         <Text style={styles.footer}>HemoGo · Blood Donor Matching</Text>
       </ScrollView>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Settings"
+        hospital={hospital}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#FFFFFF' },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 16, paddingBottom: 40 },
-  profileCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 16, borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: '#F1F5F9' },
-  avatar: { width: 60, height: 60, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarText: { color: colors.white, fontWeight: '800', fontSize: 20 },
   name: { fontSize: 16, fontWeight: '800', color: colors.text },
   email: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  rolePill: { alignSelf: 'flex-start', backgroundColor: colors.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 6, maxWidth: '90%' },
+  rolePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 6,
+    maxWidth: '90%',
+  },
   roleText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
-  editBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.textMuted, letterSpacing: 0.6, marginBottom: 8, marginLeft: 4, marginTop: 4 },
-  group: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 20, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
-  rowIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginLeft: 4,
+    marginTop: 4,
+  },
+  group: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rowLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  rowValue: { fontSize: 12, color: colors.textSecondary, fontWeight: '600', maxWidth: 140, textAlign: 'right' },
+  rowValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    maxWidth: 140,
+    textAlign: 'right',
+  },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginLeft: 62 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 27, borderWidth: 1.5, borderColor: colors.primary, marginTop: 4 },
+
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    marginTop: 4,
+  },
   logoutText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
-  footer: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 20, fontWeight: '600' },
+  footer: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: '600',
+  },
 });
 
 export default SettingsScreen;

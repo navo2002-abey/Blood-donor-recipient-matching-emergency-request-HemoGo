@@ -11,10 +11,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const statusColor = (status) => {
   if (status === 'RESERVED') return '#F59E0B';
@@ -35,6 +41,7 @@ const statusBg = (status) => {
 const ReservedUnitsScreen = ({ navigation }) => {
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,7 +68,9 @@ const ReservedUnitsScreen = ({ navigation }) => {
   const handleRelease = async (item) => {
     const ok = await confirm({
       title: 'Release Unit',
-      message: `Return unit ${item.unitId} (${item.units || 1} unit${(item.units || 1) > 1 ? 's' : ''}) to available stock?`,
+      message: `Return unit ${item.unitId} (${item.units || 1} unit${
+        (item.units || 1) > 1 ? 's' : ''
+      }) to available stock?`,
       confirmText: 'Release',
     });
     if (!ok) return;
@@ -128,7 +137,9 @@ const ReservedUnitsScreen = ({ navigation }) => {
             <Text style={styles.unitId}>{item.unitId}</Text>
           </View>
           <View style={styles.bloodBadge}>
-            <Text style={styles.bloodText}>{item.bloodGroup} × {reservedUnits}</Text>
+            <Text style={styles.bloodText}>
+              {item.bloodGroup} × {reservedUnits}
+            </Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.patient} numberOfLines={1}>{item.patientName}</Text>
@@ -181,11 +192,17 @@ const ReservedUnitsScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{busy ? '...' : 'Release'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
+              style={[
+                styles.actionBtn,
+                styles.actionPrimary,
+                busy && styles.actionDisabled,
+              ]}
               onPress={() => handleMarkUsed(item)}
               disabled={busy}
             >
-              <Text style={styles.actionPrimaryText}>{busy ? '...' : 'Mark Used'}</Text>
+              <Text style={styles.actionPrimaryText}>
+                {busy ? '...' : 'Mark Used'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconBtn, busy && styles.actionDisabled]}
@@ -219,18 +236,10 @@ const ReservedUnitsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reserved Units</Text>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.navigate('CreateReservation')}
-        >
-          <Ionicons name="add" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
@@ -269,21 +278,46 @@ const ReservedUnitsScreen = ({ navigation }) => {
           <Text style={styles.footerText}>+ CREATE NEW RESERVATION</Text>
         </TouchableOpacity>
       </View>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Reserved Units"
+        hospital={HOSPITAL}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 100 },
-  card: { backgroundColor: colors.white, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: 12 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: 12,
+  },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  unitBadge: { paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.inputBg, borderRadius: 8 },
+  unitBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: colors.inputBg,
+    borderRadius: 8,
+  },
   unitId: { fontSize: 11, fontWeight: '800', color: colors.text },
-  bloodBadge: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primarySoft, borderRadius: 8 },
+  bloodBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+  },
   bloodText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   patient: { fontSize: 14, fontWeight: '800', color: colors.text },
   ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
@@ -295,19 +329,52 @@ const styles = StyleSheet.create({
   infoLabel: { color: colors.textMuted, fontWeight: '600' },
   infoValue: { color: colors.text, fontWeight: '700' },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
-  actionBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  actionBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   actionText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   actionPrimaryText: { fontSize: 12, fontWeight: '800', color: colors.white },
   actionDisabled: { opacity: 0.5 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  hintText: { flex: 1, fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary, fontSize: 14 },
-  emptyBtn: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 22, backgroundColor: colors.primary },
+  emptyBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+  },
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 13 },
   footer: { position: 'absolute', left: 16, right: 16, bottom: 20 },
-  footerBtn: { height: 52, borderRadius: 26, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  footerBtn: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   footerText: { color: colors.white, fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
 });
 

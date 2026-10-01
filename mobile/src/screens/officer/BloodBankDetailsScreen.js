@@ -11,21 +11,18 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
 import BloodBanksMap from '../../components/BloodBanksMap';
-import { BloodDrop } from '../../components/Logo';
-import Sidebar from '../../components/Sidebar';
-import { useAlerts } from '../../context/AlertsContext';
 import { useUserLocation } from '../../hooks/useUserLocation';
-import { useMyHospital } from '../../hooks/useMyHospital';
 import { bloodBankService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-import { OFFICER_MENU } from '../../utils/roles';
-import { groupsWithStock, normalizeStock, totalUnits } from '../../utils/stockHelpers';
+import {
+  groupsWithStock,
+  normalizeStock,
+  totalUnits,
+} from '../../utils/stockHelpers';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
-
-const comingSoon = (label) =>
-  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const pseudoDistance = (name) => {
   let hash = 0;
@@ -39,11 +36,8 @@ const pseudoDistance = (name) => {
 
 const BloodBankDetailsScreen = ({ route, navigation }) => {
   const { id } = route.params;
-  const { unreadCount } = useAlerts();
-  const myHospital = useMyHospital();
   const { location } = useUserLocation();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bank, setBank] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +74,7 @@ const BloodBankDetailsScreen = ({ route, navigation }) => {
   if (loading || !bank) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <AppHeader navigation={navigation} showBack />
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
       </SafeAreaView>
     );
@@ -91,42 +86,12 @@ const BloodBankDetailsScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          hitSlop={10}
-          style={styles.headerBtn}
-          onPress={() => setSidebarOpen(true)}
-        >
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.brand}>
-          <BloodDrop size={16} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity
-          hitSlop={10}
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
-        </TouchableOpacity>
-      </View>
+      <AppHeader navigation={navigation} showBack />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back link */}
-        <TouchableOpacity
-          style={styles.backLink}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={16} color={colors.textSecondary} />
-          <Text style={styles.backText}>All Blood Banks</Text>
-        </TouchableOpacity>
-
         {/* REAL MAP BANNER */}
         <View style={styles.mapBanner}>
           <BloodBanksMap
@@ -256,9 +221,7 @@ const BloodBankDetailsScreen = ({ route, navigation }) => {
         {/* Available for transfer */}
         {available.length > 0 ? (
           <View style={styles.availableBox}>
-            <Text style={styles.availableTitle}>
-              AVAILABLE FOR TRANSFER
-            </Text>
+            <Text style={styles.availableTitle}>AVAILABLE FOR TRANSFER</Text>
             <View style={styles.availableChips}>
               {available.map((g) => (
                 <View key={g} style={styles.chip}>
@@ -289,71 +252,18 @@ const BloodBankDetailsScreen = ({ route, navigation }) => {
           <Ionicons name="call" size={16} color={colors.primary} />
           <Text style={styles.secondaryBtnText}>Call</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={onRequestBlood}
-        >
+        <TouchableOpacity style={styles.primaryButton} onPress={onRequestBlood}>
           <Ionicons name="swap-horizontal" size={16} color={colors.white} />
           <Text style={styles.primaryButtonText}>Request Blood</Text>
         </TouchableOpacity>
       </View>
-
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={OFFICER_MENU}
-        variant="staff"
-        activeKey="Nearby Blood Banks"
-        hospital={myHospital}
-      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  bellBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
   scroll: { paddingHorizontal: 20, paddingBottom: 110 },
-
-  backLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  backText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '700',
-  },
 
   mapBanner: {
     height: 180,

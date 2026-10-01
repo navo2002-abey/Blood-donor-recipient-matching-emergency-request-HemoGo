@@ -11,14 +11,20 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useAlerts } from '../../context/AlertsContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import {
   predictionService,
   stockService,
   transferService,
 } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const AlertCard = ({ icon, iconColor, bg, title, subtitle, time, onPress }) => (
   <TouchableOpacity
@@ -53,7 +59,9 @@ const AlertsScreen = ({ navigation }) => {
     totalCount,
     dismissedIds,
   } = useAlerts();
+  const HOSPITAL = useMyHospital();
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expiring, setExpiring] = useState([]);
@@ -94,7 +102,7 @@ const AlertsScreen = ({ navigation }) => {
     return unsub;
   }, [navigation, load]);
 
-  // Build alert list with STABLE IDs so dismissed state persists correctly
+  // Build alert list with stable IDs
   const allAlerts = useMemo(() => {
     const list = [];
 
@@ -108,8 +116,12 @@ const AlertsScreen = ({ navigation }) => {
           icon: 'close-circle',
           iconColor: '#7F1D1D',
           bg: '#FEE2E2',
-          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expired`,
-          subtitle: `Batch expired on ${new Date(s.expiryDate).toLocaleDateString()}. Dispose immediately.`,
+          title: `${s.bloodGroup} · ${s.units} unit${
+            s.units > 1 ? 's' : ''
+          } expired`,
+          subtitle: `Batch expired on ${new Date(
+            s.expiryDate
+          ).toLocaleDateString()}. Dispose immediately.`,
           nav: 'ExpiryMonitoring',
         });
       });
@@ -117,7 +129,8 @@ const AlertsScreen = ({ navigation }) => {
     // Expiring soon (within 5 days)
     expiring
       .filter((s) => {
-        const days = (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24);
+        const days =
+          (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24);
         return days > 0 && days <= 5;
       })
       .forEach((s) => {
@@ -130,8 +143,12 @@ const AlertsScreen = ({ navigation }) => {
           icon: 'hourglass',
           iconColor: '#EF4444',
           bg: '#FFF1F3',
-          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expiring`,
-          subtitle: `Expires in ${days} day${days === 1 ? '' : 's'} on ${new Date(s.expiryDate).toLocaleDateString()}.`,
+          title: `${s.bloodGroup} · ${s.units} unit${
+            s.units > 1 ? 's' : ''
+          } expiring`,
+          subtitle: `Expires in ${days} day${
+            days === 1 ? '' : 's'
+          } on ${new Date(s.expiryDate).toLocaleDateString()}.`,
           nav: 'ExpiryMonitoring',
         });
       });
@@ -193,7 +210,7 @@ const AlertsScreen = ({ navigation }) => {
   // Visible alerts = not dismissed
   const visibleAlerts = allAlerts.filter((a) => !dismissedIds.includes(a.id));
 
-  // Group by section for rendering
+  // Group by section
   const sections = useMemo(() => {
     const map = new Map();
     visibleAlerts.forEach((a) => {
@@ -210,20 +227,10 @@ const AlertsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.brand}>
-          <BloodDrop size={18} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        {unreadCount > 0 ? (
-          <TouchableOpacity style={styles.markReadBtn} onPress={markAllRead}>
-            <Ionicons name="checkmark-done" size={18} color={colors.primary} />
-            <Text style={styles.markReadText}>Mark all read</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -244,6 +251,19 @@ const AlertsScreen = ({ navigation }) => {
             <View style={styles.countPill}>
               <Text style={styles.countPillText}>{unreadCount} new</Text>
             </View>
+          ) : null}
+          {unreadCount > 0 ? (
+            <View style={{ flex: 1 }} />
+          ) : null}
+          {unreadCount > 0 ? (
+            <TouchableOpacity style={styles.markReadBtn} onPress={markAllRead}>
+              <Ionicons
+                name="checkmark-done"
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={styles.markReadText}>Mark all read</Text>
+            </TouchableOpacity>
           ) : null}
         </View>
         <Text style={styles.subtitle}>
@@ -285,36 +305,23 @@ const AlertsScreen = ({ navigation }) => {
           ))
         )}
       </ScrollView>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Alerts"
+        hospital={HOSPITAL}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  markReadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: colors.primarySoft,
-  },
-  markReadText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
-  },
   scroll: { padding: 16, paddingBottom: 30 },
   titleRow: {
     flexDirection: 'row',
@@ -335,6 +342,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   countPillText: { color: colors.primary, fontWeight: '800', fontSize: 11 },
+  markReadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+  },
+  markReadText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+  },
   subtitle: { fontSize: 12, color: colors.textSecondary, marginBottom: 20 },
   sectionLabel: {
     fontSize: 11,

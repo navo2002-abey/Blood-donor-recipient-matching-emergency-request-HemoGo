@@ -11,11 +11,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useConfirm } from '../../context/ConfirmContext';
-import { useMyHospital } from '../../hooks/useMyHospital';  // ✅ NEW
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const daysLeft = (date) => {
   const diff = new Date(date).getTime() - Date.now();
@@ -26,7 +31,8 @@ const statusTheme = (status, expiryDate) => {
   const days = daysLeft(expiryDate);
   if (status === 'EXPIRED' || days <= 0) return { bg: '#FEE2E2', text: '#DC2626' };
   if (status === 'RESERVED') return { bg: '#EFF6FF', text: '#2563EB' };
-  if (status === 'USED' || status === 'TRANSFERRED') return { bg: '#F3F4F6', text: '#6B7280' };
+  if (status === 'USED' || status === 'TRANSFERRED')
+    return { bg: '#F3F4F6', text: '#6B7280' };
   if (days <= 5) return { bg: '#FEE2E2', text: '#DC2626' };
   if (days <= 14) return { bg: '#FFFAF0', text: '#D97706' };
   return { bg: '#ECFDF5', text: '#059669' };
@@ -34,7 +40,8 @@ const statusTheme = (status, expiryDate) => {
 
 const InventoryListScreen = ({ navigation }) => {
   const confirm = useConfirm();
-  const HOSPITAL = useMyHospital();                          // ✅ NEW
+  const HOSPITAL = useMyHospital();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('available');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +56,8 @@ const InventoryListScreen = ({ navigation }) => {
         reservationService.list({ hospital: HOSPITAL }),
       ]);
       const sorted = (stockRes.data.stock || []).sort((a, b) => {
-        if (a.bloodGroup !== b.bloodGroup) return a.bloodGroup.localeCompare(b.bloodGroup);
+        if (a.bloodGroup !== b.bloodGroup)
+          return a.bloodGroup.localeCompare(b.bloodGroup);
         return new Date(a.expiryDate) - new Date(b.expiryDate);
       });
       setStock(sorted);
@@ -60,7 +68,7 @@ const InventoryListScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [HOSPITAL]);                                            // ✅ depend
+  }, [HOSPITAL]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -100,18 +108,29 @@ const InventoryListScreen = ({ navigation }) => {
         const days = daysLeft(item.expiryDate);
         const theme = statusTheme(item.status, item.expiryDate);
         return (
-          <View key={item._id} style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}>
-            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>{item.bloodGroup}</Text>
-            <Text style={[styles.tableCell, styles.boldText, { flex: 1.4 }]}>{item.units}</Text>
+          <View
+            key={item._id}
+            style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
+          >
+            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>
+              {item.bloodGroup}
+            </Text>
+            <Text style={[styles.tableCell, styles.boldText, { flex: 1.4 }]}>
+              {item.units}
+            </Text>
             <View style={{ flex: 2.6, alignItems: 'center' }}>
               <Text style={[styles.tableCell, { paddingVertical: 0 }]}>
                 {new Date(item.expiryDate).toLocaleDateString()}
               </Text>
-              <Text style={styles.expirySubtext}>{days} day{days === 1 ? '' : 's'} left</Text>
+              <Text style={styles.expirySubtext}>
+                {days} day{days === 1 ? '' : 's'} left
+              </Text>
             </View>
             <View style={{ flex: 1.6, alignItems: 'center' }}>
               <View style={[styles.statusPill, { backgroundColor: theme.bg }]}>
-                <Text style={[styles.statusPillText, { color: theme.text }]}>{item.status}</Text>
+                <Text style={[styles.statusPillText, { color: theme.text }]}>
+                  {item.status}
+                </Text>
               </View>
             </View>
             <TouchableOpacity
@@ -145,11 +164,21 @@ const InventoryListScreen = ({ navigation }) => {
         const busy = busyId === item._id;
         const isReserved = item.status === 'RESERVED';
         return (
-          <View key={item._id} style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}>
-            <Text style={[styles.tableCell, styles.boldText, { flex: 2 }]}>{item.unitId}</Text>
-            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>{item.bloodGroup}</Text>
+          <View
+            key={item._id}
+            style={[styles.tableRow, index % 2 !== 0 && styles.tableRowAlt]}
+          >
+            <Text style={[styles.tableCell, styles.boldText, { flex: 2 }]}>
+              {item.unitId}
+            </Text>
+            <Text style={[styles.tableCell, styles.boldRedText, { flex: 1.2 }]}>
+              {item.bloodGroup}
+            </Text>
             <View style={{ flex: 2.8, alignItems: 'center' }}>
-              <Text style={[styles.tableCell, { paddingVertical: 0 }]} numberOfLines={1}>
+              <Text
+                style={[styles.tableCell, { paddingVertical: 0 }]}
+                numberOfLines={1}
+              >
                 {item.reservedFor || item.ward}
               </Text>
               <Text style={styles.expirySubtext}>{item.status}</Text>
@@ -181,20 +210,18 @@ const InventoryListScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <View style={styles.brand}>
-          <BloodDrop size={18} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('AddStock')}>
-          <Ionicons name="add" size={22} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); load(); }}
+          />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -212,7 +239,12 @@ const InventoryListScreen = ({ navigation }) => {
             style={[styles.tab, activeTab === 'available' && styles.activeTab]}
             onPress={() => setActiveTab('available')}
           >
-            <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'available' && styles.activeTabText,
+              ]}
+            >
               Available Stock
             </Text>
           </TouchableOpacity>
@@ -220,7 +252,12 @@ const InventoryListScreen = ({ navigation }) => {
             style={[styles.tab, activeTab === 'reserved' && styles.activeTab]}
             onPress={() => setActiveTab('reserved')}
           >
-            <Text style={[styles.tabText, activeTab === 'reserved' && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'reserved' && styles.activeTabText,
+              ]}
+            >
               Reserved Units
             </Text>
           </TouchableOpacity>
@@ -229,7 +266,11 @@ const InventoryListScreen = ({ navigation }) => {
         <View style={styles.tableContainer}>
           {loading ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
-          ) : activeTab === 'available' ? renderAvailable() : renderReserved()}
+          ) : activeTab === 'available' ? (
+            renderAvailable()
+          ) : (
+            renderReserved()
+          )}
         </View>
       </ScrollView>
 
@@ -247,30 +288,82 @@ const InventoryListScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Inventory List"
+        hospital={HOSPITAL}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
   scroll: { paddingHorizontal: 20, paddingBottom: 120 },
-  pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 10 },
-  pageSubtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, marginBottom: 20 },
-  dropdown: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 20 },
+  pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 6 },
+  pageSubtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
   dropdownText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#FFF1F3', borderRadius: 14, padding: 4, marginBottom: 20 },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF1F3',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 20,
+  },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10 },
   activeTab: { backgroundColor: colors.primary },
   tabText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   activeTabText: { color: colors.white },
-  tableContainer: { borderWidth: 1, borderColor: '#FEF2F2', borderRadius: 16, overflow: 'hidden' },
-  tableHeaderRow: { flexDirection: 'row', backgroundColor: '#FFF1F3', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#FEE2E2' },
-  tableHeader: { fontSize: 11, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderColor: '#F3F4F6' },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: '#FEF2F2',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF1F3',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  tableHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderColor: '#F3F4F6',
+  },
   tableRowAlt: { backgroundColor: '#FAFAFA' },
   tableCell: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   boldText: { fontWeight: '700', color: colors.text },
@@ -279,12 +372,22 @@ const styles = StyleSheet.create({
   expirySubtext: { fontSize: 9, color: colors.textMuted, marginTop: 2 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   statusPillText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.2 },
-  actionBtn: { backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  actionBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   actionBtnText: { color: colors.white, fontSize: 10, fontWeight: '700' },
   emptyRow: { padding: 24, alignItems: 'center' },
   emptyText: { fontSize: 12, color: colors.textSecondary },
   bottomContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
-  primaryButton: { backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
   primaryButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
 });
 

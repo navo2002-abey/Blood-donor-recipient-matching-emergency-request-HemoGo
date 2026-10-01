@@ -11,10 +11,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
-import { useAlerts } from '../../context/AlertsContext';
-import { useMyHospital } from '../../hooks/useMyHospital';  // ✅ NEW
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
@@ -41,8 +40,7 @@ const getStatusTheme = (status) => {
 };
 
 const HomeScreen = ({ navigation }) => {
-  const { unreadCount } = useAlerts();
-  const HOSPITAL = useMyHospital();                        // ✅ NEW
+  const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -63,7 +61,7 @@ const HomeScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [HOSPITAL]);                                          // ✅ depend on HOSPITAL
+  }, [HOSPITAL]);
 
   useEffect(() => {
     load();
@@ -93,22 +91,10 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.headerBtn}>
-          <Ionicons name="grid-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.brand}>
-          <BloodDrop size={20} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -231,36 +217,8 @@ const HomeScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
+
   heroStats: {
     backgroundColor: '#1E293B',
     borderRadius: 24,
@@ -277,8 +235,21 @@ const styles = StyleSheet.create({
   heroSub: { flex: 1, gap: 12 },
   subStatValue: { color: colors.white, fontSize: 16, fontWeight: '700' },
   subStatLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 16, marginLeft: 4 },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
+
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
   actionCard: {
     width: '48%',
     marginBottom: 12,
@@ -291,8 +262,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  actionIconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  actionIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionLabel: { fontSize: 13, fontWeight: '700', color: colors.text, flex: 1 },
+
   inventoryList: { gap: 10 },
   listItem: {
     flexDirection: 'row',
@@ -303,18 +281,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  listBloodType: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FEF2F3', alignItems: 'center', justifyContent: 'center' },
+  listBloodType: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bloodTypeText: { fontSize: 16, fontWeight: '900', color: colors.primary },
   listContent: { flex: 1, marginLeft: 14 },
-  listRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   listUnits: { fontSize: 15, fontWeight: '800', color: colors.text },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: '#F1F5F9', overflow: 'hidden' },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
   progressFill: { height: '100%', borderRadius: 3 },
-  empty: { alignItems: 'center', padding: 32, backgroundColor: colors.white, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', gap: 10 },
+
+  empty: {
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+  },
   emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.primary },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+  },
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
 });
 

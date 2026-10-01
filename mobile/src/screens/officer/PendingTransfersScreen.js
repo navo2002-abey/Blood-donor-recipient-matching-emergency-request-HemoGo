@@ -11,10 +11,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { transferService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+
+const comingSoon = (label) =>
+  Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const statusColor = (s) => {
   if (s === 'PENDING') return '#F59E0B';
@@ -42,6 +48,7 @@ const urgencyColor = (u) => {
 const PendingTransfersScreen = ({ navigation }) => {
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +89,6 @@ const PendingTransfersScreen = ({ navigation }) => {
       setBusyId(item._id);
       await transferService.update(item._id, { status: 'APPROVED' });
       await load();
-
       navigation.navigate('TransferConfirmation', {
         mode: 'approved',
         bloodGroup: item.bloodGroup,
@@ -182,8 +188,15 @@ const PendingTransfersScreen = ({ navigation }) => {
             {item.units} unit{item.units > 1 ? 's' : ''}
           </Text>
           <View style={{ flex: 1 }} />
-          <View style={[styles.urgencyPill, { backgroundColor: `${urgencyColor(item.urgency)}20` }]}>
-            <Text style={[styles.urgencyText, { color: urgencyColor(item.urgency) }]}>
+          <View
+            style={[
+              styles.urgencyPill,
+              { backgroundColor: `${urgencyColor(item.urgency)}20` },
+            ]}
+          >
+            <Text
+              style={[styles.urgencyText, { color: urgencyColor(item.urgency) }]}
+            >
               {item.urgency}
             </Text>
           </View>
@@ -207,7 +220,9 @@ const PendingTransfersScreen = ({ navigation }) => {
 
         {item.reason ? (
           <View style={styles.reasonBox}>
-            <Text style={styles.reasonText} numberOfLines={2}>{item.reason}</Text>
+            <Text style={styles.reasonText} numberOfLines={2}>
+              {item.reason}
+            </Text>
           </View>
         ) : null}
 
@@ -273,13 +288,10 @@ const PendingTransfersScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transfer Log</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       {loading ? (
         <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
@@ -297,51 +309,143 @@ const PendingTransfersScreen = ({ navigation }) => {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="swap-horizontal-outline" size={40} color={colors.textMuted} />
+              <Ionicons
+                name="swap-horizontal-outline"
+                size={40}
+                color={colors.textMuted}
+              />
               <Text style={styles.emptyText}>No transfer requests yet.</Text>
             </View>
           }
         />
       )}
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Pending Transfers"
+        hospital={HOSPITAL}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 40 },
-  card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.cardBorder },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  directionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  directionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
   directionIn: { backgroundColor: '#F3E8FF' },
   directionOut: { backgroundColor: '#DBEAFE' },
   directionText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
   bloodRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  bloodBadge: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.primarySoft, borderRadius: 8 },
+  bloodBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+  },
   bloodText: { fontSize: 13, fontWeight: '900', color: colors.primary },
   titleText: { fontSize: 14, fontWeight: '800', color: colors.text },
   urgencyPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   urgencyText: { fontSize: 9, fontWeight: '800' },
   routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  routeLabel: { fontSize: 9, fontWeight: '800', color: colors.textMuted, letterSpacing: 0.4 },
-  routeValue: { fontSize: 11, color: colors.text, fontWeight: '700', marginTop: 2, lineHeight: 15 },
-  reasonBox: { backgroundColor: '#F9FAFB', padding: 8, borderRadius: 8, marginBottom: 10 },
+  routeLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.textMuted,
+    letterSpacing: 0.4,
+  },
+  routeValue: {
+    fontSize: 11,
+    color: colors.text,
+    fontWeight: '700',
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  reasonBox: {
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
   reasonText: { fontSize: 11, color: colors.textSecondary, lineHeight: 15 },
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 4, alignItems: 'center' },
-  primaryBtn: { flex: 1, height: 40, borderRadius: 20, backgroundColor: colors.primary, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  primaryBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   primaryText: { color: colors.white, fontWeight: '800', fontSize: 12 },
-  outlineBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  outlineBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   outlineText: { color: colors.text, fontWeight: '800', fontSize: 12 },
-  outlineBtnWide: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  outlineBtnWide: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   outlineTextPrimary: { color: colors.primary, fontWeight: '800', fontSize: 12 },
-  iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   disabled: { opacity: 0.5 },
-  hintText: { flex: 1, fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
+  hintText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary },
 });
