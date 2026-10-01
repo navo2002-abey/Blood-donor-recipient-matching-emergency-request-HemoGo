@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, placeLabel, selectedId }) => {
+const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, placeLabel, selectedId, radar }) => {
   const donorJson = JSON.stringify(
     donors.map((donor) => ({
       id: donor.id,
@@ -35,6 +35,7 @@ const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, plac
       const radiusKm = ${Number(radiusKm) || 0};
       const placeLabel = ${JSON.stringify(placeLabel || '')};
       const selectedId = ${JSON.stringify(selectedId || '')};
+      const radar = ${radar ? 'true' : 'false'};
 
       const map = L.map('map', {
         zoomControl: interactive,
@@ -44,13 +45,31 @@ const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, plac
         doubleClickZoom: interactive,
         boxZoom: false,
         keyboard: false
-      }).setView([lat, lng], radiusKm ? 12 : 14);
+      }).setView([lat, lng], radar ? 13 : (radiusKm ? 12 : 14));
 
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 19,
         attribution: 'Esri'
       }).addTo(map);
 
+      if (radar) {
+        [1.2, 2.4, 3.6].forEach(function (km) {
+          L.circle([lat, lng], {
+            radius: km * 1000,
+            color: '#E31E35',
+            weight: 1.5,
+            fillColor: '#E31E35',
+            fillOpacity: 0.05
+          }).addTo(map);
+        });
+        L.circleMarker([lat, lng], {
+          radius: 9,
+          color: '#ffffff',
+          weight: 3,
+          fillColor: '#E31E35',
+          fillOpacity: 1
+        }).addTo(map);
+      } else {
       L.circleMarker([lat, lng], {
         radius: 10,
         color: '#1D4ED8',
@@ -58,8 +77,9 @@ const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, plac
         fillColor: '#60A5FA',
         fillOpacity: 1
       }).addTo(map).bindPopup('You are here');
+      }
 
-      if (radiusKm) {
+      if (!radar && radiusKm) {
         L.circle([lat, lng], {
           radius: radiusKm * 1000,
           color: '#E31E35',
@@ -141,6 +161,7 @@ const LiveDonorsMap = ({
   placeLabel = '',
   selectedId = '',
   onSelectDonor,
+  radar = false,
 }) => {
   const html = useMemo(
     () =>
@@ -152,8 +173,9 @@ const LiveDonorsMap = ({
         radiusKm,
         placeLabel,
         selectedId,
+        radar,
       }),
-    [donors, interactive, location.latitude, location.longitude, placeLabel, radiusKm, selectedId]
+    [donors, interactive, location.latitude, location.longitude, placeLabel, radar, radiusKm, selectedId]
   );
 
   useEffect(() => {

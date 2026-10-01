@@ -21,8 +21,12 @@ import CallScreen from '../screens/CallScreen';
 import ConfirmBloodRequestScreen from '../screens/ConfirmBloodRequestScreen';
 import CreateBloodRequestScreen from '../screens/CreateBloodRequestScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import EmergencyModeScreen from '../screens/EmergencyModeScreen';
 import DirectRequestScreen from '../screens/DirectRequestScreen';
 import DonorDetailScreen from '../screens/DonorDetailScreen';
+import DonorSelectedScreen from '../screens/DonorSelectedScreen';
+import ContactDonorScreen from '../screens/ContactDonorScreen';
+import RequestBloodScreen from '../screens/RequestBloodScreen';
 import FindDonorsScreen from '../screens/FindDonorsScreen';
 import HistoryDetailScreen from '../screens/HistoryDetailScreen';
 import HistoryScreen from '../screens/HistoryScreen';
@@ -36,6 +40,7 @@ import RequestMatchScreen from '../screens/RequestMatchScreen';
 import RewardsGiftScreen from '../screens/RewardsGiftScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import SmartMatchScreen from '../screens/SmartMatchScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
 
@@ -163,6 +168,11 @@ const AppNavigator = () => {
         <Stack.Screen name="DirectRequest" component={DirectRequestScreen} />
         <Stack.Screen name="Call" component={CallScreen} />
         <Stack.Screen name="RequestMatch" component={RequestMatchScreen} />
+        <Stack.Screen name="SmartMatch" component={SmartMatchScreen} />
+        <Stack.Screen name="EmergencyMode" component={EmergencyModeScreen} />
+        <Stack.Screen name="DonorSelected" component={DonorSelectedScreen} />
+        <Stack.Screen name="ContactDonor" component={ContactDonorScreen} />
+        <Stack.Screen name="RequestBlood" component={RequestBloodScreen} />
         <Stack.Screen name="CreateBloodRequest" component={CreateBloodRequestScreen} />
         <Stack.Screen name="ConfirmBloodRequest" component={ConfirmBloodRequestScreen} />
         <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />

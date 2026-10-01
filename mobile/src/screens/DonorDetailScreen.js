@@ -7,6 +7,7 @@ import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { placeCall } from '../utils/phone';
 
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
 const AVATAR_TEXT = ['#E31E35', '#1D4ED8', '#15803D', '#C2410C', '#7E22CE'];
@@ -104,7 +105,7 @@ const DonorDetailScreen = ({ navigation, route }) => {
           <View style={styles.footer}>
             <TouchableOpacity
               style={styles.callBtn}
-              onPress={() => navigation.navigate('Call', { donorId: donor.id })}
+              onPress={() => placeCall(donor.phone)}
             >
               <Text style={styles.callText}>Call Donor</Text>
             </TouchableOpacity>
