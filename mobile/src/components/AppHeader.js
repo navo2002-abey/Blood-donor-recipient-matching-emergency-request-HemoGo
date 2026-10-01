@@ -35,7 +35,14 @@ const AppHeader = ({
 
   const handleBell = () => {
     if (onBellPress) onBellPress();
-    else navigation.navigate('Alerts');
+    else {
+      // Navigate to the Alerts tab if available; else fall back to stack screen
+      try {
+        navigation.navigate('Alerts');
+      } catch (e) {
+        navigation.navigate('OfficerTabs', { screen: 'Alerts' });
+      }
+    }
   };
 
   return (

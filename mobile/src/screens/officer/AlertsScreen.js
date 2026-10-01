@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,11 +15,6 @@ import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
 import { useAlerts } from '../../context/AlertsContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
-import {
-  predictionService,
-  stockService,
-  transferService,
-} from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 
@@ -102,240 +97,37 @@ const AlertCard = ({
 
 const AlertsScreen = ({ navigation }) => {
   const {
-    setAlertList,
-    markAllRead,
-    markOneRead,
+    alerts,
+    loading,
+    refreshing,
+    refresh,
     unreadCount,
     totalCount,
+    markAllRead,
+    markOneRead,
     isRead,
   } = useAlerts();
 
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [expiring, setExpiring] = useState([]);
-  const [predictions, setPredictions] = useState([]);
-  const [transfers, setTransfers] = useState([]);
 
-  const load = useCallback(async () => {
-    try {
-      const [expRes, predRes, transRes] = await Promise.allSettled([
-        stockService.expiring(7),
-        predictionService.list(),
-        transferService.list({ hospital: HOSPITAL }),
-      ]);
-
-      if (expRes.status === 'fulfilled') {
-        setExpiring(expRes.value.data.stock || []);
-      }
-      if (predRes.status === 'fulfilled') {
-        setPredictions(predRes.value.data.predictions || []);
-      }
-      if (transRes.status === 'fulfilled') {
-        setTransfers(transRes.value.data.transfers || []);
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to load alerts.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [HOSPITAL]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    const unsub = navigation.addListener('focus', load);
-    return unsub;
-  }, [navigation, load]);
-
-  const allAlerts = useMemo(() => {
-    const list = [];
-
-    // ---------- 1. EXPIRED UNITS ----------
-    expiring
-      .filter((s) => new Date(s.expiryDate) <= new Date())
-      .forEach((s) => {
-        list.push({
-          id: `expired-${s._id}`,
-          section: 'EXPIRED UNITS',
-          icon: 'close-circle',
-          iconColor: '#7F1D1D',
-          bg: '#FEE2E2',
-          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expired`,
-          subtitle: `Batch expired. Dispose immediately.`,
-          location: s.hospital,
-          nav: 'ExpiryMonitoring',
-          createdAt: s.expiryDate,
-        });
-      });
-
-    // ---------- 2. EXPIRING SOON ----------
-    expiring
-      .filter((s) => {
-        const days = (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24);
-        return days > 0 && days <= 5;
-      })
-      .forEach((s) => {
-        const days = Math.ceil(
-          (new Date(s.expiryDate) - Date.now()) / (1000 * 60 * 60 * 24)
-        );
-        list.push({
-          id: `expiring-${s._id}`,
-          section: 'EXPIRING SOON',
-          icon: 'hourglass',
-          iconColor: '#EF4444',
-          bg: '#FFF1F3',
-          title: `${s.bloodGroup} · ${s.units} unit${s.units > 1 ? 's' : ''} expiring`,
-          subtitle: `Expires in ${days} day${days === 1 ? '' : 's'}.`,
-          location: s.hospital,
-          nav: 'ExpiryMonitoring',
-          createdAt: s.expiryDate,
-        });
-      });
-
-    // ---------- 3. BLOOD BANK EXCHANGE ----------
-    transfers.forEach((t) => {
-      const iAmSource = t.sourceBank === HOSPITAL;
-      const iAmRequester = t.destinationHospital === HOSPITAL;
-
-      // INCOMING PENDING — I need to approve/reject
-      if (iAmSource && t.status === 'PENDING') {
-        list.push({
-          id: `exchange-in-${t._id}`,
-          section: 'EXCHANGE REQUESTS',
-          icon: 'arrow-down-circle',
-          iconColor: '#7C3AED',
-          bg: '#F3E8FF',
-          title: `New request from ${t.destinationHospital}`,
-          subtitle: `${t.units} unit(s) of ${t.bloodGroup} · ${t.urgency} priority`,
-          location: t.destinationHospital,
-          nav: 'PendingTransfers',
-          actionLabel: 'REVIEW',
-          createdAt: t.createdAt,
-        });
-      }
-      // OUTGOING PENDING — waiting for approval
-      else if (iAmRequester && t.status === 'PENDING') {
-        list.push({
-          id: `exchange-out-${t._id}`,
-          section: 'EXCHANGE REQUESTS',
-          icon: 'arrow-up-circle',
-          iconColor: '#2563EB',
-          bg: '#DBEAFE',
-          title: `Waiting for ${t.sourceBank}`,
-          subtitle: `Request sent · ${t.units} unit(s) of ${t.bloodGroup} pending.`,
-          location: t.sourceBank,
-          nav: 'PendingTransfers',
-          createdAt: t.createdAt,
-        });
-      }
-      // APPROVED (source) — I need to mark delivered
-      else if (iAmSource && t.status === 'APPROVED') {
-        list.push({
-          id: `exchange-ship-${t._id}`,
-          section: 'NEEDS ACTION',
-          icon: 'paper-plane-outline',
-          iconColor: '#2563EB',
-          bg: '#EFF6FF',
-          title: `Ready to ship to ${t.destinationHospital}`,
-          subtitle: `${t.units} unit(s) of ${t.bloodGroup} reserved.`,
-          location: t.destinationHospital,
-          nav: 'PendingTransfers',
-          actionLabel: 'SHIP NOW',
-          createdAt: t.approvedAt || t.updatedAt,
-        });
-      }
-      // DELIVERED (requester) — I need to confirm receipt
-      else if (iAmRequester && t.status === 'DELIVERED') {
-        list.push({
-          id: `exchange-receive-${t._id}`,
-          section: 'NEEDS ACTION',
-          icon: 'checkmark-done-circle',
-          iconColor: '#7C3AED',
-          bg: '#F3E8FF',
-          title: `Blood arrived from ${t.sourceBank}`,
-          subtitle: `${t.units} unit(s) of ${t.bloodGroup} in transit.`,
-          location: t.sourceBank,
-          nav: 'PendingTransfers',
-          actionLabel: 'CONFIRM',
-          createdAt: t.deliveredAt || t.updatedAt,
-        });
-      }
-      // DELIVERED (source) — waiting for confirmation
-      else if (iAmSource && t.status === 'DELIVERED') {
-        list.push({
-          id: `exchange-transit-${t._id}`,
-          section: 'IN TRANSIT',
-          icon: 'time-outline',
-          iconColor: '#2563EB',
-          bg: '#EFF6FF',
-          title: `Waiting for confirmation`,
-          subtitle: `${t.units} unit(s) of ${t.bloodGroup} sent to ${t.destinationHospital}.`,
-          location: t.destinationHospital,
-          nav: 'PendingTransfers',
-          createdAt: t.deliveredAt || t.updatedAt,
-        });
-      }
-    });
-
-    // ---------- 4. SHORTAGE WARNINGS ----------
-    predictions
-      .filter((p) => p.riskLevel === 'CRITICAL')
-      .forEach((p, idx) => {
-        list.push({
-          id: `critical-pred-${p.bloodGroup}-${idx}`,
-          section: 'SHORTAGE WARNINGS',
-          icon: 'warning',
-          iconColor: colors.primary,
-          bg: '#FFF1F3',
-          title: `Critical ${p.bloodGroup} shortage`,
-          subtitle: `${p.reason} ${p.recommendedAction}`,
-          nav: 'AIPrediction',
-        });
-      });
-
-    // ---------- 5. HIGH PRIORITY PREDICTIONS ----------
-    predictions
-      .filter((p) => p.riskLevel === 'HIGH')
-      .forEach((p, idx) => {
-        list.push({
-          id: `high-pred-${p.bloodGroup}-${idx}`,
-          section: 'HIGH PRIORITY',
-          icon: 'alert-circle',
-          iconColor: '#F59E0B',
-          bg: '#FFFBEB',
-          title: `${p.bloodGroup} stock warning`,
-          subtitle: `${p.reason} ${p.recommendedAction}`,
-          nav: 'AIPrediction',
-        });
-      });
-
-    return list;
-  }, [expiring, predictions, transfers, HOSPITAL]);
-
-  // Push to context
-  useEffect(() => {
-    setAlertList(allAlerts);
-  }, [allAlerts, setAlertList]);
-
-  // Group by section (keep ALL — read + unread)
   const sections = useMemo(() => {
     const map = new Map();
-    allAlerts.forEach((a) => {
+    alerts.forEach((a) => {
       if (!map.has(a.section)) map.set(a.section, []);
       map.get(a.section).push(a);
     });
     return Array.from(map.entries());
-  }, [allAlerts]);
+  }, [alerts]);
 
   const handlePress = async (alert) => {
-    // Mark as read but keep it in the list
     await markOneRead(alert.id);
     navigation.navigate(alert.nav);
+  };
+
+  const handleMarkAllRead = () => {
+    const ids = alerts.map((a) => a.id);
+    markAllRead(ids);
   };
 
   return (
@@ -348,13 +140,7 @@ const AlertsScreen = ({ navigation }) => {
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              load();
-            }}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -372,7 +158,7 @@ const AlertsScreen = ({ navigation }) => {
           {unreadCount > 0 ? (
             <TouchableOpacity
               style={styles.markReadBtn}
-              onPress={markAllRead}
+              onPress={handleMarkAllRead}
             >
               <Ionicons
                 name="checkmark-done"
@@ -388,7 +174,7 @@ const AlertsScreen = ({ navigation }) => {
           across your blood bank
         </Text>
 
-        {loading ? (
+        {loading && alerts.length === 0 ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
         ) : totalCount === 0 ? (
           <View style={styles.empty}>
