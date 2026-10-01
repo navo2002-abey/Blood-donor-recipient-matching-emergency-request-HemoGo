@@ -276,12 +276,6 @@ const InventoryListScreen = ({ navigation, route }) => {
                 {item.bloodGroup} × {reservedUnits}
               </Text>
             </View>
-            {isTransfer ? (
-              <View style={styles.transferBadge}>
-                <Ionicons name="swap-horizontal" size={10} color="#7C3AED" />
-                <Text style={styles.transferBadgeText}>TRANSFER</Text>
-              </View>
-            ) : null}
             <View style={{ flex: 1 }}>
               <Text style={styles.patient} numberOfLines={1}>
                 {item.patientName}
@@ -340,12 +334,42 @@ const InventoryListScreen = ({ navigation, route }) => {
           {/* ✅ Transfer reservations — no manual actions */}
           {isTransfer ? (
             <View style={styles.actionRow}>
-              <View style={styles.transferHintBox}>
-                <Ionicons name="information-circle" size={14} color="#7C3AED" />
-                <Text style={styles.transferHintText}>
-                  Incoming transfer — manage via Transfer Log
+              <TouchableOpacity
+                style={[
+                  styles.transferHintBox,
+                  item.transferRole === 'SOURCE'
+                    ? { backgroundColor: '#FEF3C7' }
+                    : { backgroundColor: '#F3E8FF' },
+                ]}
+                onPress={() => navigation.navigate('PendingTransfers')}
+              >
+                <Ionicons
+                  name={
+                    item.transferRole === 'SOURCE'
+                      ? 'arrow-up-circle'
+                      : 'arrow-down-circle'
+                  }
+                  size={14}
+                  color={item.transferRole === 'SOURCE' ? '#D97706' : '#7C3AED'}
+                />
+                <Text
+                  style={[
+                    styles.transferHintText,
+                    {
+                      color: item.transferRole === 'SOURCE' ? '#D97706' : '#7C3AED',
+                    },
+                  ]}
+                >
+                  {item.transferRole === 'SOURCE'
+                    ? 'Outgoing transfer — mark delivered in Log'
+                    : 'Incoming transfer — confirm receipt in Log'}
                 </Text>
-              </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={14}
+                  color={item.transferRole === 'SOURCE' ? '#D97706' : '#7C3AED'}
+                />
+              </TouchableOpacity>
             </View>
           ) : isReserved ? (
             <View style={styles.actionRow}>

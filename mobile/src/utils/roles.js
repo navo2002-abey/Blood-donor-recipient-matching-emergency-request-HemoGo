@@ -45,7 +45,7 @@ export const OFFICER_MENU = [
   { key: 'Home', tab: 'Home' },
   { key: 'Inventory List', tab: 'Inventory' },
   { key: 'Scan Donor QR', tab: 'Scan' },
-  { key: 'Pending Transfers', tab: 'Requests' },
+  { key: 'Transfer Log', tab: 'Requests' },
   { key: 'Expiry Monitoring', screen: 'ExpiryMonitoring' },
   { key: 'AI Shortage Prediction', screen: 'AIPrediction' },
   { key: 'Blood Bank Exchange', screen: 'BloodRescue' },

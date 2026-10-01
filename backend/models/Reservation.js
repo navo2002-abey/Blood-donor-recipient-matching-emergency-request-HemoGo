@@ -18,9 +18,15 @@ const reservationSchema = new mongoose.Schema(
       default: 'RESERVED',
     },
     reservedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    // ✅ NEW — links this reservation to a transfer
+    // ✅ Transfer link
     transferId: { type: mongoose.Schema.Types.ObjectId, ref: 'TransferRequest' },
     isTransfer: { type: Boolean, default: false },
+    // ✅ NEW — distinguishes source-side vs destination-side entries
+    transferRole: {
+      type: String,
+      enum: ['SOURCE', 'DESTINATION', null],
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -20,13 +20,12 @@ import NearbyBloodBanksScreen from '../screens/officer/NearbyBloodBanksScreen';
 import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
-import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
+import AlertsScreen from '../screens/officer/AlertsScreen';
 import CampaignConfirmationScreen from '../screens/officer/CampaignConfirmationScreen';
 import CampaignListScreen from '../screens/officer/CampaignListScreen';
 import EditCampaignScreen from '../screens/officer/EditCampaignScreen';
 import TransferConfirmationScreen from '../screens/officer/TransferConfirmationScreen';
 import CreateExchangeRequestScreen from '../screens/officer/CreateExchangeRequestScreen';
-
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -58,8 +57,8 @@ const OfficerTabs = () => (
       Home: 'home-outline',
       Inventory: 'water-outline',
       Scan: 'qr-code-outline',
-      Requests: 'swap-horizontal-outline',
-      Alerts: 'notifications-outline',      // ✅ real alerts icon
+      Log: 'list-outline',               // ← renamed from Requests
+      Alerts: 'notifications-outline',
     })}
   >
     <Tab.Screen
@@ -78,13 +77,13 @@ const OfficerTabs = () => (
       options={{ tabBarLabel: 'Scan' }}
     />
     <Tab.Screen
-      name="Requests"
-      component={PendingTransfersScreen}
-      options={{ tabBarLabel: 'Requests' }}
+      name="Log"
+      component={PendingTransfersScreen}   // ← was "Requests"
+      options={{ tabBarLabel: 'Log' }}
     />
     <Tab.Screen
       name="Alerts"
-      component={AlertsScreen}              // ✅ was ExpiryMonitoringScreen
+      component={AlertsScreen}
       options={{ tabBarLabel: 'Alerts' }}
     />
   </Tab.Navigator>

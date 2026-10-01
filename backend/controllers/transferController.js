@@ -51,7 +51,9 @@ exports.getTransfers = async (req, res) => {
  * PENDING → APPROVED
  * - Decrement source bank stock (FIFO — earliest expiry first)
  * - Record each consumed batch (with its ORIGINAL expiry) on transfer.sourceBatches
- * - Create a RESERVED reservation at destination (in-transit hold)
+ * - ✅ Create TWO reservations:
+ *     - SOURCE side: 'Outgoing to X' — reminder for source officer to ship
+ *     - DESTINATION side: 'Incoming from Y' — reminder for destination officer to receive
  */
 const moveToApproved = async (transfer, user) => {
   const requestedUnits = transfer.units || 1;
@@ -92,29 +94,54 @@ const moveToApproved = async (transfer, user) => {
 
   // Save the drawn batches on the transfer
   transfer.sourceBatches = drawnBatches;
+  transfer.approvedBy = user._id;
+  transfer.approvedAt = new Date();
 
-  // Create a reservation at destination (in-transit hold)
+  const transferCode = transfer._id.toString().slice(-6);
+
+  // ✅ Reservation at SOURCE — reminder for source officer to ship blood
   await Reservation.create({
-    unitId: `TRF-${transfer._id.toString().slice(-6)}`,
+    unitId: `OUT-${transferCode}`,
+    bloodGroup: transfer.bloodGroup,
+    units: requestedUnits,
+    patientName: `Outgoing to ${transfer.destinationHospital}`,
+    ward: 'Blood Bank Storage',
+    hospital: transfer.sourceBank,
+    reservedFor: `Transfer ${transferCode}`,
+    status: 'RESERVED',
+    reservedBy: user._id,
+    isTransfer: true,
+    transferRole: 'SOURCE',
+    transferId: transfer._id,
+  });
+
+  // ✅ Reservation at DESTINATION — reminder for destination officer to receive
+  await Reservation.create({
+    unitId: `TRF-${transferCode}`,
     bloodGroup: transfer.bloodGroup,
     units: requestedUnits,
     patientName: `Incoming from ${transfer.sourceBank}`,
     ward: 'Blood Bank Storage',
     hospital: transfer.destinationHospital,
-    reservedFor: `Transfer ${transfer._id.toString().slice(-6)}`,
+    reservedFor: `Transfer ${transferCode}`,
     status: 'RESERVED',
     reservedBy: user._id,
     isTransfer: true,
+    transferRole: 'DESTINATION',
     transferId: transfer._id,
   });
 
-  transfer.approvedBy = user._id;
-  transfer.approvedAt = new Date();
+  console.log('✅ Transfer approved — 2 reservations created:', {
+    source: transfer.sourceBank,
+    destination: transfer.destinationHospital,
+    units: requestedUnits,
+    transferCode,
+  });
 };
 
 /**
  * APPROVED → DELIVERED
- * - Just record the timestamp — reservation stays RESERVED
+ * - Just record the timestamp — both reservations stay RESERVED
  * - Destination officer will confirm receipt next
  */
 const moveToDelivered = async (transfer, user) => {
@@ -124,13 +151,13 @@ const moveToDelivered = async (transfer, user) => {
 
 /**
  * DELIVERED → COMPLETED
- * - Release the destination reservation (mark USED)
+ * - Mark BOTH reservations as USED
  * - Add stock to destination using the SAME expiry dates from sourceBatches
  *   (merged into existing batches with matching expiry, or new batches)
  */
 const moveToCompleted = async (transfer, user) => {
-  // 1. Release reservation
-  await Reservation.updateOne(
+  // 1. Mark BOTH reservations (source + destination) as USED
+  await Reservation.updateMany(
     { transferId: transfer._id, status: 'RESERVED' },
     { status: 'USED' }
   );
@@ -180,7 +207,7 @@ const moveToCompleted = async (transfer, user) => {
 /**
  * ANY → CANCELLED
  * If previously APPROVED/DELIVERED: restore source stock with SAME expiry
- * and release the destination reservation.
+ * and release BOTH reservations (source + destination).
  */
 const moveToCancelled = async (transfer, user) => {
   if (transfer.status === 'APPROVED' || transfer.status === 'DELIVERED') {
@@ -213,8 +240,8 @@ const moveToCancelled = async (transfer, user) => {
       }
     }
 
-    // Release destination reservation
-    await Reservation.updateOne(
+    // ✅ Release BOTH reservations (source + destination)
+    await Reservation.updateMany(
       { transferId: transfer._id, status: 'RESERVED' },
       { status: 'RELEASED' }
     );
