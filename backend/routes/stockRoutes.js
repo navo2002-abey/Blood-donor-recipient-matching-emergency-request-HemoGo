@@ -7,6 +7,7 @@ const {
   deleteStock,
   getExpiring,
   getAvailableBatches,
+  getBanksWithBlood,  
 } = require('../controllers/stockController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -18,6 +19,9 @@ router.use(protect, authorize('BLOOD_BANK_OFFICER', 'ADMIN'));
 // Specific routes MUST come before /:id
 router.get('/expiring', getExpiring);
 router.get('/available-batches', getAvailableBatches);
+
+router.get('/banks-with-blood', getBanksWithBlood);
+
 
 // CRUD
 router.route('/').get(getStock).post(createStock);

@@ -12,10 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useConfirm } from '../../context/ConfirmContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
-
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const statusColor = (status) => {
   if (status === 'RESERVED') return '#F59E0B';
@@ -35,6 +34,7 @@ const statusBg = (status) => {
 
 const ReservedUnitsScreen = ({ navigation }) => {
   const confirm = useConfirm();
+  const HOSPITAL = useMyHospital();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,7 +50,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [HOSPITAL]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -61,13 +61,10 @@ const ReservedUnitsScreen = ({ navigation }) => {
   const handleRelease = async (item) => {
     const ok = await confirm({
       title: 'Release Unit',
-      message: `Return unit ${item.unitId} (${item.units || 1} unit${
-        (item.units || 1) > 1 ? 's' : ''
-      }) to available stock?`,
+      message: `Return unit ${item.unitId} (${item.units || 1} unit${(item.units || 1) > 1 ? 's' : ''}) to available stock?`,
       confirmText: 'Release',
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await reservationService.update(item._id, { status: 'RELEASED' });
@@ -87,7 +84,6 @@ const ReservedUnitsScreen = ({ navigation }) => {
       confirmText: 'Mark Used',
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await reservationService.update(item._id, { status: 'USED' });
@@ -108,12 +104,11 @@ const ReservedUnitsScreen = ({ navigation }) => {
       destructive: true,
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await reservationService.remove(item._id);
       await load();
-      Alert.alert('Deleted', 'Reservation removed, units returned.');
+      Alert.alert('Deleted', 'Reservation removed.');
     } catch (e) {
       Alert.alert('Error', 'Failed to delete reservation.');
     } finally {
@@ -128,34 +123,24 @@ const ReservedUnitsScreen = ({ navigation }) => {
 
     return (
       <View style={styles.card}>
-        {/* Header row */}
         <View style={styles.cardTop}>
           <View style={styles.unitBadge}>
             <Text style={styles.unitId}>{item.unitId}</Text>
           </View>
           <View style={styles.bloodBadge}>
-            <Text style={styles.bloodText}>
-              {item.bloodGroup} × {reservedUnits}
-            </Text>
+            <Text style={styles.bloodText}>{item.bloodGroup} × {reservedUnits}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.patient} numberOfLines={1}>
-              {item.patientName}
-            </Text>
-            <Text style={styles.ward} numberOfLines={1}>
-              {item.ward}
-            </Text>
+            <Text style={styles.patient} numberOfLines={1}>{item.patientName}</Text>
+            <Text style={styles.ward} numberOfLines={1}>{item.ward}</Text>
           </View>
-          <View
-            style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}
-          >
+          <View style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}>
             <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
               {item.status}
             </Text>
           </View>
         </View>
 
-        {/* Info rows */}
         <View style={styles.infoList}>
           <View style={styles.infoRow}>
             <Ionicons name="water-outline" size={13} color={colors.textMuted} />
@@ -175,18 +160,6 @@ const ReservedUnitsScreen = ({ navigation }) => {
             </View>
           ) : null}
 
-          {item.stockId && item.stockId.expiryDate ? (
-            <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.infoText}>
-                <Text style={styles.infoLabel}>Batch expiry: </Text>
-                <Text style={styles.infoValue}>
-                  {new Date(item.stockId.expiryDate).toLocaleDateString()}
-                </Text>
-              </Text>
-            </View>
-          ) : null}
-
           <View style={styles.infoRow}>
             <Ionicons name="time-outline" size={13} color={colors.textMuted} />
             <Text style={styles.infoText}>
@@ -198,7 +171,6 @@ const ReservedUnitsScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Actions */}
         {isReserved && (
           <View style={styles.actionRow}>
             <TouchableOpacity
@@ -209,11 +181,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
               <Text style={styles.actionText}>{busy ? '...' : 'Release'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                styles.actionPrimary,
-                busy && styles.actionDisabled,
-              ]}
+              style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
               onPress={() => handleMarkUsed(item)}
               disabled={busy}
             >
@@ -275,10 +243,7 @@ const ReservedUnitsScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
+              onRefresh={() => { setRefreshing(true); load(); }}
             />
           }
           ListEmptyComponent={
@@ -310,100 +275,39 @@ const ReservedUnitsScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 100 },
-
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    marginBottom: 12,
-  },
+  card: { backgroundColor: colors.white, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.cardBorder, marginBottom: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  unitBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: colors.inputBg,
-    borderRadius: 8,
-  },
+  unitBadge: { paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.inputBg, borderRadius: 8 },
   unitId: { fontSize: 11, fontWeight: '800', color: colors.text },
-  bloodBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 8,
-  },
+  bloodBadge: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primarySoft, borderRadius: 8 },
   bloodText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   patient: { fontSize: 14, fontWeight: '800', color: colors.text },
   ward: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
   statusText: { fontSize: 10, fontWeight: '800' },
-
   infoList: { gap: 6 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   infoText: { fontSize: 11, color: colors.textSecondary, flex: 1 },
   infoLabel: { color: colors.textMuted, fontWeight: '600' },
   infoValue: { color: colors.text, fontWeight: '700' },
-
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
-  actionBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  actionBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   actionPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   actionText: { fontSize: 12, fontWeight: '800', color: colors.primary },
   actionPrimaryText: { fontSize: 12, fontWeight: '800', color: colors.white },
   actionDisabled: { opacity: 0.5 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hintText: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
-
+  iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  hintText: { flex: 1, fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary, fontSize: 14 },
-  emptyBtn: {
-    marginTop: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-  },
+  emptyBtn: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 22, backgroundColor: colors.primary },
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 13 },
-
   footer: { position: 'absolute', left: 16, right: 16, bottom: 20 },
-  footerBtn: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  footerBtn: { height: 52, borderRadius: 26, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   footerText: { color: colors.white, fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
 });
 

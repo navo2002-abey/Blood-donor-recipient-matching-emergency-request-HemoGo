@@ -22,6 +22,8 @@ import BloodBankDetailsScreen from '../screens/officer/BloodBankDetailsScreen';
 import QRScanScreen from '../screens/officer/QRScanScreen';
 import SettingsScreen from '../screens/officer/SettingsScreen';
 import AlertsScreen from '../screens/officer/AlertsScreen';   // ✅ NEW
+import CreateExchangeRequestScreen from '../screens/officer/CreateExchangeRequestScreen';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -103,6 +105,11 @@ const OfficerNavigator = () => (
     <Stack.Screen name="QRScan" component={QRScanScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="Alerts" component={AlertsScreen} />
+    {/* ✅ NEW */}
+    <Stack.Screen
+      name="CreateExchangeRequest"
+      component={CreateExchangeRequestScreen}
+    />
   </Stack.Navigator>
 );
 

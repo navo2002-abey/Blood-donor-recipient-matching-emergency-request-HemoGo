@@ -14,20 +14,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateField from '../../components/DateField';
 import FormField from '../../components/FormField';
+import { useMyHospital } from '../../hooks/useMyHospital';  // ✅ NEW
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { notPastDate, positiveInt, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const AddStockScreen = ({ navigation }) => {
+  const HOSPITAL = useMyHospital();                          // ✅ NEW
   const [bloodGroup, setBloodGroup] = useState('');
   const [units, setUnits] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [saving, setSaving] = useState(false);
-
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
@@ -54,7 +54,6 @@ const AddStockScreen = ({ navigation }) => {
         hospital: HOSPITAL,
         status: 'AVAILABLE',
       });
-
       navigation.goBack();
       setTimeout(() => {
         Alert.alert('Success', 'Stock added successfully.');
@@ -68,10 +67,7 @@ const AddStockScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
@@ -95,9 +91,7 @@ const AddStockScreen = ({ navigation }) => {
                     setTouched((t) => ({ ...t, bloodGroup: true }));
                   }}
                 >
-                  <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>
-                    {g}
-                  </Text>
+                  <Text style={[styles.chipText, bloodGroup === g && styles.chipTextActive]}>{g}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -107,6 +101,7 @@ const AddStockScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               keyboardType="number-pad"
+              inputMode="numeric"
               value={units}
               onChangeText={(t) => setUnits(digitsOnly(t))}
               onBlur={() => setTouched((t) => ({ ...t, units: true }))}

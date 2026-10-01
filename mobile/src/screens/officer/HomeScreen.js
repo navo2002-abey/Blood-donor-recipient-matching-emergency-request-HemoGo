@@ -14,11 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
 import Sidebar from '../../components/Sidebar';
 import { useAlerts } from '../../context/AlertsContext';
+import { useMyHospital } from '../../hooks/useMyHospital';  // ✅ NEW
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
-
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -36,8 +35,6 @@ const getStatusTheme = (status) => {
     case 'USED':
     case 'TRANSFERRED':
       return { bg: '#F3F4F6', text: '#6B7280', progress: '#9CA3AF' };
-    case 'AVAILABLE':
-    case 'Good':
     default:
       return { bg: '#ECFDF5', text: '#059669', progress: '#10B981' };
   }
@@ -45,6 +42,7 @@ const getStatusTheme = (status) => {
 
 const HomeScreen = ({ navigation }) => {
   const { unreadCount } = useAlerts();
+  const HOSPITAL = useMyHospital();                        // ✅ NEW
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -65,7 +63,7 @@ const HomeScreen = ({ navigation }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [HOSPITAL]);                                          // ✅ depend on HOSPITAL
 
   useEffect(() => {
     load();
@@ -95,7 +93,6 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.headerBtn}>
           <Ionicons name="grid-outline" size={22} color={colors.text} />
@@ -118,7 +115,6 @@ const HomeScreen = ({ navigation }) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Stats */}
         <View style={styles.heroStats}>
           <View style={styles.heroMain}>
             <Text style={styles.heroLabel}>Total Inventory</Text>
@@ -139,7 +135,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickGrid}>
           {actions.map((action, i) => (
@@ -265,9 +260,7 @@ const styles = StyleSheet.create({
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-
   scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
-
   heroStats: {
     backgroundColor: '#1E293B',
     borderRadius: 24,
@@ -284,21 +277,8 @@ const styles = StyleSheet.create({
   heroSub: { flex: 1, gap: 12 },
   subStatValue: { color: colors.white, fontSize: 16, fontWeight: '700' },
   subStatLabel: { color: '#94A3B8', fontSize: 11, fontWeight: '600' },
-
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 16,
-    marginLeft: 4,
-  },
-
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 16, marginLeft: 4 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 },
   actionCard: {
     width: '48%',
     marginBottom: 12,
@@ -311,15 +291,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  actionIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  actionIconBg: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   actionLabel: { fontSize: 13, fontWeight: '700', color: colors.text, flex: 1 },
-
   inventoryList: { gap: 10 },
   listItem: {
     flexDirection: 'row',
@@ -330,53 +303,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  listBloodType: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: '#FEF2F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  listBloodType: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FEF2F3', alignItems: 'center', justifyContent: 'center' },
   bloodTypeText: { fontSize: 16, fontWeight: '900', color: colors.primary },
   listContent: { flex: 1, marginLeft: 14 },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
+  listRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   listUnits: { fontSize: 15, fontWeight: '800', color: colors.text },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F1F5F9',
-    overflow: 'hidden',
-  },
+  progressTrack: { height: 6, borderRadius: 3, backgroundColor: '#F1F5F9', overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-
-  empty: {
-    alignItems: 'center',
-    padding: 32,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    gap: 10,
-  },
+  empty: { alignItems: 'center', padding: 32, backgroundColor: colors.white, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', gap: 10 },
   emptyText: { color: colors.textSecondary, fontSize: 13, textAlign: 'center' },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-  },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, backgroundColor: colors.primary },
   emptyBtnText: { color: colors.white, fontWeight: '800', fontSize: 12 },
 });
 

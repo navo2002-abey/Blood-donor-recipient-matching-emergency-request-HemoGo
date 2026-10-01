@@ -116,3 +116,63 @@ exports.getAvailableBatches = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// ✅ NEW: Find all banks with a specific blood group available
+exports.getBanksWithBlood = async (req, res) => {
+  try {
+    const { bloodGroup, excludeHospital } = req.query;
+
+    if (!bloodGroup) {
+      return res.status(400).json({
+        success: false,
+        message: 'bloodGroup query parameter is required.',
+      });
+    }
+
+    const filter = {
+      bloodGroup,
+      status: 'AVAILABLE',
+      units: { $gt: 0 },
+    };
+    if (excludeHospital) {
+      filter.hospital = { $ne: excludeHospital };
+    }
+
+    const batches = await BloodStock.find(filter)
+      .sort({ expiryDate: 1 })
+      .lean();
+
+    // Group by hospital
+    const byHospital = {};
+    batches.forEach((b) => {
+      if (!byHospital[b.hospital]) {
+        byHospital[b.hospital] = {
+          hospital: b.hospital,
+          totalUnits: 0,
+          batches: [],
+          earliestExpiry: b.expiryDate,
+        };
+      }
+      byHospital[b.hospital].totalUnits += b.units;
+      byHospital[b.hospital].batches.push({
+        _id: b._id,
+        units: b.units,
+        expiryDate: b.expiryDate,
+      });
+      if (
+        new Date(b.expiryDate).getTime() <
+        new Date(byHospital[b.hospital].earliestExpiry).getTime()
+      ) {
+        byHospital[b.hospital].earliestExpiry = b.expiryDate;
+      }
+    });
+
+    const banks = Object.values(byHospital).sort(
+      (a, b) => b.totalUnits - a.totalUnits
+    );
+
+    res.json({ success: true, count: banks.length, banks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

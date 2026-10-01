@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useConfirm } from '../../context/ConfirmContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { transferService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 
@@ -40,6 +41,7 @@ const urgencyColor = (u) => {
 
 const PendingTransfersScreen = ({ navigation }) => {
   const confirm = useConfirm();
+  const HOSPITAL = useMyHospital();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,6 +65,12 @@ const PendingTransfersScreen = ({ navigation }) => {
     return unsub;
   }, [navigation, load]);
 
+  const getDirection = (t) => {
+    if (t.destinationHospital === HOSPITAL) return 'OUTGOING';
+    if (t.sourceBank === HOSPITAL) return 'INCOMING';
+    return 'OTHER';
+  };
+
   const handleApprove = async (item) => {
     const ok = await confirm({
       title: 'Approve Transfer',
@@ -70,14 +78,13 @@ const PendingTransfersScreen = ({ navigation }) => {
       confirmText: 'Approve',
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await transferService.update(item._id, { status: 'APPROVED' });
       await load();
-      Alert.alert('Approved', 'Transfer request approved.');
+      Alert.alert('Approved', 'Transfer approved. Stock will move.');
     } catch (e) {
-      Alert.alert('Error', 'Failed to approve transfer.');
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to approve.');
     } finally {
       setBusyId(null);
     }
@@ -91,14 +98,13 @@ const PendingTransfersScreen = ({ navigation }) => {
       destructive: true,
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await transferService.update(item._id, { status: 'CANCELLED' });
       await load();
-      Alert.alert('Cancelled', 'Transfer request cancelled.');
+      Alert.alert('Cancelled', 'Transfer cancelled.');
     } catch (e) {
-      Alert.alert('Error', 'Failed to cancel transfer.');
+      Alert.alert('Error', 'Failed to cancel.');
     } finally {
       setBusyId(null);
     }
@@ -112,14 +118,13 @@ const PendingTransfersScreen = ({ navigation }) => {
       destructive: true,
     });
     if (!ok) return;
-
     try {
       setBusyId(item._id);
       await transferService.remove(item._id);
       await load();
-      Alert.alert('Deleted', 'Transfer request removed.');
+      Alert.alert('Deleted', 'Transfer removed.');
     } catch (e) {
-      Alert.alert('Error', 'Failed to delete transfer.');
+      Alert.alert('Error', 'Failed to delete.');
     } finally {
       setBusyId(null);
     }
@@ -128,23 +133,32 @@ const PendingTransfersScreen = ({ navigation }) => {
   const renderItem = ({ item }) => {
     const busy = busyId === item._id;
     const isPending = item.status === 'PENDING';
+    const direction = getDirection(item);
+    const isIncoming = direction === 'INCOMING';
 
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={styles.bloodBadge}>
-            <Text style={styles.bloodText}>{item.bloodGroup}</Text>
-          </View>
-
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.titleText}>
-              {item.units} unit{item.units > 1 ? 's' : ''} · {item.urgency}
+          <View
+            style={[
+              styles.directionPill,
+              isIncoming ? styles.directionIn : styles.directionOut,
+            ]}
+          >
+            <Ionicons
+              name={isIncoming ? 'arrow-down' : 'arrow-up'}
+              size={11}
+              color={isIncoming ? '#7C3AED' : '#2563EB'}
+            />
+            <Text
+              style={[
+                styles.directionText,
+                { color: isIncoming ? '#7C3AED' : '#2563EB' },
+              ]}
+            >
+              {isIncoming ? 'INCOMING' : 'OUTGOING'}
             </Text>
-            <Text style={styles.subText} numberOfLines={2}>
-              {item.sourceBank} → {item.destinationHospital}
-            </Text>
           </View>
-
           <View style={[styles.statusPill, { backgroundColor: statusBg(item.status) }]}>
             <Text style={[styles.statusText, { color: statusColor(item.status) }]}>
               {item.status}
@@ -152,50 +166,73 @@ const PendingTransfersScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="navigate-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.metaText}>{item.distanceKm || 0} km</Text>
+        <View style={styles.bloodRow}>
+          <View style={styles.bloodBadge}>
+            <Text style={styles.bloodText}>{item.bloodGroup}</Text>
           </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="flash-outline" size={13} color={urgencyColor(item.urgency)} />
-            <Text style={[styles.metaText, { color: urgencyColor(item.urgency) }]}>
+          <Text style={styles.titleText}>
+            {item.units} unit{item.units > 1 ? 's' : ''}
+          </Text>
+          <View style={{ flex: 1 }} />
+          <View style={[styles.urgencyPill, { backgroundColor: `${urgencyColor(item.urgency)}20` }]}>
+            <Text style={[styles.urgencyText, { color: urgencyColor(item.urgency) }]}>
               {item.urgency}
             </Text>
           </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.metaText}>
-              {new Date(item.createdAt).toLocaleString()}
+        </View>
+
+        <View style={styles.routeRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.routeLabel}>FROM</Text>
+            <Text style={styles.routeValue} numberOfLines={2}>
+              {item.sourceBank}
+            </Text>
+          </View>
+          <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.routeLabel}>TO</Text>
+            <Text style={styles.routeValue} numberOfLines={2}>
+              {item.destinationHospital}
             </Text>
           </View>
         </View>
 
         {item.reason ? (
           <View style={styles.reasonBox}>
-            <Text style={styles.reasonText}>{item.reason}</Text>
+            <Text style={styles.reasonText} numberOfLines={2}>{item.reason}</Text>
           </View>
         ) : null}
 
         {isPending && (
           <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, busy && styles.disabled]}
-              onPress={() => handleApprove(item)}
-              disabled={busy}
-            >
-              <Ionicons name="checkmark" size={15} color={colors.white} />
-              <Text style={styles.primaryText}>{busy ? '...' : 'Approve'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.outlineBtn, busy && styles.disabled]}
-              onPress={() => handleCancel(item)}
-              disabled={busy}
-            >
-              <Text style={styles.outlineText}>Cancel</Text>
-            </TouchableOpacity>
-
+            {isIncoming ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, busy && styles.disabled]}
+                  onPress={() => handleApprove(item)}
+                  disabled={busy}
+                >
+                  <Ionicons name="checkmark" size={15} color={colors.white} />
+                  <Text style={styles.primaryText}>{busy ? '...' : 'Approve'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.outlineBtn, busy && styles.disabled]}
+                  onPress={() => handleCancel(item)}
+                  disabled={busy}
+                >
+                  <Text style={styles.outlineText}>Reject</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                style={[styles.outlineBtnWide, busy && styles.disabled]}
+                onPress={() => handleCancel(item)}
+                disabled={busy}
+              >
+                <Ionicons name="close" size={14} color={colors.primary} />
+                <Text style={styles.outlineTextPrimary}>Cancel Request</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.iconBtn, busy && styles.disabled]}
               onPress={() => handleDelete(item)}
@@ -216,9 +253,9 @@ const PendingTransfersScreen = ({ navigation }) => {
               <Ionicons name="trash-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
             <Text style={styles.hintText}>
+              {item.status === 'APPROVED' && 'Stock will move on approval.'}
+              {item.status === 'COMPLETED' && 'Blood delivered.'}
               {item.status === 'CANCELLED' && 'This transfer was cancelled.'}
-              {item.status === 'APPROVED' && 'Awaiting stock dispatch.'}
-              {item.status === 'COMPLETED' && 'Blood delivered successfully.'}
             </Text>
           </View>
         )}
@@ -232,7 +269,7 @@ const PendingTransfersScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pending Transfer Log</Text>
+        <Text style={styles.headerTitle}>Transfer Log</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -247,10 +284,7 @@ const PendingTransfersScreen = ({ navigation }) => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
+              onRefresh={() => { setRefreshing(true); load(); }}
             />
           }
           ListEmptyComponent={
@@ -267,86 +301,39 @@ const PendingTransfersScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   list: { padding: 16, paddingBottom: 40 },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  cardTop: { flexDirection: 'row', alignItems: 'center' },
-  bloodBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bloodText: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  card: { backgroundColor: colors.white, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.cardBorder },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  directionPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  directionIn: { backgroundColor: '#F3E8FF' },
+  directionOut: { backgroundColor: '#DBEAFE' },
+  directionText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  bloodRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  bloodBadge: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.primarySoft, borderRadius: 8 },
+  bloodText: { fontSize: 13, fontWeight: '900', color: colors.primary },
   titleText: { fontSize: 14, fontWeight: '800', color: colors.text },
-  subText: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-  statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  statusText: { fontSize: 10, fontWeight: '800' },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 10 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-  reasonBox: {
-    marginTop: 10,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    padding: 10,
-  },
-  reasonText: { fontSize: 11, color: colors.text, lineHeight: 16 },
-  actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, alignItems: 'center' },
-  primaryBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  urgencyPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  urgencyText: { fontSize: 9, fontWeight: '800' },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  routeLabel: { fontSize: 9, fontWeight: '800', color: colors.textMuted, letterSpacing: 0.4 },
+  routeValue: { fontSize: 11, color: colors.text, fontWeight: '700', marginTop: 2, lineHeight: 15 },
+  reasonBox: { backgroundColor: '#F9FAFB', padding: 8, borderRadius: 8, marginBottom: 10 },
+  reasonText: { fontSize: 11, color: colors.textSecondary, lineHeight: 15 },
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 4, alignItems: 'center' },
+  primaryBtn: { flex: 1, height: 40, borderRadius: 20, backgroundColor: colors.primary, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: colors.white, fontWeight: '800', fontSize: 12 },
-  outlineBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  outlineBtn: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   outlineText: { color: colors.text, fontWeight: '800', fontSize: 12 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  outlineBtnWide: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
+  outlineTextPrimary: { color: colors.primary, fontWeight: '800', fontSize: 12 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  hintText: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
-  },
+  hintText: { flex: 1, fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { marginTop: 10, color: colors.textSecondary },
 });

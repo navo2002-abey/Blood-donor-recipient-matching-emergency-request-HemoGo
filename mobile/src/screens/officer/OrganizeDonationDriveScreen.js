@@ -17,21 +17,19 @@ import FormField from '../../components/FormField';
 import { BloodDrop } from '../../components/Logo';
 import Sidebar from '../../components/Sidebar';
 import { useAlerts } from '../../context/AlertsContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { campaignService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 import { minLength, notPastDate, required } from '../../utils/validators';
 
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
-const comingSoon = (label) =>
-  Alert.alert('Coming Soon', `${label} will be available soon.`);
+const comingSoon = (label) => Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const OrganizeDonationDriveScreen = ({ navigation, route }) => {
-  // Pre-fill blood group if navigated from AI screen
+  const HOSPITAL = useMyHospital();
   const initialGroup = route?.params?.bloodGroup || 'O-';
-
   const { unreadCount } = useAlerts();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -57,12 +55,7 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
   };
 
   const handlePublish = async () => {
-    setTouched({
-      name: true,
-      targetBloodGroup: true,
-      preferredDate: true,
-      venue: true,
-    });
+    setTouched({ name: true, targetBloodGroup: true, preferredDate: true, venue: true });
     if (!validate()) return;
 
     try {
@@ -76,13 +69,10 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
         reason: `Predicted ${targetBloodGroup} shortage`,
         status: 'PUBLISHED',
       });
-
       navigation.goBack();
-      setTimeout(() => {
-        Alert.alert('Published', 'Donation drive created successfully.');
-      }, 200);
+      setTimeout(() => Alert.alert('Published', 'Donation drive created.'), 200);
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to publish campaign.');
+      Alert.alert('Error', e?.response?.data?.message || 'Failed to publish.');
     } finally {
       setSaving(false);
     }
@@ -90,42 +80,25 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        {/* Header */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity
-            hitSlop={10}
-            style={styles.headerBtn}
-            onPress={() => setSidebarOpen(true)}
-          >
+          <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={() => setSidebarOpen(true)}>
             <Ionicons name="menu-outline" size={26} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.brand}>
             <BloodDrop size={16} />
             <Text style={styles.brandText}>HemoGo</Text>
           </View>
-          <TouchableOpacity
-            hitSlop={10}
-            style={styles.headerBtn}
-            onPress={() => navigation.navigate('Alerts')}
-          >
+          <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={() => navigation.navigate('Alerts')}>
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
             {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>Organize Donation Drive</Text>
           <Text style={styles.subtitle}>Suggested based on AI shortage predictions.</Text>
 
-          {/* AI Suggestion Box */}
           <View style={styles.aiBox}>
             <View style={styles.aiIcon}>
               <Ionicons name="hardware-chip" size={20} color={colors.primary} />
@@ -133,25 +106,14 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
             <View style={{ flex: 1 }}>
               <Text style={styles.aiTitle}>AI SUGGESTION</Text>
               <Text style={styles.aiText}>
-                A campaign for{' '}
-                <Text style={styles.aiBold}>{targetBloodGroup} blood type</Text> is
-                highly recommended within the next 3 days.
+                A campaign for <Text style={styles.aiBold}>{targetBloodGroup} blood type</Text> is highly recommended within the next 3 days.
               </Text>
             </View>
           </View>
 
-          {/* Campaign Name */}
-          <FormField
-            label="CAMPAIGN NAME"
-            error={touched.name ? errors.name : null}
-          >
+          <FormField label="CAMPAIGN NAME" error={touched.name ? errors.name : null}>
             <View style={styles.inputContainer}>
-              <Ionicons
-                name="megaphone"
-                size={18}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
+              <Ionicons name="megaphone" size={18} color={colors.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={name}
@@ -165,28 +127,14 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
             </View>
           </FormField>
 
-          {/* Target Blood Group picker */}
-          <FormField
-            label="TARGET BLOOD GROUP"
-            error={touched.targetBloodGroup ? errors.targetBloodGroup : null}
-          >
-            <TouchableOpacity
-              style={styles.inputContainer}
-              onPress={() => setShowGroupPicker((v) => !v)}
-            >
+          <FormField label="TARGET BLOOD GROUP" error={touched.targetBloodGroup ? errors.targetBloodGroup : null}>
+            <TouchableOpacity style={styles.inputContainer} onPress={() => setShowGroupPicker((v) => !v)}>
               <View style={styles.inputIcon}>
                 <BloodDrop size={16} />
               </View>
-              <Text style={styles.dropdownText}>
-                {targetBloodGroup} (Recommended)
-              </Text>
-              <Ionicons
-                name={showGroupPicker ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textMuted}
-              />
+              <Text style={styles.dropdownText}>{targetBloodGroup} (Recommended)</Text>
+              <Ionicons name={showGroupPicker ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
             </TouchableOpacity>
-
             {showGroupPicker && (
               <View style={styles.pickerList}>
                 {GROUPS.map((g) => {
@@ -194,31 +142,15 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
                   return (
                     <TouchableOpacity
                       key={g}
-                      style={[
-                        styles.pickerItem,
-                        active && styles.pickerItemActive,
-                      ]}
+                      style={[styles.pickerItem, active && styles.pickerItemActive]}
                       onPress={() => {
                         setTarget(g);
                         setShowGroupPicker(false);
                         setTouched((t) => ({ ...t, targetBloodGroup: true }));
                       }}
                     >
-                      <Text
-                        style={[
-                          styles.pickerItemText,
-                          active && styles.pickerItemTextActive,
-                        ]}
-                      >
-                        {g}
-                      </Text>
-                      {active ? (
-                        <Ionicons
-                          name="checkmark"
-                          size={18}
-                          color={colors.primary}
-                        />
-                      ) : null}
+                      <Text style={[styles.pickerItemText, active && styles.pickerItemTextActive]}>{g}</Text>
+                      {active ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
                     </TouchableOpacity>
                   );
                 })}
@@ -226,26 +158,13 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
             )}
           </FormField>
 
-          {/* Preferred Date */}
-          <FormField
-            label="PREFERRED DATE"
-            error={touched.preferredDate ? errors.preferredDate : null}
-          >
+          <FormField label="PREFERRED DATE" error={touched.preferredDate ? errors.preferredDate : null}>
             <DateField value={preferredDate} onChange={setPreferredDate} />
           </FormField>
 
-          {/* Venue */}
-          <FormField
-            label="LOCATION / VENUE"
-            error={touched.venue ? errors.venue : null}
-          >
+          <FormField label="LOCATION / VENUE" error={touched.venue ? errors.venue : null}>
             <View style={styles.inputContainer}>
-              <Ionicons
-                name="location"
-                size={18}
-                color={colors.textMuted}
-                style={styles.inputIcon}
-              />
+              <Ionicons name="location" size={18} color={colors.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={venue}
@@ -259,14 +178,8 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
             </View>
           </FormField>
 
-          <TouchableOpacity
-            style={[styles.publishBtn, saving && { opacity: 0.6 }]}
-            onPress={handlePublish}
-            disabled={saving}
-          >
-            <Text style={styles.publishText}>
-              {saving ? 'PUBLISHING...' : 'Publish Campaign'}
-            </Text>
+          <TouchableOpacity style={[styles.publishBtn, saving && { opacity: 0.6 }]} onPress={handlePublish} disabled={saving}>
+            <Text style={styles.publishText}>{saving ? 'PUBLISHING...' : 'Publish Campaign'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -287,126 +200,29 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+  headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  bellBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
+  bellBadge: { position: 'absolute', top: 6, right: 7, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, borderWidth: 1.5, borderColor: colors.white },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   title: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 10 },
-  subtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-    marginBottom: 20,
-  },
-
-  aiBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF1F3',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  aiIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  aiTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  aiText: {
-    fontSize: 12,
-    color: colors.text,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
+  subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, marginBottom: 20 },
+  aiBox: { flexDirection: 'row', backgroundColor: '#FFF1F3', borderRadius: 16, padding: 16, marginBottom: 24, alignItems: 'center' },
+  aiIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  aiTitle: { fontSize: 10, fontWeight: '800', color: colors.primary, letterSpacing: 0.5, marginBottom: 4 },
+  aiText: { fontSize: 12, color: colors.text, lineHeight: 18, fontWeight: '600' },
   aiBold: { fontWeight: '800', color: colors.primary },
-
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 54,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    paddingHorizontal: 16,
-  },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', height: 54, borderRadius: 12, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6', paddingHorizontal: 16 },
   inputIcon: { marginRight: 12 },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  dropdownText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '800',
-  },
-
-  pickerList: {
-    marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    overflow: 'hidden',
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
-  },
+  input: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
+  dropdownText: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '800' },
+  pickerList: { marginTop: 8, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden' },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderColor: '#F3F4F6' },
   pickerItemActive: { backgroundColor: '#FFF1F3' },
   pickerItemText: { fontSize: 14, fontWeight: '700', color: colors.text },
   pickerItemTextActive: { color: colors.primary, fontWeight: '800' },
-
-  publishBtn: {
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
+  publishBtn: { height: 56, borderRadius: 14, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   publishText: { color: colors.white, fontWeight: '800', fontSize: 14 },
 });
 
