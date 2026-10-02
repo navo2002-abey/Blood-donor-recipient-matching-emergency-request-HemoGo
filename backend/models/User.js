@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema(
       enum: ROLES,
       default: 'DONOR',
     },
+    // ✅ NEW: which hospital this officer belongs to
+    hospital: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },
@@ -45,6 +50,7 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     email: this.email,
     phone: this.phone,
     role: this.role,
+    hospital: this.hospital,
   };
 };
 

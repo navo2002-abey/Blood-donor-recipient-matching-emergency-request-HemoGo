@@ -48,7 +48,10 @@ const PatientDashboardScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.grid}>
-          <TouchableOpacity style={styles.card} onPress={() => comingSoon('Find Donors')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('Donors', { menu: PATIENT_MENU, showAvailability: false })}
+          >
             <Ionicons name="search-outline" size={20} color={colors.text} />
             <Text style={styles.cardTitle}>Find Donors</Text>
             <Text style={styles.cardSub}>Search compatible nearby donors</Text>

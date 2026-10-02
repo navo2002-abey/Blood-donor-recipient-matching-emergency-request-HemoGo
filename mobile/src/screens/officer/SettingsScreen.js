@@ -10,20 +10,25 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
 
 const SettingsScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const confirm = useConfirm();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [pushAlerts, setPushAlerts] = useState(true);
   const [expiryReminders, setExpiryReminders] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
 
-  const name = user?.name || 'Dr. Nimal Perera';
+  const name = user?.name || 'Officer';
   const email = user?.email || 'officer@hemogo.com';
+  const hospital = user?.hospital || 'Blood Bank Officer';
   const initials = name
     .replace(/^Dr\.?\s*/i, '')
     .split(' ')
@@ -41,7 +46,6 @@ const SettingsScreen = ({ navigation }) => {
       destructive: true,
     });
     if (!ok) return;
-
     await logout();
     navigation.getParent()?.reset({
       index: 0,
@@ -49,7 +53,8 @@ const SettingsScreen = ({ navigation }) => {
     });
   };
 
-  const comingSoon = (label) => Alert.alert('Coming Soon', `${label} will be available soon.`);
+  const comingSoon = (label) =>
+    Alert.alert('Coming Soon', `${label} will be available soon.`);
 
   const Row = ({ icon, label, value, onPress, danger }) => (
     <TouchableOpacity
@@ -59,11 +64,7 @@ const SettingsScreen = ({ navigation }) => {
       activeOpacity={onPress ? 0.6 : 1}
     >
       <View style={[styles.rowIcon, danger && { backgroundColor: colors.primarySoft }]}>
-        <Ionicons
-          name={icon}
-          size={18}
-          color={danger ? colors.primary : colors.text}
-        />
+        <Ionicons name={icon} size={18} color={danger ? colors.primary : colors.text} />
       </View>
       <Text style={[styles.rowLabel, danger && { color: colors.primary }]}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
@@ -90,25 +91,21 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials || 'NP'}</Text>
+            <Text style={styles.avatarText}>{initials || 'OF'}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
             <Text style={styles.name}>{name}</Text>
             <Text style={styles.email}>{email}</Text>
             <View style={styles.rolePill}>
-              <Text style={styles.roleText}>Blood Bank Officer</Text>
+              <Text style={styles.roleText} numberOfLines={1}>{hospital}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -119,7 +116,6 @@ const SettingsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Notifications */}
         <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
         <View style={styles.group}>
           <ToggleRow
@@ -144,7 +140,6 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Account */}
         <Text style={styles.sectionTitle}>ACCOUNT</Text>
         <View style={styles.group}>
           <Row
@@ -156,7 +151,7 @@ const SettingsScreen = ({ navigation }) => {
           <Row
             icon="business-outline"
             label="Hospital"
-            value="Colombo General"
+            value={hospital}
             onPress={() => comingSoon('Change Hospital')}
           />
           <View style={styles.divider} />
@@ -167,7 +162,6 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Preferences */}
         <Text style={styles.sectionTitle}>PREFERENCES</Text>
         <View style={styles.group}>
           <Row
@@ -185,7 +179,6 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* About */}
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.group}>
           <Row
@@ -200,14 +193,9 @@ const SettingsScreen = ({ navigation }) => {
             onPress={() => comingSoon('Privacy')}
           />
           <View style={styles.divider} />
-          <Row
-            icon="information-circle-outline"
-            label="App Version"
-            value="v1.0.0"
-          />
+          <Row icon="information-circle-outline" label="App Version" value="v1.0.0" />
         </View>
 
-        {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.primary} />
           <Text style={styles.logoutText}>Log Out</Text>
@@ -215,22 +203,23 @@ const SettingsScreen = ({ navigation }) => {
 
         <Text style={styles.footer}>HemoGo · Blood Donor Matching</Text>
       </ScrollView>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Settings"
+        hospital={hospital}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 16, paddingBottom: 40 },
 
   profileCard: {
@@ -261,6 +250,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
     marginTop: 6,
+    maxWidth: '90%',
   },
   roleText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
   editBtn: {
@@ -305,7 +295,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  rowValue: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  rowValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    maxWidth: 140,
+    textAlign: 'right',
+  },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginLeft: 62 },
 
   logoutBtn: {

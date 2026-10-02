@@ -14,13 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '../../components/FormField';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { minLength, positiveInt, required } from '../../utils/validators';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
 
 const daysLeft = (date) => {
   const diff = new Date(date).getTime() - Date.now();
@@ -28,6 +28,7 @@ const daysLeft = (date) => {
 };
 
 const CreateReservationScreen = ({ navigation }) => {
+  const HOSPITAL = useMyHospital();
   const [batches, setBatches] = useState([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
 
@@ -43,7 +44,6 @@ const CreateReservationScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
-  // Load available batches
   useEffect(() => {
     (async () => {
       try {
@@ -59,17 +59,14 @@ const CreateReservationScreen = ({ navigation }) => {
         setLoadingBatches(false);
       }
     })();
-  }, []);
+  }, [HOSPITAL]);
 
-  // Groups that have stock
   const groupsWithStock = GROUPS.filter((g) =>
     batches.some((b) => b.bloodGroup === g)
   );
 
-  // Batches for the chosen blood group
   const filteredBatches = batches.filter((b) => b.bloodGroup === bloodGroup);
 
-  // Auto-select earliest-expiring batch when group changes
   useEffect(() => {
     if (filteredBatches.length > 0) {
       setSelectedBatchId(filteredBatches[0]._id);
@@ -79,7 +76,6 @@ const CreateReservationScreen = ({ navigation }) => {
   }, [bloodGroup, batches.length]);
 
   const selectedBatch = batches.find((b) => b._id === selectedBatchId);
-
   const maxUnitsForBatch = selectedBatch ? selectedBatch.units : 0;
 
   const validate = () => {
@@ -162,17 +158,16 @@ const CreateReservationScreen = ({ navigation }) => {
           <Text style={styles.title}>Create Reservation</Text>
           <Text style={styles.subtitle}>Pick from available stock</Text>
 
-          {/* Blood Group */}
           <FormField
             label="BLOOD GROUP"
             error={touched.bloodGroup ? errors.bloodGroup : null}
           >
-            {groupsWithStock.length === 0 && !loadingBatches ? (
+            {loadingBatches ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : groupsWithStock.length === 0 ? (
               <View style={styles.noStock}>
                 <Ionicons name="alert-circle-outline" size={20} color={colors.primary} />
-                <Text style={styles.noStockText}>
-                  No stock available. Add stock first.
-                </Text>
+                <Text style={styles.noStockText}>No stock available at {HOSPITAL}.</Text>
               </View>
             ) : (
               <View style={styles.chipRow}>
@@ -204,7 +199,6 @@ const CreateReservationScreen = ({ navigation }) => {
             )}
           </FormField>
 
-          {/* Batch picker */}
           {bloodGroup && filteredBatches.length > 0 && (
             <>
               <Text style={styles.label}>SELECT BATCH (oldest expiry first)</Text>
@@ -227,8 +221,7 @@ const CreateReservationScreen = ({ navigation }) => {
                         {b.units} unit{b.units === 1 ? '' : 's'} available
                       </Text>
                       <Text style={styles.batchExpiry}>
-                        Expires {new Date(b.expiryDate).toLocaleDateString()} ·{' '}
-                        {days} day{days === 1 ? '' : 's'} left
+                        Expires {new Date(b.expiryDate).toLocaleDateString()} · {days}d left
                       </Text>
                     </View>
                     {days <= 5 && (
@@ -245,7 +238,6 @@ const CreateReservationScreen = ({ navigation }) => {
             </>
           )}
 
-          {/* Units to reserve */}
           <FormField label="UNITS TO RESERVE" error={touched.units ? errors.units : null}>
             <TextInput
               style={styles.input}
@@ -254,14 +246,10 @@ const CreateReservationScreen = ({ navigation }) => {
               value={units}
               onChangeText={(t) => setUnits(digitsOnly(t))}
               onBlur={() => setTouched((t) => ({ ...t, units: true }))}
-              placeholder="1"
-              placeholderTextColor={colors.textMuted}
               maxLength={4}
             />
             {selectedBatch && (
-              <Text style={styles.hint}>
-                Max {maxUnitsForBatch} unit(s) in this batch
-              </Text>
+              <Text style={styles.hint}>Max {maxUnitsForBatch} unit(s) in this batch</Text>
             )}
           </FormField>
 
@@ -339,116 +327,33 @@ const CreateReservationScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
-  subtitle: {
-    fontSize: 11,
-    letterSpacing: 1,
-    color: colors.textMuted,
-    fontWeight: '700',
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.text,
-    marginTop: 18,
-    marginBottom: 10,
-    letterSpacing: 0.4,
-  },
+  subtitle: { fontSize: 11, letterSpacing: 1, color: colors.textMuted, fontWeight: '700', marginTop: 4, marginBottom: 16 },
+  label: { fontSize: 12, fontWeight: '800', color: colors.text, marginTop: 18, marginBottom: 10, letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
-    backgroundColor: '#F4F4F6',
-  },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, backgroundColor: '#F4F4F6' },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
-  noStock: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    backgroundColor: '#FFF1F3',
-    borderRadius: 12,
-    padding: 12,
-  },
-  noStockText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  batchCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    marginBottom: 8,
-  },
-  batchCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#FFF8F9',
-  },
+  noStock: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#FFF1F3', borderRadius: 12, padding: 12 },
+  noStockText: { color: colors.primary, fontWeight: '700', fontSize: 13, flex: 1 },
+  batchCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E5E7EB', marginBottom: 8 },
+  batchCardActive: { borderColor: colors.primary, backgroundColor: '#FFF8F9' },
   batchLeft: { width: 24 },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.primary,
-  },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
   batchUnits: { fontSize: 14, fontWeight: '800', color: colors.text },
   batchExpiry: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  urgentPill: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
+  urgentPill: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   urgentText: { color: colors.primary, fontSize: 9, fontWeight: '800' },
-  inlineError: {
-    marginTop: 4,
-    marginLeft: 4,
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  input: {
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: '#F4F4F6',
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: colors.text,
-  },
+  inlineError: { marginTop: 4, marginLeft: 4, fontSize: 11, fontWeight: '700', color: colors.primary },
+  input: { height: 54, borderRadius: 16, backgroundColor: '#F4F4F6', paddingHorizontal: 16, fontSize: 15, color: colors.text },
   hint: { marginTop: 6, marginLeft: 4, fontSize: 11, color: colors.textMuted },
-  saveBtn: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 26,
-  },
+  saveBtn: { height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 26 },
   saveText: { color: colors.white, fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
 });
 
