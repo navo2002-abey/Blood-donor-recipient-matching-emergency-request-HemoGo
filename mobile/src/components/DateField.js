@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Cross-platform date field.
@@ -16,6 +17,8 @@ import { colors } from '../utils/colors';
  * - On mobile: uses TextInput with auto-format YYYY-MM-DD
  */
 const DateField = ({ value, onChange, placeholder = 'YYYY-MM-DD' }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const formatWithDashes = (text) => {
     const digits = text.replace(/\D/g, '').slice(0, 8);
     if (digits.length <= 4) return digits;
@@ -69,13 +72,13 @@ const DateField = ({ value, onChange, placeholder = 'YYYY-MM-DD' }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     paddingHorizontal: 16,
   },
   icon: { marginRight: 8 },

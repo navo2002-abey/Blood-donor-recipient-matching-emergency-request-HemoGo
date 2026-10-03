@@ -6,6 +6,7 @@ import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { useTheme } from '../context/ThemeContext';
 
 const MAX_MESSAGE = 200;
 
@@ -37,6 +38,8 @@ const formatReceipt = (date) => {
 };
 
 const DirectRequestScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
@@ -268,8 +271,8 @@ const DirectRequestScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.white },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,7 +287,7 @@ const styles = StyleSheet.create({
   donorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -328,7 +331,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     borderRadius: 14,
     padding: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   statIcon: {
     width: 36,
@@ -347,7 +350,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
     padding: 12,
     marginBottom: 14,
     minHeight: 120,
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   sendBtn: {
     height: 48,
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -426,7 +429,7 @@ const styles = StyleSheet.create({
   summaryId: { fontSize: 13, fontWeight: '800', color: colors.primary },
   nextCard: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -446,7 +449,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: '#F3C5CB',
     alignItems: 'center',

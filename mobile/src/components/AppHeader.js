@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BloodDrop } from './Logo';
 import { useAlerts } from '../context/AlertsContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Reusable top header.
@@ -21,6 +22,8 @@ const AppHeader = ({
   showBack = false,
   showBell = true,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { unreadCount } = useAlerts();
 
   const handleLeft = () => {
@@ -72,7 +75,7 @@ const AppHeader = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

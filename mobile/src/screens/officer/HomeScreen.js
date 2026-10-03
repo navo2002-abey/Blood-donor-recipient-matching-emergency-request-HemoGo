@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,8 +15,10 @@ import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -40,6 +42,9 @@ const getStatusTheme = (status) => {
 };
 
 const HomeScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
@@ -56,12 +61,12 @@ const HomeScreen = ({ navigation }) => {
       setStock(stockRes.data.stock || []);
       setReservations(resRes.data.reservations || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load inventory.');
+      Alert.alert(t('common.error'), t('pages.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [HOSPITAL]);
+  }, [HOSPITAL, t]);
 
   useEffect(() => {
     load();
@@ -124,25 +129,25 @@ const HomeScreen = ({ navigation }) => {
       >
         <View style={styles.heroStats}>
           <View style={styles.heroMain}>
-            <Text style={styles.heroLabel}>Total Inventory</Text>
+            <Text style={styles.heroLabel}>{t('pages.totalInventory')}</Text>
             <Text style={styles.heroValue}>
-              {totalUnits} <Text style={styles.unitText}>Units</Text>
+              {totalUnits} <Text style={styles.unitText}>{t('pages.units')}</Text>
             </Text>
           </View>
           <View style={styles.heroDivider} />
           <View style={styles.heroSub}>
             <View>
               <Text style={styles.subStatValue}>{reservations.length}</Text>
-              <Text style={styles.subStatLabel}>Reserved</Text>
+              <Text style={styles.subStatLabel}>{t('pages.reserved')}</Text>
             </View>
             <View>
               <Text style={styles.subStatValue}>{criticalCount}</Text>
-              <Text style={[styles.subStatLabel, { color: colors.primary }]}>Critical</Text>
+              <Text style={[styles.subStatLabel, { color: colors.primary }]}>{t('pages.critical')}</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('pages.quickActions')}</Text>
         <View style={styles.quickGrid}>
           {actions.map((action, i) => (
             <TouchableOpacity
@@ -160,20 +165,20 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Inventory Details</Text>
+        <Text style={styles.sectionTitle}>{t('pages.inventoryDetails')}</Text>
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 30 }} />
         ) : stock.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="water-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No blood units registered yet.</Text>
+            <Text style={styles.emptyText}>{t('pages.noUnits')}</Text>
             <TouchableOpacity
               style={styles.emptyBtn}
               onPress={() => navigation.navigate('AddStock')}
             >
               <Ionicons name="add" size={16} color={colors.white} />
-              <Text style={styles.emptyBtnText}>Add First Stock</Text>
+              <Text style={styles.emptyBtnText}>{t('pages.addFirstStock')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -236,7 +241,7 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
 
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
   actionCard: {
     width: '48%',
     marginBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     padding: 16,
     borderRadius: 20,
     flexDirection: 'row',
@@ -296,7 +301,7 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
@@ -332,7 +337,7 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 32,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#F1F5F9',

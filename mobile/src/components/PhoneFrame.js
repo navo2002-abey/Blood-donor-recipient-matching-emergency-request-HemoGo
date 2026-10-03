@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const PHONE_WIDTH = 390;
 const PHONE_HEIGHT = 844;
 
 const PhoneFrame = ({ children }) => {
+  const { colors, isDark } = useTheme();
+
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') {
       return undefined;
@@ -17,7 +20,7 @@ const PhoneFrame = ({ children }) => {
     html.style.height = '100%';
     body.style.margin = '0';
     body.style.height = '100%';
-    body.style.background = '#D7D9DE';
+    body.style.background = isDark ? '#0B0D11' : '#D7D9DE';
     body.style.overflow = 'hidden';
     if (root) {
       root.style.height = '100%';
@@ -50,17 +53,17 @@ const PhoneFrame = ({ children }) => {
     }
 
     return undefined;
-  }, []);
+  }, [isDark]);
 
   if (Platform.OS !== 'web') {
     return children;
   }
 
   return (
-    <View style={styles.stage}>
+    <View style={[styles.stage, { backgroundColor: isDark ? '#0B0D11' : '#D7D9DE' }]}>
       <View style={styles.phone}>
         <View style={styles.notch} />
-        <View style={styles.screen}>{children}</View>
+        <View style={[styles.screen, { backgroundColor: colors.page }]}>{children}</View>
         <View style={styles.homeBar} />
       </View>
     </View>

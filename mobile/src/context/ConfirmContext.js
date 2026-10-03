@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState, useMemo } from 'react';
 import {
   Modal,
   Platform,
@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../utils/colors';
+import { useTheme } from './ThemeContext';
 
 const ConfirmContext = createContext(null);
 
@@ -23,6 +24,8 @@ const ConfirmModal = ({
   onConfirm,
   onCancel,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   if (!visible) return null;
 
   const content = (
@@ -119,7 +122,7 @@ export const useConfirm = () => {
   return ctx;
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   webWrap: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
@@ -137,7 +140,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 22,
     padding: 22,
     alignItems: 'center',
@@ -151,7 +154,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,

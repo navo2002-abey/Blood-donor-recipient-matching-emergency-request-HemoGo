@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -22,7 +22,9 @@ import {
   deleteBloodRequest,
   updateBloodRequest,
 } from '../services/bloodRequestService';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
@@ -51,6 +53,9 @@ const formatDisplayDate = (dateStr, fallback = '18 Sep 2026 • 09:42 AM') => {
 };
 
 const ActiveRequestDetailScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { location } = useUserLocation();
 
@@ -222,7 +227,7 @@ const ActiveRequestDetailScreen = ({ route, navigation }) => {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Active Request</Text>
+        <Text style={styles.headerTitle}>{t('pages.activeRequest')}</Text>
 
         <View style={styles.iconBtnPlaceholder} />
       </View>
@@ -573,10 +578,10 @@ const ActiveRequestDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -584,7 +589,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   iconBtn: {
     width: 40,
@@ -615,7 +620,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     marginBottom: 20,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
   },
   mapElement: {
     ...StyleSheet.absoluteFillObject,
@@ -657,7 +662,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   summaryCard: {
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -668,7 +673,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 16,
   },
   summaryRow: {
@@ -679,20 +684,20 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
     flex: 0.45,
   },
   rowValue: {
     fontSize: 13,
-    color: '#111827',
+    color: colors.text,
     fontWeight: '700',
     flex: 0.55,
     textAlign: 'right',
   },
   bloodTypeValue: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
     fontWeight: '800',
     flex: 0.55,
     textAlign: 'right',
@@ -707,7 +712,7 @@ const styles = StyleSheet.create({
   requestIdValue: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     flex: 0.55,
     textAlign: 'right',
   },
@@ -720,25 +725,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: colors.border,
+    backgroundColor: colors.cardBg,
   },
   actionButtonsCol: {
     gap: 12,
   },
   whiteBtn: {
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   whiteBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   redBtn: {
     height: 48,
@@ -765,7 +770,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   deleteModalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
@@ -780,7 +785,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -788,13 +793,13 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   deleteModalDesc: {
     fontSize: 13.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 20,
@@ -808,7 +813,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -845,7 +850,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   editModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -859,12 +864,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   modalField: {
     marginBottom: 14,
@@ -876,14 +881,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
   },
   modalBadgeRow: {
     flexDirection: 'row',
@@ -894,9 +899,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   modalBadgeActive: {
     backgroundColor: colors.primary,

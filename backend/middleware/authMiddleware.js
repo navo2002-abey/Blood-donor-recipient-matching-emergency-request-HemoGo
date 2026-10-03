@@ -23,6 +23,13 @@ const protect = async (req, res, next) => {
       });
     }
 
+    if (user.isActive === false) {
+      return res.status(401).json({
+        success: false,
+        message: 'This account has been deactivated. Contact an administrator.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {

@@ -1,15 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const POINTS_KEY = '@donor_points';
 
 const RewardsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const [points, setPoints] = useState(0);
   const nextLevelPoints = 1000;
 
@@ -40,13 +45,13 @@ const RewardsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Rewards & Achievements</Text>
+        <Text style={styles.title}>{t('pages.rewardsTitle')}</Text>
 
         <View style={styles.pointsCard}>
           <View style={styles.pointsIconContainer}>
             <Ionicons name="star" size={40} color={colors.white} />
           </View>
-          <Text style={styles.pointsLabel}>Total Points</Text>
+          <Text style={styles.pointsLabel}>{t('pages.totalPoints')}</Text>
           <Text style={styles.pointsValue}>{points}</Text>
           
           <View style={styles.progressContainer}>
@@ -66,20 +71,20 @@ const RewardsScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('RewardsGift')}
           >
             <Ionicons name="gift-outline" size={20} color={colors.white} />
-            <Text style={styles.collectButtonText}>Collect Rewards</Text>
+            <Text style={styles.collectButtonText}>{t('pages.collect')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How to Earn Points</Text>
+          <Text style={styles.sectionTitle}>{t('pages.howToEarn')}</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.infoText}>Book an appointment: +10 points</Text>
+              <Text style={styles.infoText}>{t('pages.earnBook')}</Text>
             </View>
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.infoText}>Complete a blood donation: +100 points</Text>
+              <Text style={styles.infoText}>{t('pages.earnDonate')}</Text>
             </View>
           </View>
         </View>
@@ -88,10 +93,10 @@ const RewardsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 4,
   },
   progressText: {
@@ -199,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   infoCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,

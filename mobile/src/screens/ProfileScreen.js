@@ -1,22 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { colors } from '../utils/colors';
 import { ROLE_LABELS, ROLES } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const ProfileScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const isAdmin = user?.role === ROLES.ADMIN;
   const name = user?.name || (isAdmin ? 'Anusha Fernando' : 'Amal Silva');
   const email = user?.email || (isAdmin ? 'admin@hemogo.com' : 'donor@hemogo.com');
   const phone = user?.phone || (isAdmin ? '0770000001' : '0770000002');
   const bloodGroup = user?.bloodGroup || 'O+';
-  const roleLabel = ROLE_LABELS[user?.role] || (isAdmin ? 'System Admin' : 'Donor');
+  const roleLabel = (user?.role && t(`roles.${user.role}`)) || ROLE_LABELS[user?.role] || (isAdmin ? 'System Admin' : 'Donor');
   const initials = name
     .split(' ')
     .filter(Boolean)
@@ -27,23 +32,23 @@ const ProfileScreen = ({ navigation }) => {
 
   const details = isAdmin
     ? [
-        { icon: 'mail-outline', label: 'Email', value: email, tint: '#EFF6FF', color: '#2563EB' },
-        { icon: 'call-outline', label: 'Phone', value: phone, tint: '#F0FDF4', color: '#16A34A' },
-        { icon: 'business-outline', label: 'Organization', value: 'HemoGo National Network', tint: '#FFF7ED', color: '#EA580C' },
-        { icon: 'shield-checkmark-outline', label: 'Role', value: roleLabel, tint: colors.primarySoft, color: colors.primary },
+        { icon: 'mail-outline', label: t('profile.email'), value: email, tint: '#EFF6FF', color: '#2563EB' },
+        { icon: 'call-outline', label: t('profile.phone'), value: phone, tint: '#F0FDF4', color: '#16A34A' },
+        { icon: 'business-outline', label: t('profile.organization'), value: t('profile.orgValue'), tint: '#FFF7ED', color: '#EA580C' },
+        { icon: 'shield-checkmark-outline', label: t('profile.role'), value: roleLabel, tint: colors.primarySoft, color: colors.primary },
       ]
     : [
-        { icon: 'mail-outline', label: 'Email', value: email, tint: '#EFF6FF', color: '#2563EB' },
-        { icon: 'call-outline', label: 'Phone', value: phone, tint: '#F0FDF4', color: '#16A34A' },
-        { icon: 'water-outline', label: 'Blood group', value: bloodGroup, tint: colors.primarySoft, color: colors.primary },
-        { icon: 'checkmark-circle-outline', label: 'Status', value: 'Available to donate', tint: '#F0FDF4', color: '#16A34A' },
+        { icon: 'mail-outline', label: t('profile.email'), value: email, tint: '#EFF6FF', color: '#2563EB' },
+        { icon: 'call-outline', label: t('profile.phone'), value: phone, tint: '#F0FDF4', color: '#16A34A' },
+        { icon: 'water-outline', label: t('profile.bloodGroupLabel'), value: bloodGroup, tint: colors.primarySoft, color: colors.primary },
+        { icon: 'checkmark-circle-outline', label: t('profile.status'), value: t('profile.availableToDonate'), tint: '#F0FDF4', color: '#16A34A' },
       ];
 
   const handleLogout = async () => {
     const ok = await confirm({
-      title: 'Log Out',
-      message: 'Are you sure you want to log out?',
-      confirmText: 'Log Out',
+      title: t('common.logoutTitle'),
+      message: t('common.logoutMessage'),
+      confirmText: t('common.logout'),
       destructive: true,
     });
     if (!ok) return;
@@ -63,7 +68,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.hero}>
           <View style={styles.brand}>
             <BloodDrop size={16} />
-            <Text style={styles.brandText}>Profile</Text>
+            <Text style={styles.brandText}>{t('profile.title')}</Text>
           </View>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
@@ -90,16 +95,16 @@ const ProfileScreen = ({ navigation }) => {
             />
           </View>
           <View style={styles.highlightCopy}>
-            <Text style={styles.highlightLabel}>{isAdmin ? 'NETWORK' : 'BLOOD GROUP'}</Text>
-            <Text style={styles.highlightValue}>{isAdmin ? 'National Network' : bloodGroup}</Text>
+            <Text style={styles.highlightLabel}>{isAdmin ? t('profile.network') : t('profile.bloodGroup')}</Text>
+            <Text style={styles.highlightValue}>{isAdmin ? t('profile.nationalNetwork') : bloodGroup}</Text>
           </View>
           <View style={styles.statusChip}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>{isAdmin ? 'Active' : 'Available'}</Text>
+            <Text style={styles.statusText}>{isAdmin ? t('profile.active') : t('profile.available')}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Account details</Text>
+        <Text style={styles.sectionTitle}>{t('profile.account')}</Text>
         <View style={styles.group}>
           {details.map((item, index) => (
             <View key={item.label}>
@@ -117,19 +122,37 @@ const ProfileScreen = ({ navigation }) => {
           ))}
         </View>
 
+        <View style={[styles.group, styles.actionGroup]}>
+          <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('EditProfile')}>
+            <View style={[styles.rowIcon, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="create-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.actionLabel}>{t('account.editProfile')}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('ChangePassword')}>
+            <View style={[styles.rowIcon, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="lock-closed-outline" size={18} color="#2563EB" />
+            </View>
+            <Text style={styles.actionLabel}>{t('account.changePassword')}</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.primary} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F7F7F8',
+    backgroundColor: colors.page,
   },
   scroll: {
     paddingBottom: 36,
@@ -146,7 +169,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -170,7 +193,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -181,14 +204,17 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 22,
+    lineHeight: 32,
     fontWeight: '800',
     color: colors.white,
+    textAlign: 'center',
+    paddingHorizontal: 16,
   },
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
@@ -197,12 +223,13 @@ const styles = StyleSheet.create({
   roleText: {
     color: colors.primary,
     fontSize: 12,
+    lineHeight: 18,
     fontWeight: '800',
   },
   highlight: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     marginHorizontal: 16,
     marginTop: -18,
     borderRadius: 18,
@@ -261,6 +288,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 15,
+    lineHeight: 22,
     fontWeight: '800',
     color: colors.text,
     marginTop: 22,
@@ -268,12 +296,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
   },
   group: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     marginHorizontal: 16,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     overflow: 'hidden',
+  },
+  actionGroup: {
+    marginTop: 16,
   },
   row: {
     flexDirection: 'row',
@@ -294,19 +325,35 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 12,
+    lineHeight: 18,
     color: colors.textMuted,
     fontWeight: '600',
   },
   rowValue: {
     marginTop: 2,
     fontSize: 14,
+    lineHeight: 20,
     color: colors.text,
     fontWeight: '700',
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     marginLeft: 66,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  actionLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '800',
+    color: colors.text,
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -317,7 +364,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 22,
     borderRadius: 26,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1.5,
     borderColor: colors.primary,
   },

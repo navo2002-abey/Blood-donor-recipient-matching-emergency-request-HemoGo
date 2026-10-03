@@ -1,20 +1,25 @@
-export const colors = {
+const shared = {
   primary: '#E31E35',
+  success: '#22C55E',
+  white: '#FFFFFF',
+  black: '#000000',
+  illustrationSkin: '#D8B4A0',
+  illustrationSkinDark: '#C9A08A',
+};
+
+export const lightColors = {
+  ...shared,
   primarySoft: '#FFF1F3',
   primaryMuted: '#FDE8EB',
   text: '#111111',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   background: '#FFFFFF',
+  page: '#F7F7F8',
   inputBg: '#F4F4F6',
   cardBg: '#FFFFFF',
   cardBorder: '#F0F0F2',
   border: '#E8E8EA',
-  success: '#22C55E',
-  white: '#FFFFFF',
-  black: '#000000',
-  illustrationSkin: '#D8B4A0',
-  illustrationSkinDark: '#C9A08A',
   sidebar: '#111827',
   sidebarStaff: '#152033',
   sidebarStaffActive: '#1E334D',
@@ -24,3 +29,28 @@ export const colors = {
   mapRoad: '#E5E7EB',
   mapPark: '#D7E8D2',
 };
+
+export const darkColors = {
+  ...shared,
+  primarySoft: '#3A1A22',
+  primaryMuted: '#2A1418',
+  text: '#F4F4F5',
+  textSecondary: '#C5C8D0',
+  textMuted: '#9AA0AB',
+  background: '#0E0F12',
+  page: '#0E0F12',
+  inputBg: '#242830',
+  cardBg: '#1A1D24',
+  cardBorder: '#2C3038',
+  border: '#2C3038',
+  sidebar: '#0B0D11',
+  sidebarStaff: '#12151C',
+  sidebarStaffActive: '#1C2433',
+  sidebarMuted: '#9CA3AF',
+  sidebarRole: '#8B9BB4',
+  emergencyBorder: '#5C2A32',
+  mapRoad: '#2A2D34',
+  mapPark: '#1A2E22',
+};
+
+export const colors = lightColors;

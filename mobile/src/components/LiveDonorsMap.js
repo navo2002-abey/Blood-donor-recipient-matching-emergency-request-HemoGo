@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useTheme } from '../context/ThemeContext';
 
 const buildMapHtml = ({ latitude, longitude, donors, interactive, radiusKm, placeLabel, selectedId, radar }) => {
   const donorJson = JSON.stringify(
@@ -163,6 +164,8 @@ const LiveDonorsMap = ({
   onSelectDonor,
   radar = false,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const html = useMemo(
     () =>
       buildMapHtml({
@@ -234,7 +237,7 @@ const LiveDonorsMap = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     flex: 1,
     overflow: 'hidden',

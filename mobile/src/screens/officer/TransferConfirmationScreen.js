@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
 import { useAlerts } from '../../context/AlertsContext';
 import { colors } from '../../utils/colors';
+import { useTheme } from '../../context/ThemeContext';
 
 // mode: 'sent' (requester) | 'approved' (approver)
 const CONFIGS = {
@@ -41,6 +42,8 @@ const CONFIGS = {
 };
 
 const TransferConfirmationScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { unreadCount } = useAlerts();
 
   const {
@@ -212,8 +215,8 @@ const TransferConfirmationScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,11 +327,11 @@ const styles = StyleSheet.create({
 
   summaryCard: {
     width: '100%',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
   summaryHeader: {
     fontSize: 10,
@@ -384,12 +387,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   secondaryBtn: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   secondaryBtnText: {
     color: colors.text,

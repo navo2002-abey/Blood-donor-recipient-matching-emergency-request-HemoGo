@@ -16,8 +16,10 @@ import Sidebar from '../../components/Sidebar';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { transferService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const DIRECTION_FILTERS = [
   { key: 'ALL', label: 'All' },
@@ -43,14 +45,17 @@ const timeAgo = (date) => {
   return `${Math.floor(hrs / 24)}d ago`;
 };
 
-const urgencyColor = (u) => {
-  if (u === 'CRITICAL') return colors.primary;
+const urgencyColor = (u, palette) => {
+  if (u === 'CRITICAL') return palette.primary;
   if (u === 'HIGH') return '#F59E0B';
   if (u === 'MEDIUM') return '#3B82F6';
-  return colors.textSecondary;
+  return palette.textSecondary;
 };
 
 const BloodRescueScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const myHospital = useMyHospital();
 
@@ -284,7 +289,7 @@ const BloodRescueScreen = ({ navigation }) => {
         {/* Title */}
         <View style={styles.titleRow}>
           <Ionicons name="swap-horizontal-outline" size={22} color={colors.primary} />
-          <Text style={styles.title}>Blood Bank Exchange</Text>
+          <Text style={styles.title}>{t('pages.exchange')}</Text>
         </View>
         <Text style={styles.subtitle}>
           Request blood from another bank, or respond to incoming requests.
@@ -413,7 +418,7 @@ const BloodRescueScreen = ({ navigation }) => {
             const direction = getDirection(t);
             const busy = busyId === t._id;
             const isIncoming = direction === 'INCOMING';
-            const uColor = urgencyColor(t.urgency);
+            const uColor = urgencyColor(t.urgency, colors);
 
             return (
               <View key={t._id} style={styles.card}>
@@ -579,8 +584,8 @@ const BloodRescueScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
 
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
@@ -595,11 +600,11 @@ const styles = StyleSheet.create({
   myBankCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     marginBottom: 14,
   },
   myBankIcon: {
@@ -652,7 +657,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.inputBg,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
@@ -703,9 +708,9 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 4,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -721,11 +726,11 @@ const styles = StyleSheet.create({
   filterTextActive: { color: colors.white },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   cardTop: {
@@ -837,9 +842,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     padding: 16,
     borderRadius: 12,
     marginTop: 12,

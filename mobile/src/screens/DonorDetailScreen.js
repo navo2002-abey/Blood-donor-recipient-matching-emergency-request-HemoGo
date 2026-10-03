@@ -8,6 +8,7 @@ import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { placeCall } from '../utils/phone';
+import { useTheme } from '../context/ThemeContext';
 
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
 const AVATAR_TEXT = ['#E31E35', '#1D4ED8', '#15803D', '#C2410C', '#7E22CE'];
@@ -22,6 +23,8 @@ const initials = (name) =>
     .toUpperCase();
 
 const DonorDetailScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
@@ -145,15 +148,15 @@ const DonorDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -162,7 +165,7 @@ const styles = StyleSheet.create({
   profile: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#F6C9D0',
@@ -202,7 +205,7 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
   statusText: { fontSize: 12, fontWeight: '700', color: '#16A34A' },
   details: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -236,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8EEF3',
   },
   map: { flex: 1 },
-  fullMapSafe: { flex: 1, backgroundColor: colors.white },
+  fullMapSafe: { flex: 1, backgroundColor: colors.cardBg },
   fullMapTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
   fullMap: { flex: 1 },
   mapHint: { marginTop: 8, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
@@ -246,7 +249,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
   },
@@ -258,7 +261,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   callText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
   requestBtn: {

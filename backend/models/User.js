@@ -37,6 +37,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },
@@ -51,6 +55,7 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     phone: this.phone,
     role: this.role,
     hospital: this.hospital,
+    isActive: this.isActive !== false,
   };
 };
 

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,9 +7,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const ActiveRequestsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Top Header Bar */}
@@ -22,7 +27,7 @@ const ActiveRequestsScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Active Requests</Text>
+        <Text style={styles.headerTitle}>{t('pages.activeRequests')}</Text>
 
         <View style={styles.placeholderBtn} />
       </View>
@@ -51,10 +56,10 @@ const ActiveRequestsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -63,7 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 40,

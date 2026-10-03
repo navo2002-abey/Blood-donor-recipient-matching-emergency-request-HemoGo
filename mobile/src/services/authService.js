@@ -21,3 +21,13 @@ export const fetchCurrentUser = async () => {
 export const logoutUser = async () => {
   await clearSession();
 };
+
+export const updateProfile = async (payload) => {
+  const { data } = await api.patch('/auth/profile', payload);
+  return data;
+};
+
+export const changePassword = async (payload) => {
+  const { data } = await api.patch('/auth/password', payload);
+  return data;
+};

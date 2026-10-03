@@ -6,16 +6,21 @@ import LiveDonorsMap from '../components/LiveDonorsMap';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { useTheme } from '../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
 };
 
 const DashboardScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
@@ -44,15 +49,15 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.welcomeCopy}>
-            <Text style={styles.welcomeLabel}>Welcome back,</Text>
+            <Text style={styles.welcomeLabel}>{t('home.welcome')}</Text>
             <Text style={styles.welcomeName}>{name}</Text>
             <View style={styles.statusRow}>
               <View style={styles.greenDot} />
-              <Text style={styles.statusText}>Available to Donate</Text>
+              <Text style={styles.statusText}>{t('home.available')}</Text>
             </View>
           </View>
           <View style={styles.bloodBox}>
-            <Text style={styles.bloodLabel}>BLOOD GROUP</Text>
+            <Text style={styles.bloodLabel}>{t('home.bloodGroup')}</Text>
             <Text style={styles.bloodValue}>{bloodGroup}</Text>
           </View>
         </View>
@@ -61,21 +66,21 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.emergencyTop}>
             <View style={styles.emergencyTitleRow}>
               <View style={styles.redDot} />
-              <Text style={styles.emergencyKicker}>EMERGENCY NEED</Text>
+              <Text style={styles.emergencyKicker}>{t('home.emergency')}</Text>
             </View>
             <View style={styles.priority}>
-              <Text style={styles.priorityText}>High Priority</Text>
+              <Text style={styles.priorityText}>{t('home.highPriority')}</Text>
             </View>
           </View>
           <Text style={styles.emergencyTitle}>
-            {bloodGroup} Blood Needed Urgently at Colombo General Hospital
+            {t('home.emergencyTitle', { group: bloodGroup })}
           </Text>
           <View style={styles.emergencyActions}>
             <TouchableOpacity style={styles.respondBtn} onPress={() => comingSoon('Respond Now')}>
-              <Text style={styles.respondText}>Respond Now</Text>
+              <Text style={styles.respondText}>{t('home.respond')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.detailsBtn} onPress={() => comingSoon('Request Details')}>
-              <Text style={styles.detailsText}>Details</Text>
+              <Text style={styles.detailsText}>{t('home.details')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -85,15 +90,15 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.cardIcon}>
               <Ionicons name="search-outline" size={20} color={colors.text} />
             </View>
-            <Text style={styles.cardTitle}>Find Donors</Text>
-            <Text style={styles.cardSub}>Locate nearby blood donors in real-time</Text>
+            <Text style={styles.cardTitle}>{t('home.findDonors')}</Text>
+            <Text style={styles.cardSub}>{t('home.findDonorsSub')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('CreateBloodRequest')}>
             <View style={styles.cardIcon}>
               <BloodDrop size={18} />
             </View>
-            <Text style={styles.cardTitle}>Request Blood</Text>
-            <Text style={styles.cardSub}>Create urgent or regular blood requests</Text>
+            <Text style={styles.cardTitle}>{t('home.requestBlood')}</Text>
+            <Text style={styles.cardSub}>{t('home.requestBloodSub')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -106,8 +111,8 @@ const DashboardScreen = ({ navigation }) => {
             <View style={[styles.cardIcon, styles.listIconWrap]}>
               <Ionicons name="search-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.cardTitle}>Request Match</Text>
-            <Text style={styles.cardSub}>AI request matching</Text>
+            <Text style={styles.cardTitle}>{t('home.requestMatch')}</Text>
+            <Text style={styles.cardSub}>{t('home.requestMatchSub')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.smallCard}
@@ -117,8 +122,8 @@ const DashboardScreen = ({ navigation }) => {
             <View style={[styles.cardIcon, styles.listIconWrap]}>
               <Ionicons name="reorder-three-outline" size={22} color={colors.text} />
             </View>
-            <Text style={styles.cardTitle}>Request List</Text>
-            <Text style={styles.cardSub}>View All blood requests</Text>
+            <Text style={styles.cardTitle}>{t('home.requestList')}</Text>
+            <Text style={styles.cardSub}>{t('home.requestListSub')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -131,8 +136,8 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.cardIcon}>
               <Ionicons name="calendar-outline" size={20} color={colors.text} />
             </View>
-            <Text style={styles.cardTitle}>Book Appointment</Text>
-            <Text style={styles.cardSub}>Schedule your donation appointment</Text>
+            <Text style={styles.cardTitle}>{t('home.book')}</Text>
+            <Text style={styles.cardSub}>{t('home.bookSub')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.smallCard}
@@ -142,21 +147,21 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.cardIcon}>
               <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
             </View>
-            <Text style={styles.cardTitle}>Check Eligibility</Text>
-            <Text style={styles.cardSub}>Verify your donation eligibility</Text>
+            <Text style={styles.cardTitle}>{t('home.eligibility')}</Text>
+            <Text style={styles.cardSub}>{t('home.eligibilitySub')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.mapCard}>
           <View style={styles.mapHeader}>
-            <Text style={styles.mapTitle}>Live Nearby Donors</Text>
+            <Text style={styles.mapTitle}>{t('home.liveDonors')}</Text>
             <View style={styles.mapHeaderRight}>
               <View style={styles.livePill}>
                 <View style={styles.liveDot} />
-                <Text style={styles.livePillText}>LIVE</Text>
+                <Text style={styles.livePillText}>{t('home.live')}</Text>
               </View>
               <TouchableOpacity onPress={() => navigation.navigate('Map')}>
-                <Text style={styles.mapLink}>View Full Map</Text>
+                <Text style={styles.mapLink}>{t('home.fullMap')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -168,7 +173,7 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.mapFooter}>
             <View style={styles.liveDot} />
             <Ionicons name="navigate-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.mapFooterText}>{donors.length} Active Donors Nearby</Text>
+            <Text style={styles.mapFooterText}>{t('home.nearbyCount', { count: donors.length })}</Text>
           </View>
         </View>
       </ScrollView>
@@ -184,10 +189,10 @@ const DashboardScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -232,7 +237,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
@@ -257,17 +262,19 @@ const styles = StyleSheet.create({
   },
   welcomeLabel: {
     fontSize: 12,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
   welcomeName: {
     fontSize: 18,
+    lineHeight: 26,
     fontWeight: '800',
     color: colors.text,
     marginTop: 1,
   },
   statusRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginTop: 4,
   },
   greenDot: {
@@ -276,28 +283,33 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.success,
     marginRight: 6,
+    marginTop: 5,
   },
   statusText: {
+    flex: 1,
     fontSize: 12,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
   bloodBox: {
     backgroundColor: colors.inputBg,
     borderRadius: 14,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     alignItems: 'center',
-    minWidth: 78,
+    maxWidth: 92,
   },
   bloodLabel: {
-    fontSize: 9,
-    letterSpacing: 0.4,
+    fontSize: 10,
+    lineHeight: 14,
+    textAlign: 'center',
     color: colors.textMuted,
     fontWeight: '700',
   },
   bloodValue: {
     marginTop: 2,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '800',
     color: colors.text,
   },
@@ -307,17 +319,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 14,
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
   },
   emergencyTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 10,
   },
   emergencyTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flex: 1,
   },
   redDot: {
     width: 7,
@@ -327,9 +342,10 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   emergencyKicker: {
+    flex: 1,
     fontSize: 11,
+    lineHeight: 16,
     fontWeight: '800',
-    letterSpacing: 0.3,
     color: colors.text,
   },
   priority: {
@@ -340,12 +356,14 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 11,
+    lineHeight: 16,
     color: colors.primary,
     fontWeight: '700',
+    textAlign: 'center',
   },
   emergencyTitle: {
     fontSize: 18,
-    lineHeight: 24,
+    lineHeight: 28,
     fontWeight: '800',
     color: colors.text,
     marginBottom: 16,
@@ -356,31 +374,39 @@ const styles = StyleSheet.create({
   },
   respondBtn: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   respondText: {
     color: colors.white,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   detailsBtn: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   detailsText: {
     color: colors.text,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
@@ -389,7 +415,7 @@ const styles = StyleSheet.create({
   },
   smallCard: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -401,7 +427,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   wideCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -423,23 +449,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   listIconWrap: {
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#FEE2E2',
   },
   cardTitle: {
     fontSize: 15,
+    lineHeight: 22,
     fontWeight: '800',
     color: colors.text,
     marginBottom: 4,
   },
   cardSub: {
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
   mapCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -448,7 +475,9 @@ const styles = StyleSheet.create({
   mapHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 10,
@@ -458,12 +487,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mapTitle: {
+    flex: 1,
     fontSize: 15,
+    lineHeight: 22,
     fontWeight: '800',
     color: colors.text,
   },
   mapLink: {
     fontSize: 12,
+    lineHeight: 18,
     fontWeight: '600',
     color: colors.textSecondary,
   },
@@ -479,6 +511,7 @@ const styles = StyleSheet.create({
   },
   livePillText: {
     fontSize: 10,
+    lineHeight: 14,
     fontWeight: '800',
     color: colors.primary,
   },
@@ -502,7 +535,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   mapFooterText: {
+    flex: 1,
     fontSize: 12,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
 });

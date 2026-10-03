@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   Platform,
@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { DONOR_MENU, ROLE_LABELS } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const getInitials = (name) =>
   name
@@ -39,7 +41,10 @@ const Sidebar = ({
   hospital = 'Colombo National Hospital',
   org,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const [available, setAvailable] = useState(false);
   const isStaff = variant === 'staff';
   const isOfficer = user?.role === 'BLOOD_BANK_OFFICER';
@@ -50,7 +55,7 @@ const Sidebar = ({
     isOfficer && !/^dr\.?\s/i.test(rawName)
       ? `Dr. ${rawName}`
       : rawName || 'HemoGo User';
-  const roleLabel = ROLE_LABELS[user?.role] || 'HemoGo User';
+  const roleLabel = (user?.role && t(`roles.${user.role}`)) || ROLE_LABELS[user?.role] || 'HemoGo User';
   const subtitle =
     user?.role === 'DONOR' ? `${user?.bloodGroup || 'O+'} Blood Group` : roleLabel;
   const orgLine = org || hospital;
@@ -136,7 +141,7 @@ const Sidebar = ({
             {isStaff ? (
               <View style={[styles.staffBar, active && styles.staffBarActive]} />
             ) : null}
-            <Text style={[textStyle, active && activeTextStyle]}>{item.key}</Text>
+            <Text style={[textStyle, active && activeTextStyle]}>{t(`menu.${item.key}`)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -145,7 +150,7 @@ const Sidebar = ({
         onPress={handleLogout}
       >
         {isStaff ? <View style={styles.staffBar} /> : null}
-        <Text style={textStyle}>Log Out</Text>
+        <Text style={textStyle}>{t('common.logout')}</Text>
       </TouchableOpacity>
     </>
   );
@@ -281,7 +286,7 @@ const Sidebar = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     flexDirection: 'row',
@@ -387,7 +392,9 @@ const styles = StyleSheet.create({
   menuText: {
     color: colors.white,
     fontSize: 15,
+    lineHeight: 22,
     fontWeight: '500',
+    paddingRight: 8,
   },
   footer: {
     flexDirection: 'row',
@@ -470,12 +477,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   staffBarActive: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   staffItemText: {
+    flex: 1,
     color: 'rgba(255,255,255,0.82)',
     fontSize: 14,
+    lineHeight: 22,
     fontWeight: '500',
+    paddingRight: 16,
   },
   staffItemTextActive: {
     color: colors.white,

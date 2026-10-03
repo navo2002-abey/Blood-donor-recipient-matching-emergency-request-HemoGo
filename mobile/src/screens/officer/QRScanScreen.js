@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,13 +15,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
 import { useMyHospital } from '../../hooks/useMyHospital';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const QRScanScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const myHospital = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -185,7 +190,7 @@ const QRScanScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Scan Donor QR</Text>
+          <Text style={styles.title}>{t('pages.scanQr')}</Text>
           <Text style={styles.subtitle}>Point camera at the donor's QR code</Text>
 
           <View style={styles.viewfinder}>
@@ -270,8 +275,8 @@ const QRScanScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { padding: 20, paddingBottom: 40 },
 
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
@@ -316,7 +321,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderRadius: 14,
     padding: 12,
     marginBottom: 20,
@@ -337,7 +342,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     paddingHorizontal: 16,
     fontSize: 14,
     color: colors.text,
@@ -383,7 +388,7 @@ const styles = StyleSheet.create({
   /* Result view */
   resultBanner: { alignItems: 'center', paddingVertical: 30, borderRadius: 22, marginBottom: 20 },
   resultBannerSuccess: { backgroundColor: '#ECFDF5' },
-  resultBannerFail: { backgroundColor: '#FFF1F3' },
+  resultBannerFail: { backgroundColor: colors.primarySoft },
   resultTitle: { fontSize: 22, fontWeight: '900', marginTop: 12 },
   resultSub: {
     fontSize: 13,
@@ -394,7 +399,7 @@ const styles = StyleSheet.create({
   },
 
   donorCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
@@ -420,7 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   eligibleText: { color: colors.success, fontSize: 10, fontWeight: '800' },
-  divider: { height: 1, backgroundColor: '#F0F0F2', marginVertical: 14 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 14 },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   infoLabel: {
     flex: 1,

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,7 @@ import {
   normalizeStock,
   totalUnits,
 } from '../../utils/stockHelpers';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
@@ -35,6 +36,8 @@ const pseudoDistance = (name) => {
 };
 
 const BloodBankDetailsScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = route.params;
   const { location } = useUserLocation();
 
@@ -261,8 +264,8 @@ const BloodBankDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 110 },
 
   mapBanner: {
@@ -271,7 +274,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     backgroundColor: '#E8EEF3',
   },
   distancePillCenter: {
@@ -280,7 +283,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -315,13 +318,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   infoCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -355,11 +358,11 @@ const styles = StyleSheet.create({
   },
   summaryPill: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     alignItems: 'center',
     gap: 4,
   },
@@ -394,7 +397,7 @@ const styles = StyleSheet.create({
     borderColor: '#FEE2E2',
     borderRadius: 16,
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   stockGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   stockCell: { alignItems: 'center', flex: 1 },
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -447,7 +450,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 14,
     marginTop: 16,
@@ -470,7 +473,7 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     width: 100,
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',

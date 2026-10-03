@@ -1,13 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { fetchAdminUsers } from '../services/adminService';
 import api from '../services/api';
 import { colors } from '../utils/colors';
-import { ADMIN_MENU } from '../utils/roles';
+import { ADMIN_MENU, ROLE_LABELS } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const ORG = 'HemoGo National Network';
 
@@ -40,7 +44,10 @@ const stockColor = (status) => {
 };
 
 const AdminDashboardScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 3,
@@ -48,6 +55,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     officers: 1,
     patients: 0,
   });
+  const [users, setUsers] = useState(USERS);
   const name = user?.name || 'Anusha Fernando';
   const initials = name
     .split(' ')
@@ -71,11 +79,33 @@ const AdminDashboardScreen = ({ navigation }) => {
     loadStats();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      fetchAdminUsers()
+        .then((list) => {
+          if (!active || !list.length) return;
+          setUsers(
+            list.slice(0, 3).map((item) => ({
+              id: item.id,
+              name: item.name,
+              role: ROLE_LABELS[item.role] || item.role,
+              meta: item.hospital || item.phone || item.email,
+            }))
+          );
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   const cards = [
-    { label: 'Total Users', value: stats.total, icon: 'people-outline' },
-    { label: 'Donors', value: stats.donors, icon: 'water-outline' },
-    { label: 'Officers', value: stats.officers, icon: 'medkit-outline' },
-    { label: 'Patients', value: stats.patients, icon: 'heart-outline' },
+    { label: t('adminHome.totalUsers'), value: stats.total, icon: 'people-outline' },
+    { label: t('adminHome.donors'), value: stats.donors, icon: 'water-outline' },
+    { label: t('adminHome.officers'), value: stats.officers, icon: 'medkit-outline' },
+    { label: t('adminHome.patients'), value: stats.patients, icon: 'heart-outline' },
   ];
 
   return (
@@ -100,12 +130,12 @@ const AdminDashboardScreen = ({ navigation }) => {
             <Text style={styles.avatarText}>{initials || 'AF'}</Text>
           </View>
           <View style={styles.welcomeCopy}>
-            <Text style={styles.welcomeLabel}>Welcome back,</Text>
+            <Text style={styles.welcomeLabel}>{t('adminHome.welcome')}</Text>
             <Text style={styles.welcomeName}>{name}</Text>
             <Text style={styles.org}>{ORG}</Text>
             <View style={styles.statusRow}>
               <View style={styles.greenDot} />
-              <Text style={styles.statusText}>On duty · System Admin</Text>
+              <Text style={styles.statusText}>{t('adminHome.duty')}</Text>
             </View>
           </View>
         </View>
@@ -124,31 +154,29 @@ const AdminDashboardScreen = ({ navigation }) => {
           <View style={styles.emergencyTop}>
             <View style={styles.emergencyTitleRow}>
               <View style={styles.redDot} />
-              <Text style={styles.emergencyKicker}>EMERGENCY REQUESTS</Text>
+              <Text style={styles.emergencyKicker}>{t('adminHome.emergency')}</Text>
             </View>
             <View style={styles.priority}>
-              <Text style={styles.priorityText}>2 high priority</Text>
+              <Text style={styles.priorityText}>{t('adminHome.highPriority')}</Text>
             </View>
           </View>
-          <Text style={styles.emergencyTitle}>O- and B+ requests need officer matching</Text>
-          <Text style={styles.emergencyCopy}>
-            Review live requests across the national network and assign the nearest blood bank.
-          </Text>
+          <Text style={styles.emergencyTitle}>{t('adminHome.emergencyTitle')}</Text>
+          <Text style={styles.emergencyCopy}>{t('adminHome.emergencyCopy')}</Text>
           <View style={styles.emergencyActions}>
             <TouchableOpacity style={styles.respondBtn} onPress={() => navigation.navigate('Requests')}>
-              <Text style={styles.respondText}>Open Requests</Text>
+              <Text style={styles.respondText}>{t('adminHome.openRequests')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.detailsBtn} onPress={() => comingSoon('Donor Verification')}>
-              <Text style={styles.detailsText}>Verify Donors</Text>
+              <Text style={styles.detailsText}>{t('adminHome.verifyDonors')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.panel}>
           <View style={styles.panelHead}>
-            <Text style={styles.panelTitle}>Live requests</Text>
+            <Text style={styles.panelTitle}>{t('adminHome.liveRequests')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Requests')}>
-              <Text style={styles.panelLink}>View all</Text>
+              <Text style={styles.panelLink}>{t('adminHome.viewAll')}</Text>
             </TouchableOpacity>
           </View>
           {REQUESTS.map((item) => (
@@ -159,7 +187,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 <Text style={styles.rowSub}>{item.sub}</Text>
               </View>
               <TouchableOpacity onPress={() => comingSoon('Assign Officer')}>
-                <Text style={styles.link}>Assign</Text>
+                <Text style={styles.link}>{t('adminHome.assign')}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -167,13 +195,13 @@ const AdminDashboardScreen = ({ navigation }) => {
 
         <View style={styles.panel}>
           <View style={styles.panelHead}>
-            <Text style={styles.panelTitle}>Manage users</Text>
+            <Text style={styles.panelTitle}>{t('adminHome.manageUsers')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Users')}>
-              <Text style={styles.panelLink}>View all</Text>
+              <Text style={styles.panelLink}>{t('adminHome.viewAll')}</Text>
             </TouchableOpacity>
           </View>
-          {USERS.map((item) => (
-            <View key={item.name} style={styles.row}>
+          {users.map((item) => (
+            <View key={item.id || item.name} style={styles.row}>
               <View style={styles.userBadge}>
                 <Text style={styles.userBadgeText}>{item.name.charAt(0)}</Text>
               </View>
@@ -183,8 +211,10 @@ const AdminDashboardScreen = ({ navigation }) => {
                   {item.role} · {item.meta}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => comingSoon('Manage Users')}>
-                <Text style={styles.link}>Review</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Users', item.id ? { userId: item.id } : undefined)}
+              >
+                <Text style={styles.link}>{t('adminHome.review')}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -192,9 +222,9 @@ const AdminDashboardScreen = ({ navigation }) => {
 
         <View style={styles.panel}>
           <View style={styles.panelHead}>
-            <Text style={styles.panelTitle}>Blood bank network</Text>
+            <Text style={styles.panelTitle}>{t('adminHome.banks')}</Text>
             <TouchableOpacity onPress={() => comingSoon('Blood Banks')}>
-              <Text style={styles.panelLink}>View all</Text>
+              <Text style={styles.panelLink}>{t('adminHome.viewAll')}</Text>
             </TouchableOpacity>
           </View>
           {BANKS.map((item) => (
@@ -214,15 +244,15 @@ const AdminDashboardScreen = ({ navigation }) => {
             <View style={styles.actionIcon}>
               <Ionicons name="bar-chart-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.actionText}>Reports</Text>
-            <Text style={styles.actionSub}>Donations & shortages</Text>
+            <Text style={styles.actionText}>{t('adminHome.reports')}</Text>
+            <Text style={styles.actionSub}>{t('adminHome.reportsSub')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.action} onPress={() => comingSoon('Notifications')}>
             <View style={styles.actionIcon}>
               <Ionicons name="notifications-outline" size={18} color={colors.primary} />
             </View>
-            <Text style={styles.actionText}>Alerts</Text>
-            <Text style={styles.actionSub}>Push network notices</Text>
+            <Text style={styles.actionText}>{t('adminHome.alerts')}</Text>
+            <Text style={styles.actionSub}>{t('adminHome.alertsSub')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -241,8 +271,8 @@ const AdminDashboardScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,7 +299,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
@@ -301,21 +331,21 @@ const styles = StyleSheet.create({
   statCard: {
     width: '47%',
     flexGrow: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 12,
   },
   statValue: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 8 },
-  statLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontWeight: '600' },
+  statLabel: { fontSize: 11, lineHeight: 16, color: colors.textSecondary, marginTop: 2, fontWeight: '600' },
   emergency: {
     borderWidth: 1,
     borderColor: '#F7C4CB',
     borderRadius: 20,
     padding: 16,
     marginBottom: 16,
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
   },
   emergencyTop: {
     flexDirection: 'row',
@@ -361,26 +391,30 @@ const styles = StyleSheet.create({
   emergencyActions: { flexDirection: 'row', gap: 10 },
   respondBtn: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
-  respondText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  respondText: { color: colors.white, fontWeight: '700', fontSize: 13, lineHeight: 18, textAlign: 'center' },
   detailsBtn: {
     flex: 1,
-    height: 44,
+    minHeight: 48,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  detailsText: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  detailsText: { color: colors.text, fontWeight: '700', fontSize: 13, lineHeight: 18, textAlign: 'center' },
   panel: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: 18,
@@ -393,7 +427,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
-  panelTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  panelTitle: { fontSize: 15, lineHeight: 22, fontWeight: '800', color: colors.text },
   panelLink: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 },
   rowCopy: { flex: 1 },
@@ -413,7 +447,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10 },
   action: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     borderRadius: 16,
@@ -428,7 +462,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  actionText: { fontSize: 13, fontWeight: '800', color: colors.text },
+  actionText: { fontSize: 13, lineHeight: 18, fontWeight: '800', color: colors.text },
   actionSub: { fontSize: 11, color: colors.textSecondary, marginTop: 3, lineHeight: 15 },
 });
 

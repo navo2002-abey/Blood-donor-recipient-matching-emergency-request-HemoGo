@@ -1,16 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const HISTORY_KEY = '@appointment_history';
 const POINTS_KEY = '@donor_points';
 
 const HistoryScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const [appointments, setAppointments] = useState([]);
 
   const loadAppointments = async () => {
@@ -72,13 +77,13 @@ const HistoryScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Appointment History</Text>
+        <Text style={styles.title}>{t('pages.historyTitle')}</Text>
 
         {appointments.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No appointments yet</Text>
-            <Text style={styles.emptySubtext}>Your appointment history will appear here</Text>
+            <Text style={styles.emptyText}>{t('pages.noAppointments')}</Text>
+            <Text style={styles.emptySubtext}>{t('pages.historyEmpty')}</Text>
           </View>
         ) : (
           appointments.map((appointment, index) => (
@@ -123,7 +128,7 @@ const HistoryScreen = ({ navigation }) => {
                       completeDonation(index);
                     }}
                   >
-                    <Text style={styles.completeButtonText}>Complete Donation</Text>
+                    <Text style={styles.completeButtonText}>{t('pages.completeDonation')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -135,10 +140,10 @@ const HistoryScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -191,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,

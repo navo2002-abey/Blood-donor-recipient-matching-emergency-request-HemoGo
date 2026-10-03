@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const POINTS_KEY = '@donor_points';
 const REDEEMED_KEY = '@redeemed_rewards';
@@ -46,6 +48,9 @@ const rewards = [
 ];
 
 const RewardsGiftScreen = () => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const [points, setPoints] = useState(0);
   const [redeemed, setRedeemed] = useState([]);
 
@@ -122,7 +127,7 @@ const RewardsGiftScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Redeem Rewards</Text>
+        <Text style={styles.title}>{t('pages.redeem')}</Text>
         <Text style={styles.subtitle}>Use your points to claim exclusive rewards</Text>
 
         {rewards.map((reward) => {
@@ -172,10 +177,10 @@ const RewardsGiftScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -225,7 +230,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   rewardCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,

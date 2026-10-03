@@ -16,9 +16,11 @@ import LiveDonorsMap from '../components/LiveDonorsMap';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { BLOOD_GROUPS, getNearbyDonors } from '../utils/nearbyDonors';
 import { DONOR_MENU } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const AVAILABILITY = ['Available Now', 'All', 'Unavailable'];
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
@@ -38,6 +40,9 @@ const initials = (name) =>
     .toUpperCase();
 
 const FindDonorsScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const menu = route.params?.menu || DONOR_MENU;
   const showAvailability = route.params?.showAvailability !== false;
   const { location } = useUserLocation();
@@ -112,7 +117,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Nearby Blood Donors</Text>
+        <Text style={styles.title}>{t('pages.nearbyDonors')}</Text>
         <Text style={styles.subtitle}>
           Find blood donors available in your area and nearby hospitals.
         </Text>
@@ -122,7 +127,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search by area or blood group (e.g., A+, Colombo)"
+            placeholder={t('pages.searchDonors')}
             placeholderTextColor={colors.textMuted}
             style={styles.searchInput}
           />
@@ -160,7 +165,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
 
         {filtered.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No donors match this search.</Text>
+            <Text style={styles.emptyText}>{t('pages.noDonorMatch')}</Text>
           </View>
         ) : (
           filtered.map((donor, index) => (
@@ -211,7 +216,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.requestBtn} onPress={() => navigation.navigate('AvailableDonors')}>
-          <Text style={styles.requestText}>Request Blood</Text>
+          <Text style={styles.requestText}>{t('pages.requestBlood')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -245,15 +250,15 @@ const FindDonorsScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   bellBadge: {
@@ -310,7 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#F3C5CB',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,7 +329,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     padding: 20,
     alignItems: 'center',
   },
@@ -332,7 +337,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -370,7 +375,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
   },
@@ -388,7 +393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
