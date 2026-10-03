@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,8 +16,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { DONOR_MENU } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -70,6 +72,9 @@ const validateMatch = ({ patientName, hospital, bloodGroup, urgency, details }) 
 };
 
 const RequestMatchScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const menu = route.params?.menu || DONOR_MENU;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patientName, setPatientName] = useState('');
@@ -143,7 +148,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Request a Match</Text>
+          <Text style={styles.title}>{t('pages.requestMatch')}</Text>
           <Text style={styles.subtitle}>
             Tell us what you need, and we'll find the best matching donors for you.
           </Text>
@@ -252,15 +257,19 @@ const RequestMatchScreen = ({ navigation, route }) => {
   );
 };
 
-const Field = ({ label, error, children }) => (
+const Field = ({ label, error, children }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  return (
   <View style={styles.field}>
     <Text style={styles.label}>{label}</Text>
     {children}
     {error ? <Text style={styles.error}>{error}</Text> : null}
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -299,7 +308,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -316,12 +325,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.text,
   },
   input: {
     minHeight: 52,
     borderRadius: 26,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     paddingHorizontal: 18,
     fontSize: 15,
     color: colors.text,
@@ -330,7 +339,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.primary,
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
   },
   select: {
     flexDirection: 'row',
@@ -388,7 +397,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,

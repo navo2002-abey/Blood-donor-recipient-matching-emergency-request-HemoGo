@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const HISTORY_KEY = '@appointment_history';
 const POINTS_KEY = '@donor_points';
@@ -19,6 +21,9 @@ const bloodBanks = [
 const timeSlots = ['9.30 A.M', '11.30 A.M', '2.30 P.M'];
 
 const BookAppointmentScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -117,10 +122,10 @@ const BookAppointmentScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Book Donation Appointment</Text>
+        <Text style={styles.title}>{t('pages.bookTitle')}</Text>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Select Blood Bank/Hospital</Text>
+          <Text style={styles.label}>{t('pages.selectBank')}</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowBankDropdown(!showBankDropdown)}
@@ -157,7 +162,7 @@ const BookAppointmentScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Select Time</Text>
+          <Text style={styles.label}>{t('pages.selectTime')}</Text>
           <View style={styles.timeContainer}>
             {timeSlots.map((time) => (
               <TouchableOpacity
@@ -182,7 +187,7 @@ const BookAppointmentScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Select Date</Text>
+          <Text style={styles.label}>{t('pages.selectDate')}</Text>
           <TouchableOpacity style={styles.dateInput} onPress={() => setShowDatePicker(true)}>
             <Text style={selectedDate ? styles.dateText : styles.placeholder}>
               {selectedDate || 'Select date'}
@@ -203,10 +208,10 @@ const BookAppointmentScreen = ({ navigation }) => {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.bookButton} onPress={handleBookAppointment}>
-            <Text style={styles.bookButtonText}>Book Appointment</Text>
+            <Text style={styles.bookButtonText}>{t('pages.book')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('pages.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -214,10 +219,10 @@ const BookAppointmentScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -282,7 +287,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   dropdownList: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -308,7 +313,7 @@ const styles = StyleSheet.create({
   },
   timeButton: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -331,7 +336,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     height: 50,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 2,
     borderColor: colors.primary,
     borderRadius: 25,

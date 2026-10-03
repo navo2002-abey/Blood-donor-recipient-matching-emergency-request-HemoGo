@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const Card = ({ title, subtitle, icon, onPress, style }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -17,7 +20,7 @@ const Card = ({ title, subtitle, icon, onPress, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   card: {
     backgroundColor: colors.cardBg,
     borderRadius: 20,

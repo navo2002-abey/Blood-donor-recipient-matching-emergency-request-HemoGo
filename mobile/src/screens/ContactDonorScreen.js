@@ -4,10 +4,12 @@ import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, Touc
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { placeCall } from '../utils/phone';
 import { groupsThatCanDonateTo } from '../utils/smartMatch';
+import { useTheme } from '../context/ThemeContext';
 
 const LAST_DONATED = ['2 weeks ago', '1 month ago', '3 months ago', '5 months ago'];
 const MAX_MESSAGE = 160;
@@ -35,6 +37,9 @@ const openExternal = async (url) => {
 };
 
 const ContactDonorScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
@@ -66,7 +71,7 @@ const ContactDonorScreen = ({ navigation, route }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Contact Donor</Text>
+        <Text style={styles.headerTitle}>{t('pages.contactDonor')}</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -108,7 +113,7 @@ const ContactDonorScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <Text style={styles.section}>Contact Donor</Text>
+            <Text style={styles.section}>{t('pages.contactDonor')}</Text>
             <Text style={styles.sectionHint}>Choose how you would like to get in touch with {donor.name}.</Text>
 
             <TouchableOpacity
@@ -193,10 +198,10 @@ const ContactDonorScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -204,7 +209,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   headerBtn: {
     width: 36,
@@ -225,7 +230,7 @@ const styles = StyleSheet.create({
   profile: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#F8D0D6',
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -289,10 +294,10 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F2',
+    borderColor: colors.border,
     padding: 12,
   },
   statLabel: {
@@ -324,10 +329,10 @@ const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F2',
+    borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     marginBottom: 10,
@@ -346,7 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F8EE',
   },
   smsIcon: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
   },
   optionBody: {
     flex: 1,
@@ -364,10 +369,10 @@ const styles = StyleSheet.create({
   },
   messageCard: {
     marginTop: 4,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F2',
+    borderColor: colors.border,
     padding: 12,
   },
   messageLabel: {
@@ -391,7 +396,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     gap: 10,
   },
   sendBtn: {
@@ -413,7 +418,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   backListText: {
     color: colors.primary,

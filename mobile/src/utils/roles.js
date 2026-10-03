@@ -25,9 +25,10 @@ export const DONOR_MENU = [
   { key: 'History' },
   { key: 'Live Map', tab: 'Map' },
   { key: 'Rewards', tab: 'Rewards' },
-  { key: 'Profile & Settings', tab: 'Profile' },
+  { key: 'Profile', tab: 'Profile' },
+  { key: 'Settings', screen: 'DonorSettings' },
   { key: 'Notifications' },
-  { key: 'Help & Support' },
+  { key: 'Help & Support', screen: 'HelpSupport' },
 ];
 
 export const ADMIN_MENU = [
@@ -38,7 +39,8 @@ export const ADMIN_MENU = [
   { key: 'Reports & Analytics', tab: 'Reports' },
   { key: 'Donor Verification' },
   { key: 'Notifications' },
-  { key: 'Settings', tab: 'Profile' },
+  { key: 'Profile', tab: 'Profile' },
+  { key: 'Settings', screen: 'AdminSettings' },
 ];
 
 export const OFFICER_MENU = [

@@ -16,8 +16,10 @@ import Sidebar from '../../components/Sidebar';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { transferService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -55,11 +57,11 @@ const statusTheme = (status) => {
   }
 };
 
-const urgencyColor = (u) => {
-  if (u === 'CRITICAL') return colors.primary;
+const urgencyColor = (u, palette) => {
+  if (u === 'CRITICAL') return palette.primary;
   if (u === 'HIGH') return '#F59E0B';
   if (u === 'MEDIUM') return '#3B82F6';
-  return colors.textSecondary;
+  return palette.textSecondary;
 };
 
 const timeAgo = (date) => {
@@ -72,6 +74,9 @@ const timeAgo = (date) => {
 };
 
 const PendingTransfersScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -254,7 +259,7 @@ const PendingTransfersScreen = ({ navigation }) => {
     const isIncoming = direction === 'INCOMING';
     const isOutgoing = direction === 'OUTGOING';
     const theme = statusTheme(item.status);
-    const uColor = urgencyColor(item.urgency);
+    const uColor = urgencyColor(item.urgency, colors);
 
     // ✅ CORRECT ACTION LOGIC
     let actionBlock = null;
@@ -547,7 +552,7 @@ const PendingTransfersScreen = ({ navigation }) => {
         ListHeaderComponent={
           <View>
             <View style={styles.headerRow}>
-              <Text style={styles.title}>Transfer Log</Text>
+              <Text style={styles.title}>{t('pages.transferLog')}</Text>
               <Text style={styles.count}>{filtered.length} results</Text>
             </View>
 
@@ -625,7 +630,7 @@ const PendingTransfersScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   list: { padding: 16, paddingBottom: 40 },
 
@@ -657,18 +662,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   directionRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   directionChip: {
     flex: 1,
     paddingVertical: 9,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     alignItems: 'center',
   },
   chipActive: {
@@ -679,7 +684,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.white },
 
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
@@ -750,7 +755,7 @@ const styles = StyleSheet.create({
   },
 
   reasonBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     padding: 8,
     borderRadius: 8,
     marginBottom: 10,
@@ -795,7 +800,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: colors.inputBg,
     padding: 10,
     borderRadius: 8,
   },

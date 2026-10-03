@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const mapRef = useRef(null);
   const region = {
     latitude: location.latitude,
@@ -68,7 +71,7 @@ const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     overflow: 'hidden',
     backgroundColor: colors.inputBg,

@@ -3,8 +3,10 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const MAX_DETAILS = 200;
@@ -31,6 +33,9 @@ const initials = (name) =>
     .toUpperCase();
 
 const RequestBloodScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
@@ -64,7 +69,7 @@ const RequestBloodScreen = ({ navigation, route }) => {
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>Request Blood</Text>
+        <Text style={styles.headerTitle}>{t('pages.requestBlood')}</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -286,10 +291,10 @@ const RequestBloodScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -297,7 +302,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   headerBtn: {
     width: 36,
@@ -318,7 +323,7 @@ const styles = StyleSheet.create({
   urgent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F8D0D6',
@@ -351,7 +356,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F8D0D6',
@@ -395,7 +400,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#F8D0D6',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 6,
@@ -434,8 +439,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -455,8 +460,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 14,
     fontSize: 14,
     color: colors.text,
@@ -472,8 +477,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 6,
   },
   stepBtn: {
@@ -502,8 +507,8 @@ const styles = StyleSheet.create({
   detailsWrap: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 8,
@@ -523,7 +528,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   sendBtn: {
     height: 48,
@@ -577,7 +582,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -623,7 +628,7 @@ const styles = StyleSheet.create({
   },
   nextCard: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -650,7 +655,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: '#F3C5CB',
     alignItems: 'center',

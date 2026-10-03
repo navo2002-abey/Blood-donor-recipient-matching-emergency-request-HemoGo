@@ -7,9 +7,11 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { BLOOD_GROUPS, getNearbyDonors } from '../utils/nearbyDonors';
 import { placeCall } from '../utils/phone';
+import { useTheme } from '../context/ThemeContext';
 
 const AVAILABILITY = ['All', 'Available Now', 'Unavailable'];
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
@@ -29,6 +31,9 @@ const initials = (name) =>
     .toUpperCase();
 
 const MapScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { location, ready } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -99,8 +104,8 @@ const MapScreen = ({ navigation, route }) => {
       </View>
 
       <View style={styles.copy}>
-        <Text style={styles.title}>Live Donor Map</Text>
-        <Text style={styles.subtitle}>See real-time donor locations and availability on the map.</Text>
+        <Text style={styles.title}>{t('pages.liveMap')}</Text>
+        <Text style={styles.subtitle}>{t('pages.liveMapSub')}</Text>
         <View style={styles.filters}>
           <TouchableOpacity style={styles.filter} onPress={() => setOpenFilter('blood')}>
             <Text style={styles.filterText}>
@@ -128,7 +133,7 @@ const MapScreen = ({ navigation, route }) => {
             style={styles.map}
           />
         ) : (
-          <LoadingIndicator label="Finding your location..." />
+          <LoadingIndicator label={t('pages.findingLocation')} />
         )}
 
         {selected ? (
@@ -171,13 +176,13 @@ const MapScreen = ({ navigation, route }) => {
                 style={styles.callBtn}
                 onPress={() => placeCall(selected.phone)}
               >
-                <Text style={styles.callText}>Call</Text>
+                <Text style={styles.callText}>{t('pages.call')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.requestBtn}
                 onPress={() => navigation.navigate('DirectRequest', { donorId: selected.id })}
               >
-                <Text style={styles.requestText}>Direct Request</Text>
+                <Text style={styles.requestText}>{t('pages.directRequest')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -213,8 +218,8 @@ const MapScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.white },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#F3C5CB',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -262,7 +267,7 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     padding: 14,
     shadowColor: '#111111',
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   callText: { color: colors.primary, fontWeight: '800', fontSize: 14 },
   requestBtn: {
@@ -333,7 +338,7 @@ const styles = StyleSheet.create({
   requestText: { color: colors.white, fontWeight: '800', fontSize: 14 },
   backdrop: { flex: 1, backgroundColor: 'rgba(17,17,17,0.35)', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 16,

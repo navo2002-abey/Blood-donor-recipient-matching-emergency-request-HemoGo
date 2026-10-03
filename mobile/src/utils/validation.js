@@ -13,37 +13,37 @@ export const getApiErrorMessage = (error, fallback) => {
   return fallback || 'Something went wrong. Please try again.';
 };
 
-export const validateSignUp = ({ name, email, phone, password, confirmPassword, agreed }) => {
+export const validateSignUp = ({ name, email, phone, password, confirmPassword, agreed }, t = (key) => key) => {
   if (!name.trim()) {
-    return 'Please enter your full name.';
+    return t('pages.nameRequired');
   }
 
   if (!email.trim()) {
-    return 'Please enter your email address.';
+    return t('pages.emailRequired');
   }
 
   if (!isValidEmail(email)) {
-    return 'Please enter a valid email address.';
+    return t('pages.emailInvalid');
   }
 
   if (!phone.trim()) {
-    return 'Please enter your phone number.';
+    return t('pages.phoneRequired');
   }
 
   if (!password) {
-    return 'Please enter a password.';
+    return t('pages.passwordRequired');
   }
 
   if (password.length < 6) {
-    return 'Password must be at least 6 characters.';
+    return t('pages.passwordShort');
   }
 
   if (password !== confirmPassword) {
-    return 'Password confirmation does not match.';
+    return t('pages.passwordMismatch');
   }
 
   if (!agreed) {
-    return 'Please agree to the Terms & Conditions and Privacy Policy.';
+    return t('pages.termsRequired');
   }
 
   return null;

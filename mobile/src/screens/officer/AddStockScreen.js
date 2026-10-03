@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,13 +16,18 @@ import DateField from '../../components/DateField';
 import FormField from '../../components/FormField';
 import { useMyHospital } from '../../hooks/useMyHospital';  // ✅ NEW
 import { stockService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { notPastDate, positiveInt, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
 const AddStockScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const HOSPITAL = useMyHospital();                          // ✅ NEW
   const [bloodGroup, setBloodGroup] = useState('');
   const [units, setUnits] = useState('');
@@ -72,12 +77,12 @@ const AddStockScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Blood Stock</Text>
+          <Text style={styles.headerTitle}>{t('pages.addStock')}</Text>
           <View style={styles.backBtn} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Add Blood Stock</Text>
+          <Text style={styles.title}>{t('pages.addStock')}</Text>
           <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
           <FormField label="BLOOD GROUP" error={touched.bloodGroup ? errors.bloodGroup : null}>
@@ -142,8 +147,8 @@ const AddStockScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
@@ -152,15 +157,15 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, letterSpacing: 1, color: colors.textMuted, fontWeight: '700', marginTop: 4, marginBottom: 20 },
   label: { fontSize: 12, fontWeight: '800', color: colors.text, marginTop: 18, marginBottom: 10, letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, backgroundColor: '#F4F4F6' },
+  chip: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, backgroundColor: colors.page },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
-  input: { height: 54, borderRadius: 16, backgroundColor: '#F4F4F6', paddingHorizontal: 16, fontSize: 15, color: colors.text },
+  input: { height: 54, borderRadius: 16, backgroundColor: colors.page, paddingHorizontal: 16, fontSize: 15, color: colors.text },
   readonly: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   readonlyText: { color: colors.textSecondary, fontWeight: '600', fontSize: 14 },
-  tipBox: { flexDirection: 'row', gap: 12, backgroundColor: '#FFF1F3', borderRadius: 16, padding: 14, marginTop: 24 },
-  tipIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
+  tipBox: { flexDirection: 'row', gap: 12, backgroundColor: colors.primarySoft, borderRadius: 16, padding: 14, marginTop: 24 },
+  tipIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.cardBg, alignItems: 'center', justifyContent: 'center' },
   tipTitle: { fontSize: 11, fontWeight: '800', color: colors.primary, letterSpacing: 0.5 },
   tipText: { fontSize: 12, color: colors.text, marginTop: 4, lineHeight: 17 },
   saveBtn: { height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 26 },

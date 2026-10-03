@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
@@ -7,6 +7,7 @@ import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { DONOR_MENU } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -22,6 +23,8 @@ const initials = (name) =>
     .toUpperCase();
 
 const EmergencyModeScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const menu = route.params?.menu || DONOR_MENU;
   const donors = route.params?.donors || [];
   const [index, setIndex] = useState(0);
@@ -123,10 +126,10 @@ const EmergencyModeScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   top: {
     backgroundColor: colors.primary,
@@ -180,7 +183,7 @@ const styles = StyleSheet.create({
     top: 14,
     left: 28,
     right: 28,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -210,7 +213,7 @@ const styles = StyleSheet.create({
     bottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#F8D0D6',
@@ -297,17 +300,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   cancelBtn: {
     flex: 1,
     height: 48,
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   cancelText: {
     fontSize: 14,

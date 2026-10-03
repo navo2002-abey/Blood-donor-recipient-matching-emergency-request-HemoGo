@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const FormField = ({ label, error, children, style }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={[styles.wrap, style]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -12,7 +15,7 @@ const FormField = ({ label, error, children, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: { marginBottom: 4 },
   label: {
     fontSize: 12,

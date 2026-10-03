@@ -5,10 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { DONOR_MENU } from '../utils/roles';
 import { rankDonorsForRequest } from '../utils/smartMatch';
+import { useTheme } from '../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -24,6 +26,9 @@ const initials = (name) =>
     .toUpperCase();
 
 const SmartMatchScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const menu = route.params?.menu || DONOR_MENU;
   const { patientName, hospital, bloodGroup, urgency, details } = route.params || {};
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -79,7 +84,7 @@ const SmartMatchScreen = ({ navigation, route }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>AI-Based Best Donor Selection</Text>
+        <Text style={styles.title}>{t('pages.smartMatch')}</Text>
         <Text style={styles.subtitle}>
           Our AI analyzes compatibility, location, and availability to find the best match.
         </Text>
@@ -167,7 +172,7 @@ const SmartMatchScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -228,12 +233,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     padding: 14,
   },
   cardBest: {
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderColor: '#F8C9D0',
   },
   cardTop: {
@@ -249,7 +254,7 @@ const styles = StyleSheet.create({
   rank: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   rankBest: {
     color: colors.primary,
@@ -294,12 +299,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarBest: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   avatarText: {
     fontSize: 14,
@@ -344,7 +349,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     lineHeight: 17,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   empty: {
     marginTop: 20,

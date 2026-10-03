@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -10,8 +10,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../utils/colors';
+import { useTheme } from '../../context/ThemeContext';
 
 const CampaignConfirmationScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const mode = route?.params?.mode || 'created';
   const campaign = route?.params?.campaign || null;
 
@@ -177,8 +180,8 @@ const CampaignConfirmationScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: {
     paddingHorizontal: 24,
     paddingBottom: 180,
@@ -255,11 +258,11 @@ const styles = StyleSheet.create({
 
   summaryCard: {
     width: '100%',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     marginBottom: 16,
   },
   summaryHeader: {
@@ -304,7 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
   },
   chipText: {
     fontSize: 11,
@@ -317,7 +320,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 14,
     width: '100%',
@@ -342,7 +345,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
@@ -371,7 +374,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.primary,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   secondaryBtnText: {
     color: colors.primary,

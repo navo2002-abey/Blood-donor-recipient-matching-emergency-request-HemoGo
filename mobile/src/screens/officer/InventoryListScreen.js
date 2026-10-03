@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -38,12 +39,12 @@ const stockStatusTheme = (status, expiryDate) => {
   return { bg: '#ECFDF5', text: '#059669' };
 };
 
-const reservationStatusColor = (status) => {
+const reservationStatusColor = (status, palette) => {
   if (status === 'RESERVED') return '#F59E0B';
-  if (status === 'RELEASED') return colors.success;
+  if (status === 'RELEASED') return palette.success;
   if (status === 'USED') return '#3B82F6';
-  if (status === 'EXPIRED') return colors.primary;
-  return colors.textSecondary;
+  if (status === 'EXPIRED') return palette.primary;
+  return palette.textSecondary;
 };
 
 const reservationStatusBg = (status) => {
@@ -55,6 +56,8 @@ const reservationStatusBg = (status) => {
 };
 
 const InventoryListScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
 
@@ -293,7 +296,7 @@ const InventoryListScreen = ({ navigation, route }) => {
               <Text
                 style={[
                   styles.statusText,
-                  { color: reservationStatusColor(item.status) },
+                  { color: reservationStatusColor(item.status, colors) },
                 ]}
               >
                 {item.status}
@@ -530,8 +533,8 @@ const InventoryListScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 120 },
 
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 6 },
@@ -548,7 +551,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: '#F8F9FA',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -558,7 +561,7 @@ const styles = StyleSheet.create({
 
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderRadius: 14,
     padding: 4,
     marginBottom: 20,
@@ -577,7 +580,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#FEE2E2',
@@ -592,11 +595,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
-  tableRowAlt: { backgroundColor: '#FAFAFA' },
+  tableRowAlt: { backgroundColor: colors.page },
   tableCell: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -614,7 +617,7 @@ const styles = StyleSheet.create({
   /* Reserved cards */
   cardList: { gap: 12 },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,

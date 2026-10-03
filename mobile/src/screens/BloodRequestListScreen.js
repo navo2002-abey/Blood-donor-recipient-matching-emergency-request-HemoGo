@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,6 +20,7 @@ import {
   getMyVerifiedIds,
 } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const SAMPLE_REQUESTS = [
   {
@@ -75,6 +76,8 @@ const SAMPLE_REQUESTS = [
 const FILTERS = ['All', 'Critical', 'High', 'Medium', 'Low'];
 
 const BloodRequestListScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
   const [requests, setRequests] = useState(SAMPLE_REQUESTS);
   const [myAcceptedIds, setMyAcceptedIds] = useState([]);
@@ -263,7 +266,7 @@ const BloodRequestListScreen = ({ navigation }) => {
               <Text style={[styles.urgencyText, { color: '#854D0E' }]}>In Progress</Text>
             </View>
           ) : isCompleted ? (
-            <View style={[styles.urgencyPill, { backgroundColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={[styles.urgencyPill, { backgroundColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}>
               <Ionicons name="checkmark-done-circle-outline" size={12} color="#4B5563" style={{ marginRight: 3 }} />
               <Text style={[styles.urgencyText, { color: '#4B5563' }]}>Fulfilled</Text>
             </View>
@@ -347,7 +350,7 @@ const BloodRequestListScreen = ({ navigation }) => {
             </View>
           ) : isCompleted ? (
             <View style={styles.viewDetailsRow}>
-              <Text style={[styles.viewDetailsText, { color: '#6B7280', fontWeight: '500' }]}>Fulfilled by Donor</Text>
+              <Text style={[styles.viewDetailsText, { color: colors.textSecondary, fontWeight: '500' }]}>Fulfilled by Donor</Text>
               <Ionicons name="lock-closed-outline" size={13} color="#9CA3AF" />
             </View>
           ) : isInProgress ? (
@@ -458,10 +461,10 @@ const BloodRequestListScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   topBar: {
     height: 52,
@@ -469,9 +472,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 38,
@@ -495,22 +498,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 16,
     paddingBottom: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   screenTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   screenSub: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     marginHorizontal: 18,
     marginTop: 10,
     marginBottom: 10,
@@ -522,22 +525,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 13.5,
-    color: '#111827',
+    color: colors.text,
   },
   filtersScroll: {
     flexDirection: 'row',
     paddingHorizontal: 18,
     paddingBottom: 12,
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F2',
+    borderBottomColor: colors.border,
   },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   filterChipActive: {
     backgroundColor: colors.primary,
@@ -557,7 +560,7 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -593,11 +596,11 @@ const styles = StyleSheet.create({
   patientName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   hospitalName: {
     fontSize: 12.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   urgencyPill: {
@@ -611,7 +614,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     marginVertical: 12,
   },
   cardDetails: {
@@ -631,7 +634,7 @@ const styles = StyleSheet.create({
   },
   notesText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginBottom: 8,
   },
@@ -646,7 +649,7 @@ const styles = StyleSheet.create({
   },
   idText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   viewDetailsRow: {
@@ -678,7 +681,7 @@ const styles = StyleSheet.create({
   },
   emptySub: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     marginTop: 4,
     textAlign: 'center',
   },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,11 +13,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { getApiErrorMessage, validateSignUp } from '../utils/validation';
+import { useTheme } from '../context/ThemeContext';
 
 const SignUpScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { register } = useAuth();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,17 +32,20 @@ const SignUpScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    const validationError = validateSignUp({
-      name,
-      email,
-      phone,
-      password,
-      confirmPassword,
-      agreed,
-    });
+    const validationError = validateSignUp(
+      {
+        name,
+        email,
+        phone,
+        password,
+        confirmPassword,
+        agreed,
+      },
+      t
+    );
 
     if (validationError) {
-      Alert.alert('Check your details', validationError);
+      Alert.alert(t('pages.checkDetails'), validationError);
       return;
     }
 
@@ -56,8 +64,8 @@ const SignUpScreen = ({ navigation }) => {
       });
     } catch (error) {
       Alert.alert(
-        'Registration failed',
-        getApiErrorMessage(error, 'Unable to create your account right now.')
+        t('pages.registerFailed'),
+        getApiErrorMessage(error, t('pages.registerFailedMsg'))
       );
     } finally {
       setLoading(false);
@@ -74,7 +82,7 @@ const SignUpScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Account</Text>
+          <Text style={styles.headerTitle}>{t('pages.createAccount')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -84,43 +92,43 @@ const SignUpScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           <Input
-            label="Full Name"
+            label={t('pages.fullName')}
             value={name}
             onChangeText={setName}
-            placeholder="Full Name"
+            placeholder={t('pages.fullName')}
             autoCapitalize="words"
-            hint="Please enter your name"
+            hint={t('pages.nameHint')}
             editable={!loading}
           />
           <Input
-            label="Email"
+            label={t('pages.email')}
             value={email}
             onChangeText={setEmail}
-            placeholder="Email"
+            placeholder={t('pages.email')}
             keyboardType="email-address"
             editable={!loading}
           />
           <Input
-            label="Phone Number"
+            label={t('pages.phone')}
             value={phone}
             onChangeText={setPhone}
-            placeholder="Phone Number"
+            placeholder={t('pages.phone')}
             keyboardType="phone-pad"
             editable={!loading}
           />
           <Input
-            label="Password"
+            label={t('login.password')}
             value={password}
             onChangeText={setPassword}
-            placeholder="Password"
+            placeholder={t('login.password')}
             secureTextEntry
             editable={!loading}
           />
           <Input
-            label="Confirm Password"
+            label={t('pages.confirmPassword')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Confirm Password"
+            placeholder={t('pages.confirmPassword')}
             secureTextEntry
             editable={!loading}
           />
@@ -133,14 +141,11 @@ const SignUpScreen = ({ navigation }) => {
             <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
               {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
             </View>
-            <Text style={styles.termsText}>
-              I agree to the <Text style={styles.termsLink}>Terms & Conditions</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
-            </Text>
+            <Text style={styles.termsText}>{t('pages.terms')}</Text>
           </TouchableOpacity>
 
           <Button
-            title="Create Account"
+            title={t('pages.createAccount')}
             onPress={handleRegister}
             loading={loading}
             disabled={loading}
@@ -148,9 +153,9 @@ const SignUpScreen = ({ navigation }) => {
           />
 
           <View style={styles.bottom}>
-            <Text style={styles.bottomText}>Already have an account? </Text>
+            <Text style={styles.bottomText}>{t('pages.haveAccount')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.bottomLink}>Login</Text>
+              <Text style={styles.bottomLink}>{t('login.login')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -159,7 +164,7 @@ const SignUpScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

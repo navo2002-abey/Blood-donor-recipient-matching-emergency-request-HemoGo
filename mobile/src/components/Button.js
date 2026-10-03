@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const Button = ({
   title,
@@ -10,6 +11,8 @@ const Button = ({
   variant = 'primary',
   style,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDisabled = disabled || loading;
 
   return (
@@ -44,7 +47,7 @@ const Button = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   base: {
     height: 54,
     borderRadius: 28,
@@ -59,7 +62,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
   },
   outline: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: colors.border,
   },
