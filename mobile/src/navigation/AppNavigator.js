@@ -49,7 +49,10 @@ import ProfileScreen from '../screens/ProfileScreen';
 import RequestMatchScreen from '../screens/RequestMatchScreen';
 import RewardsGiftScreen from '../screens/RewardsGiftScreen';
 import RewardsScreen from '../screens/RewardsScreen';
+import AppleAccountScreen from '../screens/AppleAccountScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import SocialContinueScreen from '../screens/SocialContinueScreen';
 import SmartMatchScreen from '../screens/SmartMatchScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
@@ -204,6 +207,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="SocialContinue" component={SocialContinueScreen} />
+        <Stack.Screen name="AppleAccount" component={AppleAccountScreen} />
         <Stack.Screen name="Main" component={RoleRoot} />
         <Stack.Screen name="FindDonors" component={FindDonorsScreen} />
         <Stack.Screen name="AvailableDonors" component={AvailableDonorsScreen} />

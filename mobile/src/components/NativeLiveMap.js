@@ -1,24 +1,28 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
-import { colors } from '../utils/colors';
+import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 
-const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
+const NativeLiveMap = ({
+  location,
+  donors,
+  interactive = false,
+  style,
+  selectedId = '',
+  onSelectDonor,
+}) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const mapRef = useRef(null);
   const region = {
     latitude: location.latitude,
     longitude: location.longitude,
-    latitudeDelta: 0.04,
-    longitudeDelta: 0.04,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
   };
 
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(region, 500);
-    }
+    mapRef.current?.animateToRegion(region, 250);
   }, [location.latitude, location.longitude]);
 
   return (
@@ -27,7 +31,6 @@ const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
         ref={mapRef}
         style={styles.map}
         initialRegion={region}
-        mapType="none"
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
@@ -36,24 +39,11 @@ const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
         pitchEnabled={false}
         rotateEnabled={false}
         toolbarEnabled={false}
+        moveOnMarkerPress={false}
         loadingEnabled
         loadingIndicatorColor={colors.primary}
+        loadingBackgroundColor={colors.page}
       >
-        <UrlTile
-          urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          flipY={false}
-          zIndex={-1}
-        />
-        <Marker
-          coordinate={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          title="You"
-          description="Your current location"
-          pinColor="#2563EB"
-        />
         {donors.map((donor) => (
           <Marker
             key={donor.id}
@@ -62,8 +52,10 @@ const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
               longitude: donor.longitude,
             }}
             title={donor.name}
-            description={`Blood group ${donor.bloodGroup}`}
-            pinColor={colors.primary}
+            description={donor.bloodGroup}
+            pinColor={donor.id === selectedId ? colors.primary : '#111827'}
+            tracksViewChanges={false}
+            onPress={() => onSelectDonor?.(donor.id)}
           />
         ))}
       </MapView>
@@ -74,7 +66,7 @@ const NativeLiveMap = ({ location, donors, interactive = false, style }) => {
 const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     overflow: 'hidden',
-    backgroundColor: colors.inputBg,
+    backgroundColor: colors.page,
     minHeight: 160,
   },
   map: {

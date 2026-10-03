@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import React, { useState, useMemo } from 'react';
 import {
   Alert,
@@ -10,18 +12,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppleSignInSheet from '../components/AppleSignInSheet';
 import Button from '../components/Button';
+import GoogleLogo from '../components/GoogleLogo';
 import Input from '../components/Input';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { pickGoogleAccount } from '../utils/googleAccount';
 import { getApiErrorMessage, validateSignUp } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
 
 const SignUpScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { register } = useAuth();
+  const { register, socialLogin } = useAuth();
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,6 +35,87 @@ const SignUpScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleOpen, setAppleOpen] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+
+  const finishApple = async () => {
+    setAppleOpen(false);
+    try {
+      setAppleLoading(true);
+      const available = Platform.OS === 'ios' && (await AppleAuthentication.isAvailableAsync());
+      if (!available) {
+        navigation.navigate('SocialContinue', { provider: 'apple' });
+        return;
+      }
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const given = credential.fullName?.givenName || '';
+      const family = credential.fullName?.familyName || '';
+      const name = `${given} ${family}`.trim();
+      const email = credential.email || '';
+      const data = await socialLogin({
+        provider: 'apple',
+        email: email || undefined,
+        name: name || undefined,
+        appleId: credential.user,
+      });
+      if (data.token) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+        return;
+      }
+      navigation.navigate('SocialContinue', {
+        provider: 'apple',
+        email,
+        name,
+        appleId: credential.user,
+      });
+    } catch (error) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        return;
+      }
+      Alert.alert(t('login.failedTitle'), getApiErrorMessage(error, t('login.appleFailed')));
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
+  const continueWithGoogle = async () => {
+    try {
+      setGoogleLoading(true);
+      const email = await pickGoogleAccount();
+      if (!email) {
+        return;
+      }
+
+      const name = email.split('@')[0].replace(/[._]/g, ' ');
+      const data = await socialLogin({ provider: 'google', email, name });
+      if (data.token) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+        return;
+      }
+
+      navigation.navigate('SocialContinue', { provider: 'google', email, name });
+    } catch (error) {
+      const message = error?.message === 'NO_ACCOUNT_EMAIL'
+        ? t('login.googleNoEmail')
+        : getApiErrorMessage(error, t('login.googlePickerFailed'));
+      Alert.alert(t('login.failedTitle'), message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     const validationError = validateSignUp(
@@ -152,6 +238,29 @@ const SignUpScreen = ({ navigation }) => {
             style={styles.submit}
           />
 
+          <TouchableOpacity
+            style={styles.socialBtn}
+            onPress={continueWithGoogle}
+            disabled={loading || googleLoading}
+          >
+            <GoogleLogo size={18} />
+            <Text style={styles.socialText}>{t('login.continueGoogle')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.socialBtn}
+            onPress={() => {
+              if (Platform.OS === 'ios') {
+                setAppleOpen(true);
+                return;
+              }
+              navigation.navigate('AppleAccount');
+            }}
+            disabled={loading || appleLoading}
+          >
+            <Ionicons name="logo-apple" size={20} color={colors.text} />
+            <Text style={styles.socialText}>{t('login.continueApple')}</Text>
+          </TouchableOpacity>
+
           <View style={styles.bottom}>
             <Text style={styles.bottomText}>{t('pages.haveAccount')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -160,6 +269,15 @@ const SignUpScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <AppleSignInSheet
+        visible={appleOpen}
+        onClose={() => setAppleOpen(false)}
+        onContinue={finishApple}
+        onPrivacy={() => {
+          setAppleOpen(false);
+          navigation.navigate('PrivacyPolicy');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -237,6 +355,25 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   submit: {
     marginTop: 8,
+  },
+  socialBtn: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  socialText: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: colors.text,
   },
   bottom: {
     flexDirection: 'row',

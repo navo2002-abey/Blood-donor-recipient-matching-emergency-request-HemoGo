@@ -2,8 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LiveDonorsMap from '../components/LiveDonorsMap';
-import LoadingIndicator from '../components/LoadingIndicator';
+import NativeLiveMap from '../components/NativeLiveMap';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
@@ -34,7 +33,7 @@ const MapScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
-  const { location, ready } = useUserLocation();
+  const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(route.params?.donorId || null);
@@ -123,18 +122,14 @@ const MapScreen = ({ navigation, route }) => {
       </View>
 
       <View style={styles.mapWrap}>
-        {ready ? (
-          <LiveDonorsMap
-            location={location}
-            donors={filtered}
-            interactive
-            selectedId={selected?.id || ''}
-            onSelectDonor={selectDonor}
-            style={styles.map}
-          />
-        ) : (
-          <LoadingIndicator label={t('pages.findingLocation')} />
-        )}
+        <NativeLiveMap
+          location={location}
+          donors={filtered}
+          interactive
+          selectedId={selected?.id || ''}
+          onSelectDonor={selectDonor}
+          style={styles.map}
+        />
 
         {selected ? (
           <View style={styles.card}>
