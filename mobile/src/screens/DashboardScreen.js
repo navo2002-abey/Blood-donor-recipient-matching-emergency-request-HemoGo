@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
@@ -8,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { fetchBloodRequests } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { useTheme } from '../context/ThemeContext';
@@ -22,10 +24,61 @@ const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [urgentRequest, setUrgentRequest] = useState(null);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const name = user?.name || 'HemoGo User';
   const bloodGroup = user?.bloodGroup || 'O+';
+
+  const loadUrgentEmergency = async () => {
+    try {
+      const res = await fetchBloodRequests({ limit: 10 });
+      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+        // Find active open requests with units remaining
+        const openRequests = res.data.filter((item) => {
+          const totalUnits = Number(item.units) || 1;
+          const fulfilledUnits = Number(item.fulfilledUnits) || 0;
+          const isCompleted =
+            item.status === 'VERIFIED' ||
+            item.status === 'FULFILLED' ||
+            item.status === 'COMPLETED' ||
+            fulfilledUnits >= totalUnits;
+          return !isCompleted;
+        });
+
+        if (openRequests.length > 0) {
+          const urgencyRank = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+          const sorted = [...openRequests].sort((a, b) => {
+            const rankA = urgencyRank[a.urgency] || 1;
+            const rankB = urgencyRank[b.urgency] || 1;
+            if (rankA !== rankB) return rankB - rankA;
+
+            const userBlood = (user?.bloodGroup || '').toUpperCase();
+            if (userBlood && a.bloodGroup?.toUpperCase() === userBlood && b.bloodGroup?.toUpperCase() !== userBlood) return -1;
+            if (userBlood && b.bloodGroup?.toUpperCase() === userBlood && a.bloodGroup?.toUpperCase() !== userBlood) return 1;
+
+            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+          });
+          setUrgentRequest(sorted[0]);
+        } else {
+          setUrgentRequest(null);
+        }
+      }
+    } catch {
+      // Keep fallback
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUrgentEmergency();
+    }, [user])
+  );
+
+  const displayBloodGroup = urgentRequest?.bloodGroup || bloodGroup;
+  const displayHospital = urgentRequest?.hospital || 'Colombo General Hospital';
+  const displayUrgency = urgentRequest?.urgency ? `${urgentRequest.urgency} Priority` : t('home.highPriority');
+  const isCritical = urgentRequest?.urgency === 'Critical';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -66,21 +119,31 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.emergencyTop}>
             <View style={styles.emergencyTitleRow}>
               <View style={styles.redDot} />
-              <Text style={styles.emergencyKicker}>{t('home.emergency')}</Text>
-            </View>
-            <View style={styles.priority}>
-              <Text style={styles.priorityText}>{t('home.highPriority')}</Text>
+              <Text style={styles.emergencyKicker}>
+                {isCritical ? 'CRITICAL NEED' : t('home.emergency')}
+              </Text>
             </View>
           </View>
           <Text style={styles.emergencyTitle}>
-            {t('home.emergencyTitle', { group: bloodGroup })}
+            {urgentRequest
+              ? `${displayBloodGroup} Blood Needed Urgently at ${displayHospital}`
+              : t('home.emergencyTitle', { group: bloodGroup })}
           </Text>
           <View style={styles.emergencyActions}>
-            <TouchableOpacity style={styles.respondBtn} onPress={() => comingSoon('Respond Now')}>
+            <TouchableOpacity
+              style={styles.respondBtn}
+              onPress={() => {
+                if (urgentRequest) {
+                  navigation.navigate('ActiveRequestProgress', {
+                    requestData: urgentRequest,
+                    requestId: urgentRequest._id,
+                  });
+                } else {
+                  navigation.navigate('BloodRequestList', { filterMode: 'urgent' });
+                }
+              }}
+            >
               <Text style={styles.respondText}>{t('home.respond')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.detailsBtn} onPress={() => comingSoon('Request Details')}>
-              <Text style={styles.detailsText}>{t('home.details')}</Text>
             </TouchableOpacity>
           </View>
         </View>

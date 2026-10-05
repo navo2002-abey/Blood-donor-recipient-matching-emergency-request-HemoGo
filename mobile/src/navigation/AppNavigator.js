@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 
 // Teammate's screens
 import ActiveRequestCompletedScreen from '../screens/ActiveRequestCompletedScreen';
+import ActiveRequestDetailScreen from '../screens/ActiveRequestDetailScreen';
 import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen';
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
 import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
@@ -98,18 +99,12 @@ const DonorTabs = () => {
     screenOptions={tabOptions({
       Home: 'home-outline',
       Map: 'map-outline',
-      Requests: 'water-outline',
       Rewards: 'ribbon-outline',
       Profile: 'person-outline',
     }, language, colors)}
   >
     <Tab.Screen name="Home" component={DashboardScreen} options={{ title: t('tabs.home') }} />
     <Tab.Screen name="Map" component={MapScreen} options={{ title: t('tabs.map') }} />
-    <Tab.Screen
-      name="Requests"
-      component={CreateBloodRequestScreen}
-      options={{ title: t('tabs.request') }}
-    />
     <Tab.Screen name="Rewards" component={RewardsScreen} options={{ title: t('tabs.rewards') }} />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
   </Tab.Navigator>
@@ -227,7 +222,7 @@ const AppNavigator = () => {
         <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />
         <Stack.Screen name="ActiveRequests" component={ActiveRequestsScreen} />
         <Stack.Screen name="ActiveRequestProgress" component={ActiveRequestProgressScreen} />
-        <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestProgressScreen} />
+        <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestDetailScreen} />
         <Stack.Screen name="ActiveRequestQRVerify" component={ActiveRequestQRVerifyScreen} />
         <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
         <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />

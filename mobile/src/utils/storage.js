@@ -18,5 +18,21 @@ export const getStoredUser = async () => {
 };
 
 export const clearSession = async () => {
-  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const keysToRemove = allKeys.filter(
+      (k) =>
+        k === TOKEN_KEY ||
+        k === USER_KEY ||
+        k === 'HEMOGO_ACCEPTED_REQUESTS' ||
+        k === 'HEMOGO_VERIFIED_REQUESTS' ||
+        k.startsWith('HEMOGO_ACCEPTED_REQUESTS_') ||
+        k.startsWith('HEMOGO_VERIFIED_REQUESTS_')
+    );
+    if (keysToRemove.length > 0) {
+      await AsyncStorage.multiRemove(keysToRemove);
+    }
+  } catch {
+    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+  }
 };
