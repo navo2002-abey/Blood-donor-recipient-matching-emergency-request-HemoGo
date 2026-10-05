@@ -18,6 +18,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
 
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const HOSPITALS = [
@@ -33,17 +35,79 @@ const HOSPITALS = [
   'Other / Custom Hospital...',
 ];
 
-const DATE_TIME_PRESETS = [
-  'Immediate / ASAP',
-  '16 Sep 2026, 10:00 AM',
-  'Within 2 Hours',
-  'Within 6 Hours',
-  'Today Evening (by 6:00 PM)',
-  'Tomorrow Morning (by 9:00 AM)',
-  'Custom Date & Time...',
-];
-
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
+
+const formatDate = (dateObj) => {
+  if (!dateObj) return '';
+  const day = dateObj.getDate();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+};
+
+const formatTime = (dateObj) => {
+  if (!dateObj) return '';
+  let hours = dateObj.getHours();
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
+
+const getTimeDifferenceText = (dateObj, timeObj, hasPickedDate, hasPickedTime) => {
+  if (!hasPickedDate && !hasPickedTime) return null;
+
+  const now = new Date();
+  const target = new Date(dateObj || now);
+
+  if (timeObj) {
+    target.setHours(timeObj.getHours(), timeObj.getMinutes(), 0, 0);
+  } else {
+    target.setHours(12, 0, 0, 0);
+  }
+
+  const diffMs = target.getTime() - now.getTime();
+
+  if (diffMs < -60000) {
+    return {
+      text: 'Selected date/time has already passed',
+      isPast: true,
+      isImminent: false,
+    };
+  }
+
+  if (Math.abs(diffMs) <= 60000) {
+    return {
+      text: 'Needed immediately (ASAP)',
+      isPast: false,
+      isImminent: true,
+    };
+  }
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  let parts = [];
+  if (days > 0) {
+    parts.push(`${days}d`);
+  }
+  if (hours > 0) {
+    parts.push(`${hours}hr`);
+  }
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(`${minutes}min`);
+  }
+
+  const durationStr = parts.join(' ');
+
+  return {
+    text: `Required in: ${durationStr}`,
+    duration: durationStr,
+    isPast: false,
+    isImminent: totalMinutes <= 180,
+  };
+};
 
 const CreateBloodRequestScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -60,15 +124,23 @@ const CreateBloodRequestScreen = ({ navigation }) => {
   const [customHospital, setCustomHospital] = useState('');
   const [bloodGroup, setBloodGroup] = useState('');
   const [quantity, setQuantity] = useState('1');
-  const [requiredDateTime, setRequiredDateTime] = useState('');
-  const [customDateTime, setCustomDateTime] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [hasPickedDate, setHasPickedDate] = useState(false);
+  const [hasPickedTime, setHasPickedTime] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [urgency, setUrgency] = useState('Critical');
   const [additionalInfo, setAdditionalInfo] = useState('');
+
+  const timeDiff = useMemo(
+    () => getTimeDifferenceText(selectedDate, selectedTime, hasPickedDate, hasPickedTime),
+    [selectedDate, selectedTime, hasPickedDate, hasPickedTime]
+  );
 
   // Modals
   const [hospitalModalVisible, setHospitalModalVisible] = useState(false);
   const [bloodGroupModalVisible, setBloodGroupModalVisible] = useState(false);
-  const [dateTimeModalVisible, setDateTimeModalVisible] = useState(false);
 
   const handleSelectHospital = (item) => {
     if (item === 'Other / Custom Hospital...') {
@@ -85,19 +157,8 @@ const CreateBloodRequestScreen = ({ navigation }) => {
     setBloodGroupModalVisible(false);
   };
 
-  const handleSelectDateTime = (dt) => {
-    if (dt === 'Custom Date & Time...') {
-      setRequiredDateTime('Custom');
-    } else {
-      setRequiredDateTime(dt);
-      setCustomDateTime('');
-    }
-    setDateTimeModalVisible(false);
-  };
-
   const handleProceedToConfirm = () => {
     const finalHospital = hospital === 'Other' ? customHospital.trim() : hospital;
-    const finalDateTime = requiredDateTime === 'Custom' ? customDateTime.trim() : requiredDateTime;
 
     if (!patientName.trim()) {
       Alert.alert('Missing Field', 'Please enter the patient name.');
@@ -115,10 +176,23 @@ const CreateBloodRequestScreen = ({ navigation }) => {
       Alert.alert('Invalid Quantity', 'Please enter a valid number of blood units.');
       return;
     }
-    if (!finalDateTime) {
-      Alert.alert('Missing Field', 'Please select the required date and time.');
+    if (!hasPickedDate) {
+      Alert.alert('Missing Field', 'Please select the required date.');
       return;
     }
+    if (!hasPickedTime) {
+      Alert.alert('Missing Field', 'Please select the required time.');
+      return;
+    }
+    if (timeDiff && timeDiff.isPast) {
+      Alert.alert(
+        'Invalid Date / Time',
+        'The selected date and time has already passed. You cannot submit a blood request for a past time. Please select an upcoming date and time.'
+      );
+      return;
+    }
+
+    const finalDateTime = `${formatDate(selectedDate)} • ${formatTime(selectedTime)}`;
 
     const payload = {
       patientName: patientName.trim(),
@@ -262,39 +336,171 @@ const CreateBloodRequestScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* 5. Required Date/Time */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>
-                {t('pages.requiredDate')} <Text style={styles.requiredStar}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.selectInput}
-                onPress={() => setDateTimeModalVisible(true)}
-                activeOpacity={0.7}
+            {/* 5. Required Date & Time Pickers */}
+            <View style={styles.dateTimeRow}>
+              {/* Date Picker Field */}
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.label}>
+                  Required Date <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.selectInput}>
+                    <input
+                      type="date"
+                      value={hasPickedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const [y, m, d] = e.target.value.split('-');
+                          const newD = new Date(selectedDate);
+                          newD.setFullYear(Number(y), Number(m) - 1, Number(d));
+                          setSelectedDate(newD);
+                          setHasPickedDate(true);
+                        }
+                      }}
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        width: '100%',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.selectInput}
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.selectText,
+                        !hasPickedDate && styles.placeholderText,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {hasPickedDate ? formatDate(selectedDate) : 'Select Date'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Time Picker Field */}
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.label}>
+                  Required Time <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <View style={styles.selectInput}>
+                    <input
+                      type="time"
+                      value={hasPickedTime ? `${String(selectedTime.getHours()).padStart(2, '0')}:${String(selectedTime.getMinutes()).padStart(2, '0')}` : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const [hh, mm] = e.target.value.split(':');
+                          const newT = new Date(selectedTime);
+                          newT.setHours(Number(hh), Number(mm), 0, 0);
+                          setSelectedTime(newT);
+                          setHasPickedTime(true);
+                        }
+                      }}
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        width: '100%',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.selectInput}
+                    onPress={() => setShowTimePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.selectText,
+                        !hasPickedTime && styles.placeholderText,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {hasPickedTime ? formatTime(selectedTime) : 'Select Time'}
+                    </Text>
+                    <Ionicons name="time-outline" size={18} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Native DateTimePicker Modals */}
+            {Platform.OS !== 'web' && showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                minimumDate={new Date()}
+                onChange={(event, date) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (date) {
+                    setSelectedDate(date);
+                    setHasPickedDate(true);
+                  }
+                }}
+              />
+            )}
+
+            {Platform.OS !== 'web' && showTimePicker && (
+              <DateTimePicker
+                value={selectedTime}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, time) => {
+                  setShowTimePicker(Platform.OS === 'ios');
+                  if (time) {
+                    setSelectedTime(time);
+                    setHasPickedTime(true);
+                  }
+                }}
+              />
+            )}
+
+            {/* Dynamic Time Remaining Countdown / Duration Indicator */}
+            {timeDiff && (
+              <View
+                style={[
+                  styles.timeDiffBanner,
+                  timeDiff.isPast && styles.timeDiffBannerPast,
+                  timeDiff.isImminent && !timeDiff.isPast && styles.timeDiffBannerImminent,
+                ]}
               >
+                <Ionicons
+                  name={timeDiff.isPast ? 'alert-circle-outline' : timeDiff.isImminent ? 'flash-outline' : 'time-outline'}
+                  size={16}
+                  color={timeDiff.isPast ? '#DC2626' : timeDiff.isImminent ? '#D97706' : colors.primary}
+                />
                 <Text
                   style={[
-                    styles.selectText,
-                    !requiredDateTime && styles.placeholderText,
+                    styles.timeDiffText,
+                    timeDiff.isPast && styles.timeDiffTextPast,
+                    timeDiff.isImminent && !timeDiff.isPast && styles.timeDiffTextImminent,
                   ]}
-                  numberOfLines={1}
                 >
-                  {requiredDateTime === 'Custom'
-                    ? t('pages.customDate')
-                    : requiredDateTime || t('pages.selectDateTime')}
+                  {timeDiff.text}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-              </TouchableOpacity>
-              {requiredDateTime === 'Custom' && (
-                <TextInput
-                  style={[styles.input, { marginTop: 8 }]}
-                  placeholder={t('pages.dateTime')}
-                  placeholderTextColor="#9CA3AF"
-                  value={customDateTime}
-                  onChangeText={setCustomDateTime}
-                />
-              )}
-            </View>
+              </View>
+            )}
 
             {/* 6. Urgency */}
             <View style={styles.fieldGroup}>
@@ -345,9 +551,19 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             </View>
           </View>
 
+          {/* Past Date Warning Banner */}
+          {timeDiff?.isPast && (
+            <View style={styles.pastDateNotice}>
+              <Ionicons name="alert-circle" size={18} color="#DC2626" />
+              <Text style={styles.pastDateNoticeText}>
+                The selected time has already passed. Please select a future time before submitting.
+              </Text>
+            </View>
+          )}
+
           {/* Bottom Action Button */}
           <TouchableOpacity
-            style={styles.submitButton}
+            style={[styles.submitButton, timeDiff?.isPast && styles.submitButtonDisabled]}
             onPress={handleProceedToConfirm}
             activeOpacity={0.85}
           >
@@ -449,60 +665,6 @@ const CreateBloodRequestScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
-      {/* Required Date/Time Modal */}
-      <Modal
-        visible={dateTimeModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDateTimeModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('pages.selectRequiredTime')}</Text>
-              <TouchableOpacity onPress={() => setDateTimeModalVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 320 }}>
-              {DATE_TIME_PRESETS.map((dt, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.modalItem,
-                    requiredDateTime === dt && styles.modalItemSelected,
-                  ]}
-                  onPress={() => handleSelectDateTime(dt)}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={18}
-                    color={requiredDateTime === dt ? colors.primary : colors.textSecondary}
-                    style={{ marginRight: 10 }}
-                  />
-                  <Text
-                    style={[
-                      styles.modalItemText,
-                      requiredDateTime === dt && styles.modalItemTextSelected,
-                    ]}
-                  >
-                    {dt}
-                  </Text>
-                  {requiredDateTime === dt && (
-                    <Ionicons
-                      name="checkmark"
-                      size={20}
-                      color={colors.primary}
-                      style={{ marginLeft: 'auto' }}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -511,6 +673,41 @@ const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.cardBg,
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeDiffBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    marginTop: -4,
+  },
+  timeDiffBannerImminent: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  timeDiffBannerPast: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FECACA',
+  },
+  timeDiffText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  timeDiffTextImminent: {
+    color: '#D97706',
+  },
+  timeDiffTextPast: {
+    color: '#DC2626',
   },
   topBar: {
     height: 52,
@@ -724,6 +921,62 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   bloodBadgeTextSelected: {
     color: '#FFFFFF',
+  },
+  timeDiffBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  timeDiffBannerImminent: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  timeDiffBannerPast: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  timeDiffText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    flex: 1,
+  },
+  timeDiffTextImminent: {
+    color: '#B45309',
+  },
+  timeDiffTextPast: {
+    color: '#DC2626',
+  },
+  pastDateNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 14,
+    marginBottom: -8,
+  },
+  pastDateNoticeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#DC2626',
+    flex: 1,
+    lineHeight: 18,
+  },
+  submitButtonDisabled: {
+    opacity: 0.55,
   },
 });
 

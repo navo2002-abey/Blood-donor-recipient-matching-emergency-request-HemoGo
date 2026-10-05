@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 import { verifyBloodRequest } from '../services/bloodRequestService';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
@@ -34,6 +35,7 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { user } = useAuth();
   const requestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
     hospital: 'National Hospital Colombo',
@@ -68,6 +70,51 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
       ? new Date(requestData.verifiedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
+
+  // Authorization Security Guard: Only the actual accepted donor, owner, or admin can access
+  const isAuthorized = useMemo(() => {
+    if (!user) return false;
+    if (user?.role === 'ADMIN') return true;
+    if (route?.params?.isOwner || route?.params?.isAcceptedDonor) return true;
+
+    const currentUserId = user?.id || user?._id;
+    const acceptedUserId =
+      requestData?.acceptedBy?._id ||
+      requestData?.acceptedBy?.id ||
+      (typeof requestData?.acceptedBy === 'string' ? requestData.acceptedBy : null);
+    const reqUserId =
+      requestData?.requestedBy?._id ||
+      requestData?.requestedBy?.id ||
+      (typeof requestData?.requestedBy === 'string' ? requestData.requestedBy : null);
+
+    if (acceptedUserId && currentUserId && String(acceptedUserId) === String(currentUserId)) return true;
+    if (reqUserId && currentUserId && String(reqUserId) === String(currentUserId)) return true;
+    if (
+      requestData?.acceptedBy?.email &&
+      user?.email &&
+      requestData.acceptedBy.email.toLowerCase() === user.email.toLowerCase()
+    ) {
+      return true;
+    }
+    if (
+      requestData?.requestedBy?.email &&
+      user?.email &&
+      requestData.requestedBy.email.toLowerCase() === user.email.toLowerCase()
+    ) {
+      return true;
+    }
+    return false;
+  }, [user, requestData, route?.params]);
+
+  React.useEffect(() => {
+    if (!isAuthorized) {
+      Alert.alert(
+        'Access Denied',
+        'This verification QR code is private and only accessible by the donor who accepted this request.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    }
+  }, [isAuthorized, navigation]);
 
   // Dynamic QR Code payload encoded with live request details
   const qrPayload = JSON.stringify({

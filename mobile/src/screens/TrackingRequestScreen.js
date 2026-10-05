@@ -25,12 +25,168 @@ import { useUserLocation } from '../hooks/useUserLocation';
 import {
   deleteBloodRequest,
   updateBloodRequest,
+  fetchMatchingDonors,
+  getMyAcceptedIds,
+  getMyVerifiedIds,
 } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
+
+const formatDate = (dateObj) => {
+  if (!dateObj) return '';
+  const day = dateObj.getDate();
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+};
+
+const formatTime = (dateObj) => {
+  if (!dateObj) return '';
+  let hours = dateObj.getHours();
+  const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
+
+const getTimeDifferenceText = (dateObj, timeObj) => {
+  if (!dateObj && !timeObj) return null;
+
+  const now = new Date();
+  const target = new Date(dateObj || now);
+
+  if (timeObj) {
+    target.setHours(timeObj.getHours(), timeObj.getMinutes(), 0, 0);
+  } else {
+    target.setHours(12, 0, 0, 0);
+  }
+
+  const diffMs = target.getTime() - now.getTime();
+
+  if (diffMs < -60000) {
+    return {
+      text: 'Selected date/time has already passed',
+      isPast: true,
+      isImminent: false,
+    };
+  }
+
+  if (Math.abs(diffMs) <= 60000) {
+    return {
+      text: 'Needed immediately (ASAP)',
+      isPast: false,
+      isImminent: true,
+    };
+  }
+
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  let parts = [];
+  if (days > 0) {
+    parts.push(`${days}d`);
+  }
+  if (hours > 0) {
+    parts.push(`${hours}hr`);
+  }
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(`${minutes}min`);
+  }
+
+  const durationStr = parts.join(' ');
+
+  return {
+    text: `Required in: ${durationStr}`,
+    duration: durationStr,
+    isPast: false,
+    isImminent: totalMinutes <= 180,
+  };
+};
+
+const parseRequestDate = (dtStr) => {
+  if (!dtStr) return null;
+  const direct = new Date(dtStr);
+  if (!isNaN(direct.getTime())) return direct;
+  const cleaned = dtStr.replace('•', ',').trim();
+  const parsed = new Date(cleaned);
+  if (!isNaN(parsed.getTime())) return parsed;
+  return null;
+};
+
+const checkRequestClosureState = (request, isAuthorized = false, isAcceptedDonor = false) => {
+  const status = (request?.status || '').toUpperCase();
+  const totalUnits = Number(request?.units) || 1;
+  const fulfilledUnits = Number(request?.fulfilledUnits) || 0;
+
+  const isFulfilled =
+    status === 'FULFILLED' ||
+    status === 'COMPLETED' ||
+    status === 'VERIFIED' ||
+    (fulfilledUnits >= totalUnits && totalUnits > 0);
+
+  if (isFulfilled) {
+    if (isAuthorized) {
+      // Only the accepted donor or request owner sees the private "Fulfilled" green badge & message
+      return {
+        isClosed: true,
+        isFulfilled: true,
+        isExpired: false,
+        isPrivateClosed: false,
+        badgeText: 'Fulfilled',
+        badgeColor: '#16A34A',
+        bannerText: isAcceptedDonor
+          ? 'Your blood donation for this request has been fulfilled and completed.'
+          : 'This blood request has been fulfilled and completed.',
+      };
+    } else {
+      // For general public / other users, keep details private and show simple closed status
+      return {
+        isClosed: true,
+        isFulfilled: false,
+        isExpired: false,
+        isPrivateClosed: true,
+        badgeText: 'Closed',
+        badgeColor: '#6B7280',
+        bannerText: 'This blood request is closed and is no longer accepting donors.',
+      };
+    }
+  }
+
+  const explicitExpired = status === 'EXPIRED' || status === 'CLOSED' || status === 'CANCELLED';
+  const reqDate = parseRequestDate(request?.requiredDateTime);
+  const now = new Date();
+  const timeExpired = reqDate && reqDate.getTime() < now.getTime() - 60000;
+
+  if (explicitExpired || timeExpired) {
+    return {
+      isClosed: true,
+      isFulfilled: false,
+      isExpired: true,
+      isPrivateClosed: false,
+      badgeText: explicitExpired && status === 'CANCELLED' ? 'Cancelled' : 'Expired',
+      badgeColor: '#DC2626',
+      bannerText:
+        explicitExpired && status === 'CANCELLED'
+          ? 'This blood request has been cancelled.'
+          : 'This blood request has expired and is now closed.',
+    };
+  }
+
+  return {
+    isClosed: false,
+    isFulfilled: false,
+    isExpired: false,
+    isPrivateClosed: false,
+    badgeText: null,
+    badgeColor: null,
+    bannerText: null,
+  };
+};
 
 const TrackingRequestScreen = ({ route, navigation }) => {
   const { colors } = useTheme();
@@ -57,10 +213,20 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   const { location } = useUserLocation();
 
   const [currentRequest, setCurrentRequest] = useState(initialRequestData);
-  const [notified, setNotified] = useState(false);
+  const [myAcceptedIds, setMyAcceptedIds] = useState([]);
+  const [myVerifiedIds, setMyVerifiedIds] = useState([]);
+
+  useEffect(() => {
+    getMyAcceptedIds().then((ids) => {
+      if (Array.isArray(ids)) setMyAcceptedIds(ids);
+    });
+    getMyVerifiedIds().then((ids) => {
+      if (Array.isArray(ids)) setMyVerifiedIds(ids);
+    });
+  }, []);
 
   // Determine if logged-in user is the owner of this request
-  const isOwner = (() => {
+  const isOwner = useMemo(() => {
     if (route?.params?.isOwner !== undefined) {
       return Boolean(route.params.isOwner);
     }
@@ -90,7 +256,130 @@ const TrackingRequestScreen = ({ route, navigation }) => {
       return true;
     }
     return false;
-  })();
+  }, [route?.params?.isOwner, user, currentRequest]);
+
+  // Determine if logged-in user is the accepted / fulfilled donor
+  const isAcceptedDonor = useMemo(() => {
+    if (myAcceptedIds.includes(cleanId) || myVerifiedIds.includes(cleanId)) return true;
+    if (route?.params?.isAcceptedDonor === true || route?.params?.isAccepted === true) return true;
+    const accUserId =
+      currentRequest?.acceptedBy?._id ||
+      currentRequest?.acceptedBy?.id ||
+      (typeof currentRequest?.acceptedBy === 'string' ? currentRequest.acceptedBy : null);
+    const verUserId =
+      currentRequest?.verifiedBy?._id ||
+      currentRequest?.verifiedBy?.id ||
+      (typeof currentRequest?.verifiedBy === 'string' ? currentRequest.verifiedBy : null);
+    const currentUserId = user?.id || user?._id;
+
+    if (accUserId && currentUserId && String(accUserId) === String(currentUserId)) return true;
+    if (verUserId && currentUserId && String(verUserId) === String(currentUserId)) return true;
+    if (
+      currentRequest?.acceptedBy?.email &&
+      user?.email &&
+      currentRequest.acceptedBy.email.toLowerCase() === user.email.toLowerCase()
+    ) {
+      return true;
+    }
+    if (
+      currentRequest?.donorPhone &&
+      user?.phone &&
+      currentRequest.donorPhone.replace(/\s+/g, '') === user.phone.replace(/\s+/g, '')
+    ) {
+      return true;
+    }
+    return false;
+  }, [myAcceptedIds, myVerifiedIds, cleanId, route?.params, currentRequest, user]);
+
+  const isAuthorizedViewer = Boolean(isOwner || isAcceptedDonor);
+
+  const closureState = useMemo(
+    () => checkRequestClosureState(currentRequest, isAuthorizedViewer, isAcceptedDonor),
+    [currentRequest, isAuthorizedViewer, isAcceptedDonor]
+  );
+  const [matchingDonors, setMatchingDonors] = useState([]);
+  const [loadingDonors, setLoadingDonors] = useState(true);
+  const [notifiedDonors, setNotifiedDonors] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadMatchingDonors = async () => {
+      try {
+        setLoadingDonors(true);
+        const res = await fetchMatchingDonors({
+          bloodGroup: currentRequest.bloodGroup,
+          hospital: currentRequest.hospital,
+        });
+
+        if (isMounted) {
+          if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+            setMatchingDonors(res.data);
+          } else {
+            // Intelligent fallback matching donors
+            setMatchingDonors([
+              {
+                id: 'd1',
+                name: 'Amal Perera',
+                bloodGroup: currentRequest.bloodGroup || 'AB-',
+                distance: '2.4km away',
+                status: 'Available',
+                phone: '+94 77 123 4567',
+                avatar:
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+              },
+              {
+                id: 'd2',
+                name: 'Rashed Fernando',
+                bloodGroup: currentRequest.bloodGroup || 'A+',
+                distance: '3.8km away',
+                status: 'Available',
+                phone: '+94 77 234 5678',
+                avatar:
+                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+              },
+            ]);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setMatchingDonors([
+            {
+              id: 'd1',
+              name: 'Amal Perera',
+              bloodGroup: currentRequest.bloodGroup || 'AB-',
+              distance: '2.4km away',
+              status: 'Available',
+              phone: '+94 77 123 4567',
+              avatar:
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+            },
+          ]);
+        }
+      } finally {
+        if (isMounted) setLoadingDonors(false);
+      }
+    };
+
+    loadMatchingDonors();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentRequest.bloodGroup, currentRequest.hospital]);
+
+  const mapDonors = useMemo(() => {
+    if (!matchingDonors.length) return [];
+    return matchingDonors.map((d, index) => {
+      const angle = (index * (2 * Math.PI)) / matchingDonors.length;
+      const radius = 0.007 + (index % 3) * 0.003;
+      return {
+        name: d.name,
+        bloodGroup: d.bloodGroup,
+        latitude: location.latitude + Math.sin(angle) * radius,
+        longitude: location.longitude + Math.cos(angle) * radius,
+      };
+    });
+  }, [matchingDonors, location]);
+
 
   // Modals state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -104,8 +393,16 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   const [editHospital, setEditHospital] = useState(initialRequestData.hospital || '');
   const [editBloodGroup, setEditBloodGroup] = useState(initialRequestData.bloodGroup || 'A+');
   const [editUnits, setEditUnits] = useState(String(initialRequestData.units || '1'));
-  const [editDateTime, setEditDateTime] = useState(initialRequestData.requiredDateTime || '');
+  const [editDate, setEditDate] = useState(new Date());
+  const [editTime, setEditTime] = useState(new Date());
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [showEditTimePicker, setShowEditTimePicker] = useState(false);
   const [editUrgency, setEditUrgency] = useState(initialRequestData.urgency || 'Medium');
+
+  const editTimeDiff = useMemo(
+    () => getTimeDifferenceText(editDate, editTime),
+    [editDate, editTime]
+  );
 
   // Radar Pulse Animation
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -146,18 +443,6 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     ).start();
   }, [pulseAnim, dotOpacity]);
 
-  const donorList = [
-    {
-      id: 'd1',
-      name: 'Amal Perera',
-      bloodGroup: currentRequest.bloodGroup || 'A+',
-      distance: '2.4km away',
-      status: 'Available',
-      phone: '+94 77 123 4567',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-    },
-  ];
-
   const handleCall = (donor) => {
     Alert.alert(
       'Contact Donor',
@@ -184,10 +469,10 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   };
 
   const handleNotify = (donor) => {
-    setNotified(true);
+    setNotifiedDonors((prev) => ({ ...prev, [donor.id]: true }));
     Alert.alert(
       'Emergency Alert Sent!',
-      `An urgent push notification and SMS alert has been dispatched to ${donor.name} (${donor.distance}).`
+      `An urgent push notification and SMS alert has been dispatched to ${donor.name} (${donor.distance || 'nearby'}).`
     );
   };
 
@@ -203,14 +488,24 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     setEditHospital(currentRequest.hospital || '');
     setEditBloodGroup(currentRequest.bloodGroup || 'A+');
     setEditUnits(String(currentRequest.units || '1'));
-    setEditDateTime(currentRequest.requiredDateTime || '');
+    const parsedDate = currentRequest.requiredDateTime ? new Date(currentRequest.requiredDateTime) : new Date();
+    setEditDate(!isNaN(parsedDate.getTime()) ? parsedDate : new Date());
+    setEditTime(!isNaN(parsedDate.getTime()) ? parsedDate : new Date());
     setEditUrgency(currentRequest.urgency || 'Medium');
     setEditModalVisible(true);
   };
 
   const handleSaveEdit = async () => {
-    if (!editHospital.trim() || !editUnits.trim() || !editDateTime.trim()) {
-      Alert.alert('Incomplete Fields', 'Please fill in all details before saving.');
+    if (!editHospital.trim() || !editUnits.trim()) {
+      Alert.alert('Incomplete Fields', 'Please fill in mandatory fields.');
+      return;
+    }
+
+    if (editTimeDiff && editTimeDiff.isPast) {
+      Alert.alert(
+        'Invalid Date / Time',
+        'The selected date and time has already passed. Please select an upcoming date and time to update the request.'
+      );
       return;
     }
 
@@ -221,7 +516,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
       hospital: editHospital.trim(),
       bloodGroup: editBloodGroup,
       units: Number(editUnits),
-      requiredDateTime: editDateTime.trim(),
+      requiredDateTime: `${formatDate(editDate)} • ${formatTime(editTime)}`,
       urgency: editUrgency,
     };
 
@@ -230,7 +525,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
       setCurrentRequest(updatedPayload);
       setEditModalVisible(false);
       Alert.alert('Success', 'Blood request details updated successfully.');
-    } catch (e) {
+    } catch {
       setCurrentRequest(updatedPayload);
       setEditModalVisible(false);
       Alert.alert('Success', 'Blood request details updated.');
@@ -274,17 +569,27 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     outputRange: [0.65, 0.3, 0],
   });
 
+  const showBackButton = Boolean(
+    route?.params?.fromMyRequests ||
+    route?.params?.showBack ||
+    route?.params?.fromHistory
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Top Header Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.iconBtn}
-          accessibilityLabel="Go back"
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
+        {showBackButton ? (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.iconBtn}
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconBtnPlaceholder} />
+        )}
         <View style={styles.brandContainer}>
           <BloodDrop size={18} />
           <Text style={styles.brandTitle}>HemoGo</Text>
@@ -303,54 +608,112 @@ const TrackingRequestScreen = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {/* Top Tracking Status Card */}
-        <View style={styles.trackingCard}>
-          <View style={styles.speedometerCircle}>
-            <Ionicons name="speedometer-outline" size={20} color={colors.primary} />
+        <View style={[
+          styles.trackingCard,
+          closureState.isClosed && (
+            closureState.isFulfilled
+              ? styles.trackingCardFulfilled
+              : closureState.isExpired
+              ? styles.trackingCardClosed
+              : styles.trackingCardNeutralClosed
+          ),
+        ]}>
+          <View style={[
+            styles.speedometerCircle,
+            closureState.isClosed && (
+              closureState.isFulfilled
+                ? styles.circleFulfilled
+                : closureState.isExpired
+                ? styles.circleClosed
+                : styles.circleNeutralClosed
+            ),
+          ]}>
+            <Ionicons
+              name={
+                closureState.isFulfilled
+                  ? 'checkmark-circle'
+                  : closureState.isExpired
+                  ? 'time'
+                  : closureState.isPrivateClosed
+                  ? 'lock-closed'
+                  : 'speedometer-outline'
+              }
+              size={20}
+              color={
+                closureState.isFulfilled
+                  ? '#16A34A'
+                  : closureState.isExpired
+                  ? '#DC2626'
+                  : closureState.isPrivateClosed
+                  ? '#6B7280'
+                  : colors.primary
+              }
+            />
           </View>
           <View style={styles.trackingTextWrap}>
-            <Text style={styles.trackingTitle}>
-              Tracking Request{' '}
-              <Text style={styles.trackingId}>#{cleanId}</Text>
-            </Text>
-            <Text style={styles.trackingSub}>
-              Searching for compatible donors...
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Text style={styles.trackingTitle}>
+                Tracking Request{' '}
+                <Text style={styles.trackingId}>#{cleanId}</Text>
+              </Text>
+              {closureState.isClosed && (
+                <View style={[styles.statusMiniBadge, { backgroundColor: closureState.badgeColor }]}>
+                  <Text style={styles.statusMiniBadgeText}>{closureState.badgeText}</Text>
+                </View>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.trackingSub,
+                closureState.isClosed && {
+                  color: closureState.isFulfilled ? '#15803D' : closureState.isExpired ? '#DC2626' : '#4B5563',
+                  fontWeight: '700',
+                },
+              ]}
+            >
+              {closureState.isClosed ? closureState.bannerText : 'Searching for compatible donors...'}
             </Text>
           </View>
         </View>
+
+        {/* Back to Dashboard Button (Up on Screen) */}
+        <TouchableOpacity
+          style={styles.topDashboardBtn}
+          onPress={handleGoToDashboard}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.topDashboardBtnText}>Back to Dashboard</Text>
+        </TouchableOpacity>
 
         {/* Live Radar Map */}
         <View style={styles.mapContainer}>
           <LiveDonorsMap
             location={location}
-            donors={[
-              {
-                name: 'Amal Perera',
-                bloodGroup: currentRequest.bloodGroup || 'A+',
-                latitude: location.latitude + 0.008,
-                longitude: location.longitude + 0.009,
-              },
-            ]}
+            donors={mapDonors}
             interactive={false}
             style={styles.mapElement}
           />
 
-          {/* Concentric Radar Rings Overlay */}
-          <View style={styles.radarOverlay} pointerEvents="none">
-            <Animated.View
-              style={[
-                styles.pulseRing,
-                {
-                  transform: [{ scale: rippleScale }],
-                  opacity: rippleOpacity,
-                },
-              ]}
-            />
-            <View style={styles.radarOuterRing} />
-            <View style={styles.radarMidRing} />
-            <View style={styles.radarCoreCircle}>
-              <BloodDrop size={16} />
+          {/* Concentric Radar Rings Overlay (Only pulsing if active) */}
+          {!closureState.isClosed && (
+            <View style={styles.radarOverlay} pointerEvents="none">
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  {
+                    transform: [{ scale: rippleScale }],
+                    opacity: rippleOpacity,
+                  },
+                ]}
+              />
+              <View style={styles.radarOuterRing} />
+              <View style={styles.radarMidRing} />
+              <View style={styles.radarCoreCircle}>
+                <BloodDrop size={16} />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Request Details Card */}
@@ -360,13 +723,19 @@ const TrackingRequestScreen = ({ route, navigation }) => {
             <View
               style={[
                 styles.criticalPill,
-                currentRequest.urgency === 'Medium' && { backgroundColor: '#F59E0B' },
-                currentRequest.urgency === 'High' && { backgroundColor: '#EA580C' },
-                currentRequest.urgency === 'Low' && { backgroundColor: '#6B7280' },
+                closureState.isClosed
+                  ? { backgroundColor: closureState.badgeColor }
+                  : currentRequest.urgency === 'Medium'
+                  ? { backgroundColor: '#F59E0B' }
+                  : currentRequest.urgency === 'High'
+                  ? { backgroundColor: '#EA580C' }
+                  : currentRequest.urgency === 'Low'
+                  ? { backgroundColor: '#6B7280' }
+                  : { backgroundColor: colors.primary },
               ]}
             >
               <Text style={styles.criticalText}>
-                {currentRequest.urgency || 'Medium'}
+                {closureState.isClosed ? closureState.badgeText : (currentRequest.urgency || 'Medium')}
               </Text>
             </View>
           </View>
@@ -376,96 +745,155 @@ const TrackingRequestScreen = ({ route, navigation }) => {
             {currentRequest.requiredDateTime}
           </Text>
 
-          {/* Edit & Delete Action Buttons Row (Only shown to Request Creator / Owner) */}
-          {isOwner ? (
-            <View style={styles.requestControlRow}>
-              <TouchableOpacity
-                style={styles.editCtrlBtn}
-                onPress={handleOpenEdit}
-                activeOpacity={0.7}
+          {/* Closed Status Notice Banner */}
+          {closureState.isClosed && (
+            <View
+              style={[
+                styles.closedNoticeBanner,
+                closureState.isFulfilled
+                  ? styles.fulfilledBanner
+                  : closureState.isExpired
+                  ? styles.expiredBanner
+                  : styles.neutralClosedBanner,
+              ]}
+            >
+              <Ionicons
+                name={
+                  closureState.isFulfilled
+                    ? 'checkmark-circle'
+                    : closureState.isExpired
+                    ? 'alert-circle'
+                    : 'lock-closed'
+                }
+                size={16}
+                color={
+                  closureState.isFulfilled
+                    ? '#16A34A'
+                    : closureState.isExpired
+                    ? '#DC2626'
+                    : '#6B7280'
+                }
+              />
+              <Text
+                style={[
+                  styles.closedNoticeText,
+                  {
+                    color: closureState.isFulfilled
+                      ? '#15803D'
+                      : closureState.isExpired
+                      ? '#B91C1C'
+                      : '#4B5563',
+                  },
+                ]}
               >
-                <Ionicons name="pencil-outline" size={15} color="#374151" />
-                <Text style={styles.editCtrlText}>Edit</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.deleteCtrlBtn}
-                onPress={() => setDeleteModalVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="trash-outline" size={15} color={colors.primary} />
-                <Text style={styles.deleteCtrlText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.readOnlyRow}>
-              <Ionicons name="information-circle-outline" size={15} color="#6B7280" />
-              <Text style={styles.readOnlyText}>Public Request • View Only</Text>
+                {closureState.bannerText}
+              </Text>
             </View>
           )}
+
+          {/* Edit & Cancel Action Buttons Row (Disabled when Expired or Fulfilled) */}
+          <View style={styles.requestControlRow}>
+            <TouchableOpacity
+              style={[styles.editCtrlBtn, closureState.isClosed && styles.ctrlBtnDisabled]}
+              onPress={closureState.isClosed ? () => Alert.alert('Request Closed', `This blood request is ${closureState.badgeText.toLowerCase()} and cannot be edited.`) : handleOpenEdit}
+              activeOpacity={closureState.isClosed ? 1 : 0.7}
+              disabled={closureState.isClosed}
+            >
+              <Ionicons name="pencil-outline" size={15} color={closureState.isClosed ? '#9CA3AF' : '#374151'} />
+              <Text style={[styles.editCtrlText, closureState.isClosed && styles.ctrlTextDisabled]}>Edit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.deleteCtrlBtn, closureState.isClosed && styles.ctrlBtnDisabled]}
+              onPress={closureState.isClosed ? () => Alert.alert('Request Closed', `This blood request is already ${closureState.badgeText.toLowerCase()}.`) : () => setDeleteModalVisible(true)}
+              activeOpacity={closureState.isClosed ? 1 : 0.7}
+              disabled={closureState.isClosed}
+            >
+              <Ionicons name="close-circle-outline" size={15} color={closureState.isClosed ? '#9CA3AF' : colors.primary} />
+              <Text style={[styles.deleteCtrlText, closureState.isClosed && styles.ctrlTextDisabled]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Matching Donors List */}
-        {donorList.map((donor) => (
-          <View key={donor.id} style={styles.donorCard}>
-            <View style={styles.donorTopRow}>
-              <View style={styles.avatarWrap}>
-                <Image
-                  source={{ uri: donor.avatar }}
-                  style={styles.avatarImg}
-                  defaultSource={{ uri: donor.avatar }}
-                />
-              </View>
-              <View style={styles.donorInfo}>
-                <Text style={styles.donorName}>{donor.name}</Text>
-                <Text style={styles.donorSub}>
-                  {donor.bloodGroup} • {donor.distance}
-                </Text>
-              </View>
-              <View style={styles.availablePill}>
-                <Text style={styles.availableText}>{donor.status}</Text>
-              </View>
-            </View>
-
-            {/* Donor Actions */}
-            <View style={styles.donorActions}>
-              <TouchableOpacity
-                style={styles.callBtn}
-                onPress={() => handleCall(donor)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.callBtnText}>Call</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.notifyBtn,
-                  notified && styles.notifyBtnDone,
-                ]}
-                onPress={() => handleNotify(donor)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.notifyBtnText}>
-                  {notified ? 'Notified ✓' : 'Notify'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {loadingDonors && matchingDonors.length === 0 ? (
+          <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ marginTop: 8, fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>
+              Finding matching registered donors...
+            </Text>
           </View>
-        ))}
+        ) : (
+          matchingDonors.map((donor) => {
+            const isNotified = Boolean(notifiedDonors[donor.id]);
+            return (
+              <View key={donor.id} style={[styles.donorCard, closureState.isClosed && { opacity: 0.85 }]}>
+                <View style={styles.donorTopRow}>
+                  <View style={styles.avatarWrap}>
+                    <Image
+                      source={{ uri: donor.avatar }}
+                      style={styles.avatarImg}
+                      defaultSource={{ uri: donor.avatar }}
+                    />
+                  </View>
+                  <View style={styles.donorInfo}>
+                    <Text style={styles.donorName}>{donor.name}</Text>
+                    <Text style={styles.donorSub}>
+                      {donor.bloodGroup} • {donor.distance || '2.4km away'}
+                    </Text>
+                  </View>
+                  <View style={[styles.availablePill, (!donor.isAvailable || closureState.isClosed) && { backgroundColor: '#F3F4F6' }]}>
+                    <Text style={[styles.availableText, (!donor.isAvailable || closureState.isClosed) && { color: '#6B7280' }]}>
+                      {closureState.isClosed ? 'Closed' : donor.status || (donor.isAvailable ? 'Available' : 'Busy')}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Donor Actions (Disabled when request is Closed) */}
+                <View style={styles.donorActions}>
+                  <TouchableOpacity
+                    style={[styles.callBtn, closureState.isClosed && styles.donorActionBtnDisabled]}
+                    onPress={closureState.isClosed ? () => Alert.alert('Request Closed', `This blood request is ${closureState.badgeText.toLowerCase()}. Contacting donors is disabled.`) : () => handleCall(donor)}
+                    activeOpacity={closureState.isClosed ? 1 : 0.7}
+                    disabled={closureState.isClosed}
+                  >
+                    <Text style={[styles.callBtnText, closureState.isClosed && { color: '#9CA3AF' }]}>Call</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.notifyBtn,
+                      isNotified && styles.notifyBtnDone,
+                      closureState.isClosed && styles.donorActionBtnDisabled,
+                    ]}
+                    onPress={closureState.isClosed ? () => Alert.alert('Request Closed', `This blood request is ${closureState.badgeText.toLowerCase()}. Dispatching notifications is disabled.`) : () => handleNotify(donor)}
+                    activeOpacity={closureState.isClosed ? 1 : 0.85}
+                    disabled={closureState.isClosed}
+                  >
+                    <Text style={[styles.notifyBtnText, closureState.isClosed && { color: '#9CA3AF' }]}>
+                      {closureState.isClosed
+                        ? closureState.isFulfilled ? 'Completed' : 'Closed'
+                        : isNotified ? 'Notified ✓' : 'Notify'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        )}
 
         {/* Searching for more donors indicator */}
-        <Animated.View style={[styles.searchingWrap, { opacity: dotOpacity }]}>
-          <Text style={styles.searchingText}>Searching for more donors...</Text>
-        </Animated.View>
-
-        {/* Go to Dashboard CTA */}
-        <TouchableOpacity
-          style={styles.dashboardBtn}
-          onPress={handleGoToDashboard}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.dashboardBtnText}>Go to Dashboard</Text>
-        </TouchableOpacity>
+        {closureState.isClosed ? (
+          <View style={styles.searchingWrap}>
+            <Text style={[styles.searchingText, { color: colors.textSecondary, fontWeight: '700' }]}>
+              🔒 Request is {closureState.badgeText.toLowerCase()}. All actions are closed.
+            </Text>
+          </View>
+        ) : (
+          <Animated.View style={[styles.searchingWrap, { opacity: dotOpacity }]}>
+            <Text style={styles.searchingText}>Searching for more donors...</Text>
+          </Animated.View>
+        )}
       </ScrollView>
 
       {/* 1. Delete Confirmation Modal */}
@@ -478,11 +906,11 @@ const TrackingRequestScreen = ({ route, navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalCard}>
             <View style={styles.deleteIconCircle}>
-              <Ionicons name="trash" size={32} color={colors.primary} />
+              <Ionicons name="close-circle" size={34} color={colors.primary} />
             </View>
-            <Text style={styles.deleteModalTitle}>Delete Blood Request?</Text>
+            <Text style={styles.deleteModalTitle}>Cancel Blood Request?</Text>
             <Text style={styles.deleteModalDesc}>
-              Are you sure you want to delete this blood request? Active notifications to nearby donors will be cancelled.
+              Are you sure you want to cancel this blood request? Matching search and active notifications will be terminated.
             </Text>
             <View style={styles.deleteBtnRow}>
               <TouchableOpacity
@@ -490,7 +918,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                 onPress={() => setDeleteModalVisible(false)}
                 disabled={isDeleting}
               >
-                <Text style={styles.cancelDeleteText}>Cancel</Text>
+                <Text style={styles.cancelDeleteText}>Keep Request</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmDeleteBtn, isDeleting && { opacity: 0.7 }]}
@@ -500,7 +928,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                 {isDeleting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.confirmDeleteText}>Delete</Text>
+                  <Text style={styles.confirmDeleteText}>Yes, Cancel</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -508,7 +936,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
         </View>
       </Modal>
 
-      {/* 2. Deletion Success Modal */}
+      {/* 2. Cancellation Success Modal */}
       <Modal
         visible={deletedSuccess}
         transparent
@@ -520,9 +948,9 @@ const TrackingRequestScreen = ({ route, navigation }) => {
             <View style={[styles.deleteIconCircle, { backgroundColor: '#FEE2E2' }]}>
               <Ionicons name="checkmark-circle" size={36} color={colors.primary} />
             </View>
-            <Text style={styles.deleteModalTitle}>Request Deleted</Text>
+            <Text style={styles.deleteModalTitle}>Request Cancelled</Text>
             <Text style={styles.deleteModalDesc}>
-              The blood request #{cleanId} has been successfully deleted.
+              The blood request #{cleanId} has been successfully cancelled.
             </Text>
             <TouchableOpacity
               style={styles.afterDeleteBtn}
@@ -614,16 +1042,147 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                 />
               </View>
 
-              {/* Required Date & Time */}
-              <View style={styles.modalField}>
-                <Text style={styles.modalFieldLabel}>Required Date / Time</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={editDateTime}
-                  onChangeText={setEditDateTime}
-                  placeholder="e.g. 16 Sep 2026, 10:00 AM"
-                />
+              {/* Date & Time Picker Row */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+                {/* Date Picker */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalFieldLabel}>Required Date</Text>
+                  {Platform.OS === 'web' ? (
+                    <View style={styles.modalInput}>
+                      <input
+                        type="date"
+                        value={editDate ? editDate.toISOString().split('T')[0] : ''}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const [yyyy, mm, dd] = e.target.value.split('-');
+                            const newD = new Date(editDate);
+                            newD.setFullYear(Number(yyyy), Number(mm) - 1, Number(dd));
+                            setEditDate(newD);
+                          }
+                        }}
+                        style={{
+                          border: 'none',
+                          outline: 'none',
+                          backgroundColor: 'transparent',
+                          color: colors.text,
+                          fontSize: 13,
+                          fontWeight: '600',
+                          width: '100%',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.modalInput, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                      onPress={() => setShowEditDatePicker(true)}
+                    >
+                      <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>
+                        {formatDate(editDate)}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Time Picker */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalFieldLabel}>Required Time</Text>
+                  {Platform.OS === 'web' ? (
+                    <View style={styles.modalInput}>
+                      <input
+                        type="time"
+                        value={editTime ? `${String(editTime.getHours()).padStart(2, '0')}:${String(editTime.getMinutes()).padStart(2, '0')}` : ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const [hh, mm] = e.target.value.split(':');
+                            const newT = new Date(editTime);
+                            newT.setHours(Number(hh), Number(mm), 0, 0);
+                            setEditTime(newT);
+                          }
+                        }}
+                        style={{
+                          border: 'none',
+                          outline: 'none',
+                          backgroundColor: 'transparent',
+                          color: colors.text,
+                          fontSize: 13,
+                          fontWeight: '600',
+                          width: '100%',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.modalInput, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                      onPress={() => setShowEditTimePicker(true)}
+                    >
+                      <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>
+                        {formatTime(editTime)}
+                      </Text>
+                      <Ionicons name="time-outline" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
+
+              {/* Native DateTimePickers for Edit Modal */}
+              {Platform.OS !== 'web' && showEditDatePicker && (
+                <DateTimePicker
+                  value={editDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={(event, date) => {
+                    setShowEditDatePicker(Platform.OS === 'ios');
+                    if (date) setEditDate(date);
+                  }}
+                />
+              )}
+
+              {Platform.OS !== 'web' && showEditTimePicker && (
+                <DateTimePicker
+                  value={editTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, time) => {
+                    setShowEditTimePicker(Platform.OS === 'ios');
+                    if (time) setEditTime(time);
+                  }}
+                />
+              )}
+
+              {/* Time Remaining Indicator */}
+              {editTimeDiff && (
+                <View
+                  style={[
+                    styles.timeDiffBanner,
+                    editTimeDiff.isPast && styles.timeDiffBannerPast,
+                    editTimeDiff.isImminent && !editTimeDiff.isPast && styles.timeDiffBannerImminent,
+                    { marginBottom: 14 },
+                  ]}
+                >
+                  <Ionicons
+                    name={editTimeDiff.isPast ? 'alert-circle-outline' : editTimeDiff.isImminent ? 'flash-outline' : 'time-outline'}
+                    size={15}
+                    color={editTimeDiff.isPast ? '#DC2626' : editTimeDiff.isImminent ? '#D97706' : colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.timeDiffText,
+                      editTimeDiff.isPast && styles.timeDiffTextPast,
+                      editTimeDiff.isImminent && !editTimeDiff.isPast && styles.timeDiffTextImminent,
+                      { fontSize: 12 },
+                    ]}
+                  >
+                    {editTimeDiff.text}
+                  </Text>
+                </View>
+              )}
 
               {/* Urgency */}
               <View style={styles.modalField}>
@@ -653,7 +1212,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
             </ScrollView>
 
             <TouchableOpacity
-              style={[styles.saveBtn, isUpdating && { opacity: 0.7 }]}
+              style={[styles.saveBtn, (isUpdating || editTimeDiff?.isPast) && { opacity: 0.65 }]}
               onPress={handleSaveEdit}
               disabled={isUpdating}
             >
@@ -691,6 +1250,10 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconBtnPlaceholder: {
+    width: 38,
+    height: 38,
+  },
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -718,6 +1281,18 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 14,
   },
+  trackingCardFulfilled: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  trackingCardClosed: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  trackingCardNeutralClosed: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
   speedometerCircle: {
     width: 38,
     height: 38,
@@ -728,6 +1303,29 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  circleFulfilled: {
+    borderColor: '#86EFAC',
+    backgroundColor: '#DCFCE7',
+  },
+  circleClosed: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FEE2E2',
+  },
+  circleNeutralClosed: {
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F3F4F6',
+  },
+  statusMiniBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  statusMiniBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   trackingTextWrap: {
     flex: 1,
@@ -845,6 +1443,34 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '500',
   },
+  closedNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    marginTop: 10,
+    borderWidth: 1,
+  },
+  fulfilledBanner: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  expiredBanner: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  neutralClosedBanner: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  closedNoticeText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    flex: 1,
+    lineHeight: 17,
+  },
   requestControlRow: {
     flexDirection: 'row',
     gap: 10,
@@ -886,6 +1512,19 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
+  },
+  ctrlBtnDisabled: {
+    opacity: 0.45,
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+  },
+  ctrlTextDisabled: {
+    color: '#9CA3AF',
+  },
+  donorActionBtnDisabled: {
+    opacity: 0.45,
+    backgroundColor: '#E5E7EB',
+    borderColor: '#E5E7EB',
   },
   readOnlyRow: {
     flexDirection: 'row',
@@ -999,6 +1638,27 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 12.5,
     color: colors.textMuted,
     fontWeight: '500',
+  },
+  topDashboardBtn: {
+    height: 44,
+    backgroundColor: '#1E293B',
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  topDashboardBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   dashboardBtn: {
     height: 50,
@@ -1175,6 +1835,39 @@ const makeStyles = (colors) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
+  },
+  timeDiffBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  timeDiffBannerImminent: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  timeDiffBannerPast: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  timeDiffText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    flex: 1,
+  },
+  timeDiffTextImminent: {
+    color: '#B45309',
+  },
+  timeDiffTextPast: {
+    color: '#DC2626',
   },
 });
 

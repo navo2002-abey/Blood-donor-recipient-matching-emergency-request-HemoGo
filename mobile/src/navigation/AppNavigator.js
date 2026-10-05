@@ -9,10 +9,12 @@ import { useTheme } from '../context/ThemeContext';
 
 // Teammate's screens
 import ActiveRequestCompletedScreen from '../screens/ActiveRequestCompletedScreen';
+import ActiveRequestDetailScreen from '../screens/ActiveRequestDetailScreen';
 import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen';
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
 import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminBloodRequestsScreen from '../screens/AdminBloodRequestsScreen';
 import AdminReportsScreen from '../screens/AdminReportsScreen';
 import AdminSettingsScreen from '../screens/AdminSettingsScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
@@ -98,18 +100,12 @@ const DonorTabs = () => {
     screenOptions={tabOptions({
       Home: 'home-outline',
       Map: 'map-outline',
-      Requests: 'water-outline',
       Rewards: 'ribbon-outline',
       Profile: 'person-outline',
     }, language, colors)}
   >
     <Tab.Screen name="Home" component={DashboardScreen} options={{ title: t('tabs.home') }} />
     <Tab.Screen name="Map" component={MapScreen} options={{ title: t('tabs.map') }} />
-    <Tab.Screen
-      name="Requests"
-      component={CreateBloodRequestScreen}
-      options={{ title: t('tabs.request') }}
-    />
     <Tab.Screen name="Rewards" component={RewardsScreen} options={{ title: t('tabs.rewards') }} />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
   </Tab.Navigator>
@@ -131,7 +127,7 @@ const AdminTabs = () => {
   >
     <Tab.Screen name="Home" component={AdminDashboardScreen} options={{ title: t('tabs.admin') }} />
     <Tab.Screen name="Users" component={AdminUsersScreen} options={{ title: t('tabs.users') }} />
-    <Tab.Screen name="Requests" component={soon(t('menu.Emergency Requests'))} options={{ title: t('tabs.requests') }} />
+    <Tab.Screen name="Requests" component={AdminBloodRequestsScreen} options={{ title: t('tabs.requests') }} />
     <Tab.Screen name="Reports" component={AdminReportsScreen} options={{ title: t('tabs.reports') }} />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
   </Tab.Navigator>
@@ -227,7 +223,7 @@ const AppNavigator = () => {
         <Stack.Screen name="TrackingRequest" component={TrackingRequestScreen} />
         <Stack.Screen name="ActiveRequests" component={ActiveRequestsScreen} />
         <Stack.Screen name="ActiveRequestProgress" component={ActiveRequestProgressScreen} />
-        <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestProgressScreen} />
+        <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestDetailScreen} />
         <Stack.Screen name="ActiveRequestQRVerify" component={ActiveRequestQRVerifyScreen} />
         <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
         <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />
@@ -238,6 +234,7 @@ const AppNavigator = () => {
         <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
         <Stack.Screen name="RewardsGift" component={RewardsGiftScreen} />
         <Stack.Screen name="CheckEligibility" component={CheckEligibilityScreen} />
+        <Stack.Screen name="AdminBloodRequests" component={AdminBloodRequestsScreen} />
         <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
         <Stack.Screen name="DonorSettings" component={DonorSettingsScreen} />
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
