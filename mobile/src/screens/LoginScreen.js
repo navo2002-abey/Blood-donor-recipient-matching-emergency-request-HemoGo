@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,7 +15,6 @@ import Input from '../components/Input';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { colors } from '../utils/colors';
 import { getApiErrorMessage } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
 
@@ -47,10 +45,6 @@ const LoginScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const comingSoon = (feature) => {
-    Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
   };
 
   return (
@@ -100,26 +94,11 @@ const LoginScreen = ({ navigation }) => {
             editable={!loading}
           />
 
-          <TouchableOpacity style={styles.forgot} onPress={() => comingSoon('Forgot Password')}>
+          <TouchableOpacity style={styles.forgot} onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={styles.forgotText}>{t('login.forgot')}</Text>
           </TouchableOpacity>
 
           <Button title={t('login.login')} onPress={handleLogin} loading={loading} disabled={loading} />
-
-          <View style={styles.orRow}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>{t('login.or')}</Text>
-            <View style={styles.line} />
-          </View>
-
-          <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.social} onPress={() => comingSoon('Google login')}>
-              <Ionicons name="logo-google" size={22} color="#4285F4" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.social} onPress={() => comingSoon('Apple login')}>
-              <Ionicons name="logo-apple" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
         </ScrollView>
 
         <View style={styles.bottom}>
@@ -192,39 +171,6 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.primary,
     fontSize: 13,
     fontWeight: '500',
-  },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 22,
-    gap: 10,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  orText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 28,
-    paddingVertical: 10,
-    paddingHorizontal: 28,
-    alignSelf: 'center',
-  },
-  social: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   bottom: {
     flexDirection: 'row',

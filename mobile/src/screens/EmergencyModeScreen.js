@@ -3,10 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
-import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
-import { DONOR_MENU } from '../utils/roles';
 import { useTheme } from '../context/ThemeContext';
 
 const comingSoon = (feature) => {
@@ -25,10 +23,8 @@ const initials = (name) =>
 const EmergencyModeScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const menu = route.params?.menu || DONOR_MENU;
   const donors = route.params?.donors || [];
   const [index, setIndex] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { location } = useUserLocation();
   const donor = donors[index] || null;
 
@@ -46,9 +42,7 @@ const EmergencyModeScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.top}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setSidebarOpen(true)} hitSlop={10} style={styles.headerBtn}>
-            <Ionicons name="menu-outline" size={26} color={colors.white} />
-          </TouchableOpacity>
+          <View style={styles.headerBtn} />
           <View style={styles.headerBtn} />
           <TouchableOpacity onPress={() => comingSoon('Notifications')} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="notifications-outline" size={22} color={colors.white} />
@@ -115,13 +109,6 @@ const EmergencyModeScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={menu}
-      />
     </SafeAreaView>
   );
 };

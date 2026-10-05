@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -224,20 +223,6 @@ const Sidebar = ({
               </View>
             </View>
 
-            <View style={styles.search}>
-              <Ionicons
-                name="search-outline"
-                size={16}
-                color={colors.sidebarMuted}
-              />
-              <TextInput
-                placeholder=""
-                placeholderTextColor={colors.sidebarMuted}
-                style={styles.searchInput}
-                editable={false}
-              />
-            </View>
-
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.menu}
@@ -367,21 +352,6 @@ const makeStyles = (colors) => StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.primary,
-  },
-  search: {
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1F2937',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    marginBottom: 18,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    color: colors.white,
-    paddingVertical: 0,
   },
   menu: {
     paddingBottom: 16,

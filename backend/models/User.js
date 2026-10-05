@@ -41,6 +41,16 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google', 'apple'],
+      default: 'local',
+    },
+    appleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },

@@ -31,3 +31,16 @@ export const changePassword = async (payload) => {
   const { data } = await api.patch('/auth/password', payload);
   return data;
 };
+
+export const forgotPassword = async (payload) => {
+  const { data } = await api.post('/auth/forgot-password', payload);
+  return data;
+};
+
+export const socialLoginUser = async (payload) => {
+  const { data } = await api.post('/auth/social', payload);
+  if (data.token && data.user) {
+    await saveSession(data.token, data.user);
+  }
+  return data;
+};
