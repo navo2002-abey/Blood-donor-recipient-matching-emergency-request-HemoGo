@@ -15,6 +15,9 @@ const campaignRoutes = require('./routes/campaignRoutes');
 const bloodBankRoutes = require('./routes/bloodBankRoutes');
 // Teammate's routes
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
+// QR Scan & Appointment routes
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const donorRoutes = require('./routes/donorRoutes');
 
 const seedUsers = require('./utils/seedUsers');
 const seedBloodBanks = require('./utils/seedBloodBanks');
@@ -52,6 +55,10 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/blood-banks', bloodBankRoutes);
 
+// QR Scan & Appointment routes
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/donor', donorRoutes);
+
 // -------------------- 404 --------------------
 app.use((req, res) => {
   res.status(404).json({
@@ -88,6 +95,8 @@ const startServer = async () => {
     console.log('  /api/predictions');
     console.log('  /api/campaigns');
     console.log('  /api/blood-banks');
+    console.log('  /api/appointments');
+    console.log('  /api/donor');
   });
 };
 

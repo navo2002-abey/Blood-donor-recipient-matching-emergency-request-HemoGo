@@ -1,14 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useCallback } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
+import { getDonorProfile, getRedemptions, redeemReward } from '../services/api';
 import { colors } from '../utils/colors';
-
-const POINTS_KEY = '@donor_points';
-const REDEEMED_KEY = '@redeemed_rewards';
 
 const rewards = [
   {
@@ -48,20 +45,31 @@ const rewards = [
 const RewardsGiftScreen = () => {
   const [points, setPoints] = useState(0);
   const [redeemed, setRedeemed] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const loadRewards = async () => {
     try {
-      const storedPoints = await AsyncStorage.getItem(POINTS_KEY);
-      const totalPoints = storedPoints ? parseInt(storedPoints) : 0;
-      setPoints(totalPoints);
+      const profileResponse = await getDonorProfile();
+      setPoints(profileResponse.data.points || 0);
 
-      const storedRedeemed = await AsyncStorage.getItem(REDEEMED_KEY);
-      const redeemedList = storedRedeemed ? JSON.parse(storedRedeemed) : [];
-      setRedeemed(redeemedList);
+      const redemptionsResponse = await getRedemptions();
+      const redeemedIds = redemptionsResponse.data.map(r => r.rewardId);
+      setRedeemed(redeemedIds);
     } catch (error) {
       console.error('Failed to load rewards:', error);
     }
   };
+
+  // Filter rewards based on points
+  const getAvailableRewards = () => {
+    if (points < 250) return []; // No rewards if less than 250 points
+    if (points < 500) return rewards.filter(r => r.points <= 250); // Only 250
+    if (points < 750) return rewards.filter(r => r.points <= 500); // 250, 500
+    if (points < 1000) return rewards.filter(r => r.points <= 750); // 250, 500, 750
+    return rewards; // All rewards (250, 500, 750, 1000)
+  };
+
+  const availableRewards = getAvailableRewards();
 
   const handleRedeem = async (reward) => {
     if (redeemed.includes(reward.id)) {
@@ -82,19 +90,17 @@ const RewardsGiftScreen = () => {
         {
           text: 'Redeem',
           onPress: async () => {
+            setLoading(true);
             try {
-              const newPoints = points - reward.points;
-              await AsyncStorage.setItem(POINTS_KEY, JSON.stringify(newPoints));
-              setPoints(newPoints);
-
-              const newRedeemed = [...redeemed, reward.id];
-              await AsyncStorage.setItem(REDEEMED_KEY, JSON.stringify(newRedeemed));
-              setRedeemed(newRedeemed);
-
+              const response = await redeemReward(reward.id);
+              setPoints(response.data.points);
+              setRedeemed([...redeemed, reward.id]);
               Alert.alert('Success!', `You have redeemed ${reward.title}. Check your email for details.`);
             } catch (error) {
               console.error('Failed to redeem reward:', error);
-              Alert.alert('Error', 'Failed to redeem reward. Please try again.');
+              Alert.alert('Error', error.response?.data?.message || 'Failed to redeem reward. Please try again.');
+            } finally {
+              setLoading(false);
             }
           },
         },
@@ -125,48 +131,56 @@ const RewardsGiftScreen = () => {
         <Text style={styles.title}>Redeem Rewards</Text>
         <Text style={styles.subtitle}>Use your points to claim exclusive rewards</Text>
 
-        {rewards.map((reward) => {
-          const isRedeemed = redeemed.includes(reward.id);
-          const canRedeem = points >= reward.points && !isRedeemed;
+        {availableRewards.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="lock-closed-outline" size={64} color={colors.textMuted} />
+            <Text style={styles.emptyText}>Not enough points yet</Text>
+            <Text style={styles.emptySubtext}>You need at least 250 points to redeem rewards</Text>
+          </View>
+        ) : (
+          availableRewards.map((reward) => {
+            const isRedeemed = redeemed.includes(reward.id);
+            const canRedeem = points >= reward.points && !isRedeemed && !loading;
 
-          return (
-            <View key={reward.id} style={styles.rewardCard}>
-              <View style={styles.rewardHeader}>
-                <View style={[styles.rewardIcon, { backgroundColor: reward.color + '20' }]}>
-                  <Ionicons name={reward.icon} size={32} color={reward.color} />
+            return (
+              <View key={reward.id} style={styles.rewardCard}>
+                <View style={styles.rewardHeader}>
+                  <View style={[styles.rewardIcon, { backgroundColor: reward.color + '20' }]}>
+                    <Ionicons name={reward.icon} size={32} color={reward.color} />
+                  </View>
+                  <View style={styles.rewardInfo}>
+                    <Text style={styles.rewardTitle}>{reward.title}</Text>
+                    <Text style={styles.rewardDescription}>{reward.description}</Text>
+                  </View>
                 </View>
-                <View style={styles.rewardInfo}>
-                  <Text style={styles.rewardTitle}>{reward.title}</Text>
-                  <Text style={styles.rewardDescription}>{reward.description}</Text>
-                </View>
-              </View>
-              <View style={styles.rewardFooter}>
-                <View style={styles.pointsContainer}>
-                  <Ionicons name="star" size={16} color={colors.primary} />
-                  <Text style={styles.pointsText}>{reward.points} points</Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.redeemButton,
-                    !canRedeem && styles.redeemButtonDisabled,
-                    isRedeemed && styles.redeemButtonRedeemed,
-                  ]}
-                  onPress={() => handleRedeem(reward)}
-                  disabled={!canRedeem}
-                >
-                  <Text
+                <View style={styles.rewardFooter}>
+                  <View style={styles.pointsContainer}>
+                    <Ionicons name="star" size={16} color={colors.primary} />
+                    <Text style={styles.pointsText}>{reward.points} points</Text>
+                  </View>
+                  <TouchableOpacity
                     style={[
-                      styles.redeemButtonText,
-                      (!canRedeem || isRedeemed) && styles.redeemButtonTextDisabled,
+                      styles.redeemButton,
+                      !canRedeem && styles.redeemButtonDisabled,
+                      isRedeemed && styles.redeemButtonRedeemed,
                     ]}
+                    onPress={() => handleRedeem(reward)}
+                    disabled={!canRedeem || loading}
                   >
-                    {isRedeemed ? 'Redeemed' : points < reward.points ? 'Not Enough' : 'Redeem'}
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.redeemButtonText,
+                        (!canRedeem || isRedeemed) && styles.redeemButtonTextDisabled,
+                      ]}
+                    >
+                      {isRedeemed ? 'Redeemed' : points < reward.points ? 'Not Enough' : 'Redeem'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );

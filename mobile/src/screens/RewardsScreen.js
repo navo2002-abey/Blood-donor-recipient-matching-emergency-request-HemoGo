@@ -1,13 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
+import { getDonorProfile } from '../services/api';
 import { colors } from '../utils/colors';
-
-const POINTS_KEY = '@donor_points';
 
 const RewardsScreen = ({ navigation }) => {
   const [points, setPoints] = useState(0);
@@ -15,10 +13,8 @@ const RewardsScreen = ({ navigation }) => {
 
   const loadRewards = async () => {
     try {
-      // Load points from AsyncStorage
-      const storedPoints = await AsyncStorage.getItem(POINTS_KEY);
-      const totalPoints = storedPoints ? parseInt(storedPoints) : 0;
-      setPoints(totalPoints);
+      const response = await getDonorProfile();
+      setPoints(response.data.points || 0);
     } catch (error) {
       console.error('Failed to load rewards:', error);
     }
@@ -73,10 +69,6 @@ const RewardsScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How to Earn Points</Text>
           <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.infoText}>Book an appointment: +10 points</Text>
-            </View>
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
               <Text style={styles.infoText}>Complete a blood donation: +100 points</Text>

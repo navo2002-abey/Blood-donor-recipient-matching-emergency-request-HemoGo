@@ -1,14 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { createAppointment, getDonorProfile } from '../services/api';
 import { colors } from '../utils/colors';
-
-const HISTORY_KEY = '@appointment_history';
-const POINTS_KEY = '@donor_points';
 
 const bloodBanks = [
   'National Blood Bank',
@@ -18,24 +15,64 @@ const bloodBanks = [
 
 const timeSlots = ['9.30 A.M', '11.30 A.M', '2.30 P.M'];
 
-const BookAppointmentScreen = ({ navigation }) => {
-  const [selectedBank, setSelectedBank] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
+const BookAppointmentScreen = ({ route, navigation }) => {
+  const { editing, appointment, index } = route.params || {};
+  const [selectedBank, setSelectedBank] = useState(editing ? appointment.hospital : null);
+  const [selectedTime, setSelectedTime] = useState(editing ? appointment.time : null);
+  const [selectedDate, setSelectedDate] = useState(editing ? appointment.date : null);
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(editing ? new Date(appointment.date) : new Date());
+  const [loading, setLoading] = useState(false);
+  const [nextEligibleDate, setNextEligibleDate] = useState(null);
+  const [dateValidationMessage, setDateValidationMessage] = useState('');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await getDonorProfile();
+        console.log('Donor profile:', response.data);
+        console.log('Last appointment date:', response.data.lastAppointmentDate);
+        console.log('Next eligible date:', response.data.nextEligibleDate);
+        if (response.data.nextEligibleDate) {
+          setNextEligibleDate(response.data.nextEligibleDate);
+        }
+      } catch (error) {
+        console.error('Failed to fetch donor profile:', error);
+      }
+    };
+    
+    fetchProfile();
+  }, []);
 
   const handleBookAppointment = async () => {
     if (!selectedBank || !selectedTime || !selectedDate) {
-      alert('Please select blood bank, time, and date');
+      Alert.alert('Missing Information', 'Please select blood bank, time, and date');
       return;
+    }
+
+    if (loading) return;
+
+    // Check if selected date is after next eligible date
+    if (nextEligibleDate) {
+      const selected = new Date(selectedDate);
+      const nextEligible = new Date(nextEligibleDate);
+      selected.setHours(0, 0, 0, 0);
+      nextEligible.setHours(0, 0, 0, 0);
+      
+      if (selected < nextEligible) {
+        Alert.alert(
+          'Not Eligible',
+          `You can donate again from ${nextEligibleDate}. Please choose a later date.`
+        );
+        return;
+      }
     }
 
     // Validate that date and time are not in the past
     const now = new Date();
     const selectedDateTime = new Date(selectedDate);
-    
+
     // Parse time slot to hours
     const timeToHours = (timeStr) => {
       const [time, period] = timeStr.split(' ');
@@ -51,37 +88,37 @@ const BookAppointmentScreen = ({ navigation }) => {
     selectedDateTime.setHours(selectedHour, selectedMinute, 0, 0);
 
     if (selectedDateTime < now) {
-      alert('Cannot book appointment for a past date or time');
+      Alert.alert('Invalid Date', 'Cannot book appointment for a past date or time');
       return;
     }
 
-    // Save appointment to history and add 10 points
+    // Convert date to YYYY-MM-DD format using local date parts
+    const dateObj = new Date(selectedDate);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+
+    setLoading(true);
     try {
-      const appointment = {
-        hospital: selectedBank,
-        date: selectedDate,
-        time: selectedTime,
-        bookedAt: new Date().toISOString(),
-      };
-      
-      const existing = await AsyncStorage.getItem(HISTORY_KEY);
-      const history = existing ? JSON.parse(existing) : [];
-      history.unshift(appointment);
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      const result = await createAppointment(selectedBank, formattedDate, selectedTime);
 
-      // Add 10 points for booking appointment
-      const existingPoints = await AsyncStorage.getItem(POINTS_KEY);
-      const currentPoints = existingPoints ? parseInt(existingPoints) : 0;
-      await AsyncStorage.setItem(POINTS_KEY, JSON.stringify(currentPoints + 10));
+      if (editing) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('AppointmentBooked', {
+          hospital: selectedBank,
+          date: selectedDate,
+          time: selectedTime,
+          appointment: result.data,
+        });
+      }
     } catch (error) {
-      console.error('Failed to save appointment:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to book appointment. Please try again.';
+      Alert.alert('Booking Failed', errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    navigation.navigate('AppointmentBooked', {
-      hospital: selectedBank,
-      date: selectedDate,
-      time: selectedTime,
-    });
   };
 
   const handleCancel = () => {
@@ -96,6 +133,22 @@ const BookAppointmentScreen = ({ navigation }) => {
       setDate(selectedDate);
       const formattedDate = selectedDate.toISOString().split('T')[0];
       setSelectedDate(formattedDate);
+      
+      // Validate selected date against next eligible date
+      if (nextEligibleDate) {
+        const selected = new Date(formattedDate);
+        const nextEligible = new Date(nextEligibleDate);
+        selected.setHours(0, 0, 0, 0);
+        nextEligible.setHours(0, 0, 0, 0);
+        
+        if (selected < nextEligible) {
+          setDateValidationMessage(`You can donate again from ${nextEligibleDate}. Please choose a later date.`);
+        } else {
+          setDateValidationMessage('');
+        }
+      } else {
+        setDateValidationMessage('');
+      }
     }
   };
 
@@ -117,7 +170,7 @@ const BookAppointmentScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Book Donation Appointment</Text>
+        <Text style={styles.title}>{editing ? 'Edit Appointment' : 'Book Donation Appointment'}</Text>
 
         <View style={styles.section}>
           <Text style={styles.label}>Select Blood Bank/Hospital</Text>
@@ -189,6 +242,9 @@ const BookAppointmentScreen = ({ navigation }) => {
             </Text>
             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
+          {dateValidationMessage ? (
+            <Text style={styles.validationMessage}>{dateValidationMessage}</Text>
+          ) : null}
           {showDatePicker && (
             <DateTimePicker
               value={date}
@@ -202,10 +258,16 @@ const BookAppointmentScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.bookButton} onPress={handleBookAppointment}>
-            <Text style={styles.bookButtonText}>Book Appointment</Text>
+          <TouchableOpacity
+            style={[styles.bookButton, loading && styles.bookButtonDisabled]}
+            onPress={handleBookAppointment}
+            disabled={loading}
+          >
+            <Text style={styles.bookButtonText}>
+              {loading ? 'Booking...' : editing ? 'Update Appointment' : 'Book Appointment'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel} disabled={loading}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -342,6 +404,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
   },
+  validationMessage: {
+    fontSize: 12,
+    color: colors.primary,
+    marginTop: 8,
+    lineHeight: 16,
+  },
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -354,6 +422,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bookButtonDisabled: {
+    opacity: 0.6,
   },
   bookButtonText: {
     fontSize: 16,
