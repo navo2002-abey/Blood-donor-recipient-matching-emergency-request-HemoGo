@@ -7,7 +7,7 @@ import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { fetchAdminUsers } from '../services/adminService';
+import { fetchAdminBloodRequests, fetchAdminUsers } from '../services/adminService';
 import api from '../services/api';
 import { colors } from '../utils/colors';
 import { ADMIN_MENU, ROLE_LABELS } from '../utils/roles';
@@ -54,8 +54,10 @@ const AdminDashboardScreen = ({ navigation }) => {
     donors: 1,
     officers: 1,
     patients: 0,
+    requests: 0,
   });
   const [users, setUsers] = useState(USERS);
+  const [liveRequests, setLiveRequests] = useState(REQUESTS);
   const name = user?.name || 'Anusha Fernando';
   const initials = name
     .split(' ')
@@ -70,7 +72,7 @@ const AdminDashboardScreen = ({ navigation }) => {
       try {
         const { data } = await api.get('/admin/stats');
         if (data?.stats) {
-          setStats(data.stats);
+          setStats((prev) => ({ ...prev, ...data.stats }));
         }
       } catch (error) {
         // Keep fallback demo stats if the admin API is unavailable.
@@ -95,6 +97,25 @@ const AdminDashboardScreen = ({ navigation }) => {
           );
         })
         .catch(() => {});
+
+      fetchAdminBloodRequests({ limit: 3 })
+        .then((res) => {
+          if (!active || !res?.data?.length) return;
+          setLiveRequests(
+            res.data.map((item) => ({
+              id: item._id,
+              raw: item,
+              title: `${item.bloodGroup} · ${item.hospital}`,
+              sub: `${item.urgency || 'Medium'} priority · ${item.units || 1} units · ${item.status}`,
+              urgent: item.urgency === 'Critical' || item.urgency === 'High',
+            }))
+          );
+          if (res.metrics?.total !== undefined) {
+            setStats((prev) => ({ ...prev, requests: res.metrics.total }));
+          }
+        })
+        .catch(() => {});
+
       return () => {
         active = false;
       };
@@ -104,8 +125,8 @@ const AdminDashboardScreen = ({ navigation }) => {
   const cards = [
     { label: t('adminHome.totalUsers'), value: stats.total, icon: 'people-outline' },
     { label: t('adminHome.donors'), value: stats.donors, icon: 'water-outline' },
+    { label: 'Requests', value: stats.requests || liveRequests.length, icon: 'alert-circle-outline' },
     { label: t('adminHome.officers'), value: stats.officers, icon: 'medkit-outline' },
-    { label: t('adminHome.patients'), value: stats.patients, icon: 'heart-outline' },
   ];
 
   return (
@@ -179,15 +200,15 @@ const AdminDashboardScreen = ({ navigation }) => {
               <Text style={styles.panelLink}>{t('adminHome.viewAll')}</Text>
             </TouchableOpacity>
           </View>
-          {REQUESTS.map((item) => (
+          {liveRequests.map((item) => (
             <View key={item.id} style={styles.row}>
               <View style={[styles.redDot, !item.urgent && styles.mutedDot]} />
               <View style={styles.rowCopy}>
                 <Text style={styles.rowTitle}>{item.title}</Text>
                 <Text style={styles.rowSub}>{item.sub}</Text>
               </View>
-              <TouchableOpacity onPress={() => comingSoon('Assign Officer')}>
-                <Text style={styles.link}>{t('adminHome.assign')}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Requests')}>
+                <Text style={styles.link}>Manage</Text>
               </TouchableOpacity>
             </View>
           ))}

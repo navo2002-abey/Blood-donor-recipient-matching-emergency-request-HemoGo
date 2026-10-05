@@ -14,6 +14,7 @@ import ActiveRequestProgressScreen from '../screens/ActiveRequestProgressScreen'
 import ActiveRequestQRVerifyScreen from '../screens/ActiveRequestQRVerifyScreen';
 import ActiveRequestsScreen from '../screens/ActiveRequestsScreen';
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
+import AdminBloodRequestsScreen from '../screens/AdminBloodRequestsScreen';
 import AdminReportsScreen from '../screens/AdminReportsScreen';
 import AdminSettingsScreen from '../screens/AdminSettingsScreen';
 import AdminUsersScreen from '../screens/AdminUsersScreen';
@@ -126,7 +127,7 @@ const AdminTabs = () => {
   >
     <Tab.Screen name="Home" component={AdminDashboardScreen} options={{ title: t('tabs.admin') }} />
     <Tab.Screen name="Users" component={AdminUsersScreen} options={{ title: t('tabs.users') }} />
-    <Tab.Screen name="Requests" component={soon(t('menu.Emergency Requests'))} options={{ title: t('tabs.requests') }} />
+    <Tab.Screen name="Requests" component={AdminBloodRequestsScreen} options={{ title: t('tabs.requests') }} />
     <Tab.Screen name="Reports" component={AdminReportsScreen} options={{ title: t('tabs.reports') }} />
     <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t('tabs.profile') }} />
   </Tab.Navigator>
@@ -233,6 +234,7 @@ const AppNavigator = () => {
         <Stack.Screen name="HistoryDetail" component={HistoryDetailScreen} />
         <Stack.Screen name="RewardsGift" component={RewardsGiftScreen} />
         <Stack.Screen name="CheckEligibility" component={CheckEligibilityScreen} />
+        <Stack.Screen name="AdminBloodRequests" component={AdminBloodRequestsScreen} />
         <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
         <Stack.Screen name="DonorSettings" component={DonorSettingsScreen} />
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
