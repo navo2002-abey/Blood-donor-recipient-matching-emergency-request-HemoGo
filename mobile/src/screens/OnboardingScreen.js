@@ -1,22 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/Button';
 import DonationIllustration from '../components/DonationIllustration';
 import { BloodDrop } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
-
-const FEATURES = [
-  { icon: 'navigate-outline', text: 'Find nearby donors.' },
-  { icon: 'calendar-outline', text: 'Schedule donations.' },
-  { icon: 'notifications-outline', text: 'Stay notified.' },
-  { icon: 'heart-outline', text: 'Save lives.' },
-];
+import { useTheme } from '../context/ThemeContext';
 
 const OnboardingScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const features = [
+    { icon: 'navigate-outline', text: t('pages.findNearby') },
+    { icon: 'calendar-outline', text: t('pages.schedule') },
+    { icon: 'notifications-outline', text: t('pages.stayNotified') },
+    { icon: 'heart-outline', text: t('pages.saveLivesShort') },
+  ];
 
   const handleContinue = () => {
     if (user) {
@@ -38,15 +42,15 @@ const OnboardingScreen = ({ navigation }) => {
 
       <View style={styles.content}>
         <Text style={styles.title}>
-          Donate Blood,{'\n'}
-          <Text style={styles.titleAccent}>Save Lives</Text>
+          {t('pages.donate')}{'\n'}
+          <Text style={styles.titleAccent}>{t('pages.saveLives')}</Text>
         </Text>
-        <Text style={styles.subtitle}>Join our community to make a real difference</Text>
+        <Text style={styles.subtitle}>{t('pages.join')}</Text>
 
         <DonationIllustration />
 
         <View style={styles.features}>
-          {FEATURES.map((item) => (
+          {features.map((item) => (
             <View key={item.text} style={styles.featureRow}>
               <View style={styles.featureIcon}>
                 <Ionicons name={item.icon} size={15} color={colors.primary} />
@@ -63,13 +67,13 @@ const OnboardingScreen = ({ navigation }) => {
           <View style={styles.dot} />
           <View style={styles.dot} />
         </View>
-        <Button title="Continue" onPress={handleContinue} />
+        <Button title={t('pages.continue')} onPress={handleContinue} />
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -142,7 +146,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
   },
   dotActive: {
     width: 18,

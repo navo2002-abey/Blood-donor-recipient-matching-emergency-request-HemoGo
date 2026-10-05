@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,18 +14,22 @@ import Button from '../components/Button';
 import Input from '../components/Input';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
-import { colors } from '../utils/colors';
+import { useLanguage } from '../context/LanguageContext';
 import { getApiErrorMessage } from '../utils/validation';
+import { useTheme } from '../context/ThemeContext';
 
 const LoginScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { login } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Missing details', 'Please enter your email/phone and password.');
+      Alert.alert(t('login.missingTitle'), t('login.missingMessage'));
       return;
     }
 
@@ -38,14 +41,10 @@ const LoginScreen = ({ navigation }) => {
         routes: [{ name: 'Main' }],
       });
     } catch (error) {
-      Alert.alert('Login failed', getApiErrorMessage(error, 'Invalid login details.'));
+      Alert.alert(t('login.failedTitle'), getApiErrorMessage(error, t('login.failedMessage')));
     } finally {
       setLoading(false);
     }
-  };
-
-  const comingSoon = (feature) => {
-    Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
   };
 
   return (
@@ -59,57 +58,53 @@ const LoginScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity style={styles.topLink} onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.topLinkText}>Sign Up</Text>
-          </TouchableOpacity>
+          <View style={styles.topRow}>
+            <View style={styles.langSwitch}>
+              <TouchableOpacity onPress={() => setLanguage('en')}>
+                <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>English</Text>
+              </TouchableOpacity>
+              <Text style={styles.langDivider}>|</Text>
+              <TouchableOpacity onPress={() => setLanguage('si')}>
+                <Text style={[styles.langText, language === 'si' && styles.langTextActive]}>සිංහල</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.topLink} onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.topLinkText}>{t('login.signUp')}</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.center}>
             <Logo />
-            <Text style={styles.heading}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>Log in to continue</Text>
+            <Text style={styles.heading}>{t('login.welcome')}</Text>
+            <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
           </View>
 
           <Input
             value={email}
             onChangeText={setEmail}
-            placeholder="Email / Phone"
+            placeholder={t('login.emailPhone')}
             keyboardType="email-address"
             editable={!loading}
           />
           <Input
             value={password}
             onChangeText={setPassword}
-            placeholder="Password"
+            placeholder={t('login.password')}
             secureTextEntry
             editable={!loading}
           />
 
-          <TouchableOpacity style={styles.forgot} onPress={() => comingSoon('Forgot Password')}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
+          <TouchableOpacity style={styles.forgot} onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text style={styles.forgotText}>{t('login.forgot')}</Text>
           </TouchableOpacity>
 
-          <Button title="Login" onPress={handleLogin} loading={loading} disabled={loading} />
-
-          <View style={styles.orRow}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>OR</Text>
-            <View style={styles.line} />
-          </View>
-
-          <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.social} onPress={() => comingSoon('Google login')}>
-              <Ionicons name="logo-google" size={22} color="#4285F4" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.social} onPress={() => comingSoon('Apple login')}>
-              <Ionicons name="logo-apple" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <Button title={t('login.login')} onPress={handleLogin} loading={loading} disabled={loading} />
         </ScrollView>
 
         <View style={styles.bottom}>
-          <Text style={styles.bottomText}>Don't have an account? </Text>
+          <Text style={styles.bottomText}>{t('login.noAccount')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.bottomLink}>Sign Up</Text>
+            <Text style={styles.bottomLink}>{t('login.signUp')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -117,7 +112,7 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -130,8 +125,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     flexGrow: 1,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  langSwitch: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  langText: { fontSize: 13, lineHeight: 20, fontWeight: '700', color: colors.textMuted },
+  langTextActive: { color: colors.primary },
+  langDivider: { color: colors.textMuted },
   topLink: {
-    alignSelf: 'flex-end',
     paddingVertical: 8,
   },
   topLinkText: {
@@ -147,13 +150,17 @@ const styles = StyleSheet.create({
   heading: {
     marginTop: 18,
     fontSize: 26,
+    lineHeight: 36,
     fontWeight: '800',
     color: colors.text,
+    textAlign: 'center',
   },
   subtitle: {
     marginTop: 6,
     fontSize: 14,
+    lineHeight: 22,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   forgot: {
     alignSelf: 'flex-end',
@@ -164,39 +171,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 13,
     fontWeight: '500',
-  },
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 22,
-    gap: 10,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  orText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 28,
-    paddingVertical: 10,
-    paddingHorizontal: 28,
-    alignSelf: 'center',
-  },
-  social: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   bottom: {
     flexDirection: 'row',

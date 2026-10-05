@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,14 +11,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BloodDrop } from '../../components/Logo';
+import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
-import { useAlerts } from '../../context/AlertsContext';
+import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
-
-const HOSPITAL = 'Colombo General Hospital Blood Bank';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -36,15 +36,16 @@ const getStatusTheme = (status) => {
     case 'USED':
     case 'TRANSFERRED':
       return { bg: '#F3F4F6', text: '#6B7280', progress: '#9CA3AF' };
-    case 'AVAILABLE':
-    case 'Good':
     default:
       return { bg: '#ECFDF5', text: '#059669', progress: '#10B981' };
   }
 };
 
 const HomeScreen = ({ navigation }) => {
-  const { unreadCount } = useAlerts();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
+  const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stock, setStock] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -60,12 +61,12 @@ const HomeScreen = ({ navigation }) => {
       setStock(stockRes.data.stock || []);
       setReservations(resRes.data.reservations || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load inventory.');
+      Alert.alert(t('common.error'), t('pages.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [HOSPITAL, t]);
 
   useEffect(() => {
     load();
@@ -87,66 +88,72 @@ const HomeScreen = ({ navigation }) => {
   ).length;
 
   const actions = [
-    { label: 'Add Stock', icon: 'add-circle', color: colors.primary, screen: 'AddStock' },
-    { label: 'Expiry', icon: 'hourglass-outline', color: '#F59E0B', screen: 'ExpiryMonitoring' },
-    { label: 'Reservations', icon: 'bookmark-outline', color: '#3B82F6', screen: 'ReservedUnits' },
-    { label: 'Rescue', icon: 'swap-horizontal-outline', color: '#8B5CF6', screen: 'BloodRescue' },
+    {
+      label: 'Add Stock',
+      icon: 'add-circle',
+      color: colors.primary,
+      onPress: () => navigation.navigate('AddStock'),
+    },
+    {
+      label: 'Expiry',
+      icon: 'hourglass-outline',
+      color: '#F59E0B',
+      onPress: () => navigation.navigate('ExpiryMonitoring'),
+    },
+    {
+      label: 'Reservations',
+      icon: 'bookmark-outline',
+      color: '#3B82F6',
+      onPress: () =>
+        navigation.navigate('Inventory', { initialTab: 'reserved' }),
+    },
+    {
+      label: 'Rescue',
+      icon: 'swap-horizontal-outline',
+      color: '#8B5CF6',
+      onPress: () => navigation.navigate('BloodRescue'),
+    },
   ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} style={styles.headerBtn}>
-          <Ionicons name="grid-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.brand}>
-          <BloodDrop size={20} />
-          <Text style={styles.brandText}>HemoGo</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => navigation.navigate('Alerts')}
-        >
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
-        </TouchableOpacity>
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Stats */}
         <View style={styles.heroStats}>
           <View style={styles.heroMain}>
-            <Text style={styles.heroLabel}>Total Inventory</Text>
+            <Text style={styles.heroLabel}>{t('pages.totalInventory')}</Text>
             <Text style={styles.heroValue}>
-              {totalUnits} <Text style={styles.unitText}>Units</Text>
+              {totalUnits} <Text style={styles.unitText}>{t('pages.units')}</Text>
             </Text>
           </View>
           <View style={styles.heroDivider} />
           <View style={styles.heroSub}>
             <View>
               <Text style={styles.subStatValue}>{reservations.length}</Text>
-              <Text style={styles.subStatLabel}>Reserved</Text>
+              <Text style={styles.subStatLabel}>{t('pages.reserved')}</Text>
             </View>
             <View>
               <Text style={styles.subStatValue}>{criticalCount}</Text>
-              <Text style={[styles.subStatLabel, { color: colors.primary }]}>Critical</Text>
+              <Text style={[styles.subStatLabel, { color: colors.primary }]}>{t('pages.critical')}</Text>
             </View>
           </View>
         </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('pages.quickActions')}</Text>
         <View style={styles.quickGrid}>
           {actions.map((action, i) => (
             <TouchableOpacity
               key={i}
               style={styles.actionCard}
-              onPress={() => navigation.navigate(action.screen)}
+              onPress={action.onPress}
             >
               <View style={[styles.actionIconBg, { backgroundColor: action.color + '15' }]}>
                 <Ionicons name={action.icon} size={22} color={action.color} />
@@ -158,20 +165,20 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <Text style={styles.sectionTitle}>Inventory Details</Text>
+        <Text style={styles.sectionTitle}>{t('pages.inventoryDetails')}</Text>
 
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 30 }} />
         ) : stock.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="water-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No blood units registered yet.</Text>
+            <Text style={styles.emptyText}>{t('pages.noUnits')}</Text>
             <TouchableOpacity
               style={styles.emptyBtn}
               onPress={() => navigation.navigate('AddStock')}
             >
               <Ionicons name="add" size={16} color={colors.white} />
-              <Text style={styles.emptyBtnText}>Add First Stock</Text>
+              <Text style={styles.emptyBtnText}>{t('pages.addFirstStock')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -234,39 +241,9 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 11,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.white,
-  },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { color: colors.primary, fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
-
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
 
   heroStats: {
     backgroundColor: '#1E293B',
@@ -302,7 +279,7 @@ const styles = StyleSheet.create({
   actionCard: {
     width: '48%',
     marginBottom: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     padding: 16,
     borderRadius: 20,
     flexDirection: 'row',
@@ -324,7 +301,7 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
@@ -360,7 +337,7 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     padding: 32,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#F1F5F9',

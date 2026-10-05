@@ -95,6 +95,13 @@ exports.getReservations = async (req, res) => {
     const filter = {};
     if (req.query.hospital) filter.hospital = req.query.hospital;
     if (req.query.status) filter.status = req.query.status;
+
+    // ✅ By default, exclude auto-generated transfer reservations
+    // Pass ?includeTransfers=true to see them
+    if (req.query.includeTransfers !== 'true') {
+      filter.isTransfer = { $ne: true };
+    }
+
     const reservations = await Reservation.find(filter)
       .populate('stockId', 'bloodGroup units expiryDate status')
       .sort({ createdAt: -1 });

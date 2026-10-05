@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchBloodRequests } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const formatTimeAgo = (dateInput) => {
   if (!dateInput) return 'Just now';
@@ -30,6 +32,9 @@ const formatTimeAgo = (dateInput) => {
 };
 
 const MyRequestsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,7 +170,7 @@ const MyRequestsScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>My Requests</Text>
+        <Text style={styles.headerTitle}>{t('pages.myRequests')}</Text>
 
         <TouchableOpacity
           onPress={() => navigation.navigate('CreateBloodRequest')}
@@ -232,10 +237,10 @@ const MyRequestsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -244,7 +249,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 40,
@@ -263,20 +268,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     borderRadius: 14,
     marginHorizontal: 18,
     marginTop: 16,
     marginBottom: 14,
     paddingHorizontal: 14,
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: '#111827',
+    color: colors.text,
   },
   listContent: {
     paddingHorizontal: 18,
@@ -285,10 +290,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   card: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     padding: 14,
     marginBottom: 14,
   },
@@ -317,7 +322,7 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     overflow: 'hidden',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     marginRight: 12,
   },
   avatarImg: {
@@ -335,16 +340,16 @@ const styles = StyleSheet.create({
   },
   bloodGroupBold: {
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   hospitalText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   metaText: {
     fontSize: 11.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   viewBtn: {
     backgroundColor: colors.primary,
@@ -376,7 +381,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -384,12 +389,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 6,
   },
   emptySub: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,

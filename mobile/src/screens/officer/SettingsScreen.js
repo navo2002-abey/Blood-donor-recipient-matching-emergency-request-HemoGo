@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   ScrollView,
@@ -10,20 +10,32 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import LanguagePicker from '../../components/LanguagePicker';
+import ThemePicker from '../../components/ThemePicker';
+import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { colors } from '../../utils/colors';
+import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const SettingsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const confirm = useConfirm();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [pushAlerts, setPushAlerts] = useState(true);
   const [expiryReminders, setExpiryReminders] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
 
-  const name = user?.name || 'Dr. Nimal Perera';
+  const name = user?.name || 'Officer';
   const email = user?.email || 'officer@hemogo.com';
+  const hospital = user?.hospital || 'Blood Bank Officer';
   const initials = name
     .replace(/^Dr\.?\s*/i, '')
     .split(' ')
@@ -41,7 +53,6 @@ const SettingsScreen = ({ navigation }) => {
       destructive: true,
     });
     if (!ok) return;
-
     await logout();
     navigation.getParent()?.reset({
       index: 0,
@@ -49,7 +60,8 @@ const SettingsScreen = ({ navigation }) => {
     });
   };
 
-  const comingSoon = (label) => Alert.alert('Coming Soon', `${label} will be available soon.`);
+  const comingSoon = (label) =>
+    Alert.alert('Coming Soon', `${label} will be available soon.`);
 
   const Row = ({ icon, label, value, onPress, danger }) => (
     <TouchableOpacity
@@ -59,11 +71,7 @@ const SettingsScreen = ({ navigation }) => {
       activeOpacity={onPress ? 0.6 : 1}
     >
       <View style={[styles.rowIcon, danger && { backgroundColor: colors.primarySoft }]}>
-        <Ionicons
-          name={icon}
-          size={18}
-          color={danger ? colors.primary : colors.text}
-        />
+        <Ionicons name={icon} size={18} color={danger ? colors.primary : colors.text} />
       </View>
       <Text style={[styles.rowLabel, danger && { color: colors.primary }]}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
@@ -90,25 +98,21 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <AppHeader
+        navigation={navigation}
+        onMenuPress={() => setSidebarOpen(true)}
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials || 'NP'}</Text>
+            <Text style={styles.avatarText}>{initials || 'OF'}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 14 }}>
             <Text style={styles.name}>{name}</Text>
             <Text style={styles.email}>{email}</Text>
             <View style={styles.rolePill}>
-              <Text style={styles.roleText}>Blood Bank Officer</Text>
+              <Text style={styles.roleText} numberOfLines={1}>{hospital}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -119,124 +123,103 @@ const SettingsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Notifications */}
-        <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+        <Text style={styles.sectionTitle}>{t('pages.notifications')}</Text>
         <View style={styles.group}>
           <ToggleRow
             icon="notifications-outline"
-            label="Push Alerts"
+            label={t('pages.pushAlerts')}
             value={pushAlerts}
             onValueChange={setPushAlerts}
           />
           <View style={styles.divider} />
           <ToggleRow
             icon="hourglass-outline"
-            label="Expiry Reminders"
+            label={t('pages.expiryReminders')}
             value={expiryReminders}
             onValueChange={setExpiryReminders}
           />
           <View style={styles.divider} />
           <ToggleRow
             icon="alert-outline"
-            label="Low Stock Alerts"
+            label={t('pages.lowStockAlerts')}
             value={lowStockAlerts}
             onValueChange={setLowStockAlerts}
           />
         </View>
 
-        {/* Account */}
-        <Text style={styles.sectionTitle}>ACCOUNT</Text>
+        <Text style={styles.sectionTitle}>{t('pages.account')}</Text>
         <View style={styles.group}>
           <Row
             icon="person-outline"
-            label="Edit Profile"
+            label={t('pages.editProfile')}
             onPress={() => comingSoon('Edit Profile')}
           />
           <View style={styles.divider} />
           <Row
             icon="business-outline"
-            label="Hospital"
-            value="Colombo General"
+            label={t('pages.hospitalLabel')}
+            value={hospital}
             onPress={() => comingSoon('Change Hospital')}
           />
           <View style={styles.divider} />
           <Row
             icon="lock-closed-outline"
-            label="Change Password"
+            label={t('pages.changePassword')}
             onPress={() => comingSoon('Change Password')}
           />
         </View>
 
-        {/* Preferences */}
-        <Text style={styles.sectionTitle}>PREFERENCES</Text>
-        <View style={styles.group}>
-          <Row
-            icon="language-outline"
-            label="Language"
-            value="English"
-            onPress={() => comingSoon('Language')}
-          />
-          <View style={styles.divider} />
-          <Row
-            icon="moon-outline"
-            label="Dark Mode"
-            value="Off"
-            onPress={() => comingSoon('Dark Mode')}
-          />
-        </View>
+        <Text style={styles.sectionTitle}>{t('pages.preferences')}</Text>
+        <LanguagePicker />
+        <ThemePicker />
 
-        {/* About */}
-        <Text style={styles.sectionTitle}>ABOUT</Text>
+        <Text style={styles.sectionTitle}>{t('pages.about')}</Text>
         <View style={styles.group}>
           <Row
             icon="help-circle-outline"
-            label="Help & Support"
+            label={t('menu.Help & Support')}
             onPress={() => comingSoon('Help')}
           />
           <View style={styles.divider} />
           <Row
             icon="document-text-outline"
-            label="Privacy Policy"
+            label={t('pages.privacy')}
             onPress={() => comingSoon('Privacy')}
           />
           <View style={styles.divider} />
-          <Row
-            icon="information-circle-outline"
-            label="App Version"
-            value="v1.0.0"
-          />
+          <Row icon="information-circle-outline" label={t('pages.appVersion')} value="v1.0.0" />
         </View>
 
-        {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.primary} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>HemoGo · Blood Donor Matching</Text>
+        <Text style={styles.footer}>{t('pages.appFooter')}</Text>
       </ScrollView>
+
+      <Sidebar
+        visible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        navigation={navigation}
+        onComingSoon={comingSoon}
+        menu={OFFICER_MENU}
+        variant="staff"
+        activeKey="Settings"
+        hospital={hospital}
+      />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   scroll: { padding: 16, paddingBottom: 40 },
 
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     padding: 16,
     borderRadius: 20,
     marginBottom: 20,
@@ -261,6 +244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 8,
     marginTop: 6,
+    maxWidth: '90%',
   },
   roleText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
   editBtn: {
@@ -282,7 +266,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   group: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -305,7 +289,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
-  rowValue: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  rowValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    maxWidth: 140,
+    textAlign: 'right',
+  },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginLeft: 62 },
 
   logoutBtn: {

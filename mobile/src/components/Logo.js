@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 export const BloodDrop = ({ size = 42 }) => (
   <Svg width={size} height={size} viewBox="0 0 64 64">
@@ -13,6 +14,8 @@ export const BloodDrop = ({ size = 42 }) => (
 );
 
 const Logo = ({ size = 'md', showText = true, tagline, align = 'center', titleColor }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const dropSize = size === 'lg' ? 78 : size === 'sm' ? 22 : 42;
   const titleSize = size === 'lg' ? 34 : size === 'sm' ? 18 : 24;
 
@@ -29,7 +32,7 @@ const Logo = ({ size = 'md', showText = true, tagline, align = 'center', titleCo
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     alignItems: 'center',
   },

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,11 +27,14 @@ import {
   updateBloodRequest,
 } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
 
 const TrackingRequestScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
 
   const initialRequestData = route?.params?.requestData || {
@@ -667,10 +670,10 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -679,7 +682,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 38,
@@ -707,7 +710,7 @@ const styles = StyleSheet.create({
   trackingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -719,7 +722,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: '#FECACA',
     alignItems: 'center',
@@ -732,7 +735,7 @@ const styles = StyleSheet.create({
   trackingTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 2,
   },
   trackingId: {
@@ -741,7 +744,7 @@ const styles = StyleSheet.create({
   },
   trackingSub: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   mapContainer: {
     height: 210,
@@ -749,9 +752,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     position: 'relative',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
   },
   mapElement: {
     ...StyleSheet.absoluteFillObject,
@@ -792,7 +795,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -802,7 +805,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   detailsCard: {
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -818,7 +821,7 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   criticalPill: {
     backgroundColor: colors.primary,
@@ -834,12 +837,12 @@ const styles = StyleSheet.create({
   hospitalText: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.text,
     marginBottom: 3,
   },
   metaText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   requestControlRow: {
@@ -858,9 +861,9 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   editCtrlText: {
     fontSize: 13,
@@ -875,7 +878,7 @@ const styles = StyleSheet.create({
     gap: 6,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#FECACA',
   },
@@ -895,14 +898,14 @@ const styles = StyleSheet.create({
   },
   readOnlyText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   donorCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F0F0F2',
+    borderColor: colors.border,
     padding: 14,
     marginBottom: 14,
     shadowColor: '#000000',
@@ -921,7 +924,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     marginRight: 12,
   },
   avatarImg: {
@@ -934,12 +937,12 @@ const styles = StyleSheet.create({
   donorName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 2,
   },
   donorSub: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   availablePill: {
@@ -962,13 +965,13 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   callBtnText: {
-    color: '#111827',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -994,7 +997,7 @@ const styles = StyleSheet.create({
   },
   searchingText: {
     fontSize: 12.5,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   dashboardBtn: {
@@ -1016,7 +1019,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   deleteModalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginHorizontal: 20,
     marginBottom: 'auto',
     marginTop: 'auto',
@@ -1032,7 +1035,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1040,13 +1043,13 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   deleteModalDesc: {
     fontSize: 13.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 22,
@@ -1061,8 +1064,8 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1098,7 +1101,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   editModalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -1111,12 +1114,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   modalField: {
     marginBottom: 14,
@@ -1129,11 +1132,11 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     height: 44,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
   },
   modalBadgeRow: {
     flexDirection: 'row',
@@ -1144,9 +1147,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   modalBadgeActive: {
     backgroundColor: colors.primary,

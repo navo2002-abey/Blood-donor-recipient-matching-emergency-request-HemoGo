@@ -1,11 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const AppointmentBookedScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { hospital, date, time } = route.params || {};
   const [reminderSet, setReminderSet] = useState(false);
 
@@ -14,7 +19,7 @@ const AppointmentBookedScreen = ({ route, navigation }) => {
       return;
     }
     setReminderSet(true);
-    Alert.alert('Reminder Set', 'You will be reminded of your appointment.');
+    Alert.alert(t('pages.reminderTitle'), t('pages.reminderMsg'));
   };
 
   const handleBookAnother = () => {
@@ -39,32 +44,32 @@ const AppointmentBookedScreen = ({ route, navigation }) => {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark" size={48} color={colors.white} />
           </View>
-          <Text style={styles.successTitle}>Appointment Booked!</Text>
-          <Text style={styles.successSubtitle}>Your donation appointment has been successfully scheduled.</Text>
+          <Text style={styles.successTitle}>{t('pages.booked')}</Text>
+          <Text style={styles.successSubtitle}>{t('pages.bookedSub')}</Text>
         </View>
 
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Appointment Details</Text>
+          <Text style={styles.summaryTitle}>{t('pages.appointmentDetails')}</Text>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Hospital</Text>
+            <Text style={styles.detailLabel}>{t('pages.hospitalLabel')}</Text>
             <Text style={styles.detailValue}>{hospital}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Date</Text>
+            <Text style={styles.detailLabel}>{t('pages.date')}</Text>
             <Text style={styles.detailValue}>{date}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Time</Text>
+            <Text style={styles.detailLabel}>{t('pages.time')}</Text>
             <Text style={styles.detailValue}>{time}</Text>
           </View>
           
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
+            <Text style={styles.detailLabel}>{t('pages.statusLabel')}</Text>
             <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>Confirmed</Text>
+              <Text style={styles.statusText}>{t('pages.confirmed')}</Text>
             </View>
           </View>
         </View>
@@ -76,11 +81,11 @@ const AppointmentBookedScreen = ({ route, navigation }) => {
             disabled={reminderSet}
           >
             <Text style={styles.reminderButtonText}>
-              {reminderSet ? 'Reminder Set' : 'Set Reminder'}
+              {reminderSet ? t('pages.reminderTitle') : t('pages.setReminder')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bookAnotherButton} onPress={handleBookAnother}>
-            <Text style={styles.bookAnotherButtonText}>Book Another</Text>
+            <Text style={styles.bookAnotherButtonText}>{t('pages.bookAnother')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -88,10 +93,10 @@ const AppointmentBookedScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -146,7 +151,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   summaryCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -207,7 +212,7 @@ const styles = StyleSheet.create({
   },
   bookAnotherButton: {
     height: 50,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 2,
     borderColor: colors.primary,
     borderRadius: 25,

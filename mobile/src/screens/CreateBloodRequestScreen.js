@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,7 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -44,6 +46,15 @@ const DATE_TIME_PRESETS = [
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
 
 const CreateBloodRequestScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
+  const urgencyLabel = {
+    Low: t('pages.low'),
+    Medium: t('pages.medium'),
+    High: t('pages.high'),
+    Critical: t('pages.criticalLevel'),
+  };
   const [patientName, setPatientName] = useState('');
   const [hospital, setHospital] = useState('');
   const [customHospital, setCustomHospital] = useState('');
@@ -159,10 +170,8 @@ const CreateBloodRequestScreen = ({ navigation }) => {
         >
           {/* Main Title Header */}
           <View style={styles.titleSection}>
-            <Text style={styles.title}>Create Blood Request</Text>
-            <Text style={styles.subtitle}>
-              Fill in the details below to request blood for your patient.
-            </Text>
+            <Text style={styles.title}>{t('pages.requestTitle')}</Text>
+            <Text style={styles.subtitle}>{t('pages.requestSub')}</Text>
           </View>
 
           {/* Form Fields */}
@@ -170,11 +179,11 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 1. Patient Name */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Patient Name <Text style={styles.requiredStar}>*</Text>
+                {t('pages.patientName')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter patient name"
+                placeholder={t('pages.enterPatient')}
                 placeholderTextColor="#9CA3AF"
                 value={patientName}
                 onChangeText={setPatientName}
@@ -185,7 +194,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 2. Hospital */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Hospital <Text style={styles.requiredStar}>*</Text>
+                {t('pages.hospitalLabel')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.selectInput}
@@ -200,15 +209,15 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                   numberOfLines={1}
                 >
                   {hospital === 'Other'
-                    ? 'Other / Custom Hospital'
-                    : hospital || 'Select hospital'}
+                    ? t('pages.otherHospital')
+                    : hospital || t('pages.selectHospitalHint')}
                 </Text>
                 <Ionicons name="caret-down" size={14} color="#6B7280" />
               </TouchableOpacity>
               {hospital === 'Other' && (
                 <TextInput
                   style={[styles.input, { marginTop: 8 }]}
-                  placeholder="Enter custom hospital name"
+                  placeholder={t('pages.enterHospital')}
                   placeholderTextColor="#9CA3AF"
                   value={customHospital}
                   onChangeText={setCustomHospital}
@@ -219,7 +228,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 3. Required Blood Group */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Required Blood Group <Text style={styles.requiredStar}>*</Text>
+                {t('pages.requiredGroup')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.selectInput}
@@ -232,7 +241,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                     !bloodGroup && styles.placeholderText,
                   ]}
                 >
-                  {bloodGroup ? `${bloodGroup} Blood Group` : 'Select blood group'}
+                  {bloodGroup ? t('pages.groupNamed', { group: bloodGroup }) : t('pages.selectGroupHint')}
                 </Text>
                 <Ionicons name="caret-down" size={14} color="#6B7280" />
               </TouchableOpacity>
@@ -241,11 +250,11 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 4. Quantity (Units) */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Quantity (Units) <Text style={styles.requiredStar}>*</Text>
+                {t('pages.quantity')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g. 2"
+                placeholder={t('pages.unitsExample')}
                 placeholderTextColor="#9CA3AF"
                 value={quantity}
                 onChangeText={setQuantity}
@@ -256,7 +265,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 5. Required Date/Time */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Required Date/Time <Text style={styles.requiredStar}>*</Text>
+                {t('pages.requiredDate')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <TouchableOpacity
                 style={styles.selectInput}
@@ -271,15 +280,15 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                   numberOfLines={1}
                 >
                   {requiredDateTime === 'Custom'
-                    ? 'Custom Date/Time'
-                    : requiredDateTime || 'Select date & time'}
+                    ? t('pages.customDate')
+                    : requiredDateTime || t('pages.selectDateTime')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               {requiredDateTime === 'Custom' && (
                 <TextInput
                   style={[styles.input, { marginTop: 8 }]}
-                  placeholder="Enter date & time (e.g. 16 Sep 2026, 10:00 AM)"
+                  placeholder={t('pages.dateTime')}
                   placeholderTextColor="#9CA3AF"
                   value={customDateTime}
                   onChangeText={setCustomDateTime}
@@ -290,7 +299,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             {/* 6. Urgency */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>
-                Urgency <Text style={styles.requiredStar}>*</Text>
+                {t('pages.urgency')} <Text style={styles.requiredStar}>*</Text>
               </Text>
               <View style={styles.urgencyContainer}>
                 {URGENCIES.map((lvl) => {
@@ -312,7 +321,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                           isSelected && styles.urgencyTextActive,
                         ]}
                       >
-                        {lvl}
+                        {urgencyLabel[lvl] || lvl}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -322,10 +331,10 @@ const CreateBloodRequestScreen = ({ navigation }) => {
 
             {/* 7. Additional Information */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Additional Information</Text>
+              <Text style={styles.label}>{t('pages.additional')}</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                placeholder="Any special requirements or notes..."
+                placeholder={t('pages.additionalHint')}
                 placeholderTextColor="#9CA3AF"
                 value={additionalInfo}
                 onChangeText={setAdditionalInfo}
@@ -342,7 +351,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
             onPress={handleProceedToConfirm}
             activeOpacity={0.85}
           >
-            <Text style={styles.submitButtonText}>Create Request</Text>
+            <Text style={styles.submitButtonText}>{t('pages.createRequest')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -357,7 +366,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Hospital</Text>
+              <Text style={styles.modalTitle}>{t('pages.selectHospital')}</Text>
               <TouchableOpacity onPress={() => setHospitalModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -411,7 +420,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Blood Group</Text>
+              <Text style={styles.modalTitle}>{t('pages.selectBloodGroup')}</Text>
               <TouchableOpacity onPress={() => setBloodGroupModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -451,7 +460,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Required Time</Text>
+              <Text style={styles.modalTitle}>{t('pages.selectRequiredTime')}</Text>
               <TouchableOpacity onPress={() => setDateTimeModalVisible(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -498,10 +507,10 @@ const CreateBloodRequestScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -510,7 +519,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 38,
@@ -541,13 +550,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 6,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   form: {
@@ -559,7 +568,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#1F2937',
+    color: colors.text,
   },
   requiredStar: {
     color: colors.primary,
@@ -567,15 +576,15 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 48,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     borderRadius: 14,
     paddingHorizontal: 16,
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
   },
   selectInput: {
     height: 48,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     borderRadius: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -584,11 +593,11 @@ const styles = StyleSheet.create({
   },
   selectText: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.text,
     flex: 1,
   },
   placeholderText: {
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   urgencyContainer: {
     flexDirection: 'row',
@@ -598,7 +607,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 42,
     borderRadius: 12,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -647,7 +656,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -660,12 +669,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   modalItem: {
     flexDirection: 'row',
@@ -698,11 +707,11 @@ const styles = StyleSheet.create({
     width: '21%',
     aspectRatio: 1.3,
     borderRadius: 14,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   bloodBadgeSelected: {
     backgroundColor: colors.primary,
@@ -711,7 +720,7 @@ const styles = StyleSheet.create({
   bloodBadgeText: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1F2937',
+    color: colors.text,
   },
   bloodBadgeTextSelected: {
     color: '#FFFFFF',

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,9 +12,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import { createBloodRequest } from '../services/bloodRequestService';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const ConfirmBloodRequestScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const requestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
     hospital: 'National Hospital Colombo',
@@ -130,7 +135,7 @@ const ConfirmBloodRequestScreen = ({ route, navigation }) => {
           <View style={styles.checkCircle}>
             <Ionicons name="checkmark" size={22} color="#FFFFFF" />
           </View>
-          <Text style={styles.heroTitle}>Confirm Your Request</Text>
+          <Text style={styles.heroTitle}>{t('pages.confirmRequest')}</Text>
           <Text style={styles.heroSub}>
             Please review the details before submitting.
           </Text>
@@ -261,10 +266,10 @@ const ConfirmBloodRequestScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -273,7 +278,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.border,
   },
   iconBtn: {
     width: 38,
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   heroCard: {
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -320,19 +325,19 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 4,
   },
   heroSub: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   detailsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F0F0F2',
+    borderColor: colors.border,
     paddingHorizontal: 18,
     paddingVertical: 14,
     marginBottom: 16,
@@ -348,7 +353,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9CA3AF',
+    color: colors.textMuted,
     letterSpacing: 0.5,
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -356,7 +361,7 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   bloodGroupValue: {
     color: colors.primary,
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
   },
   urgencyBadge: {
     alignSelf: 'flex-start',
@@ -416,15 +421,15 @@ const styles = StyleSheet.create({
   },
   secondaryBtn: {
     height: 50,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryBtnText: {
-    color: '#111827',
+    color: colors.text,
     fontSize: 15,
     fontWeight: '700',
   },

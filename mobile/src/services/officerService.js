@@ -7,6 +7,10 @@ export const stockService = {
   update: (id, data) => api.put(`/stock/${id}`, data),
   remove: (id) => api.delete(`/stock/${id}`),
   expiring: (days = 7) => api.get('/stock/expiring', { params: { days } }),
+  banksWithBlood: (bloodGroup, excludeHospital) =>
+  api.get('/stock/banks-with-blood', {
+    params: { bloodGroup, excludeHospital },
+  }),
 };
 
 export const reservationService = {

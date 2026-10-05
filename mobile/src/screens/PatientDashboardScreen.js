@@ -1,21 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { PATIENT_MENU } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
 };
 
 const PatientDashboardScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const firstName = user?.name?.split(' ')[0] || 'there';
+  const firstName = user?.name?.split(' ')[0] || '';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -28,38 +33,41 @@ const PatientDashboardScreen = ({ navigation }) => {
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
         <View style={styles.rolePill}>
-          <Text style={styles.roleText}>Patient</Text>
+          <Text style={styles.roleText}>{t('pages.patient')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.hello}>Hello, {firstName}</Text>
-        <Text style={styles.sub}>Create a request or find a matching donor</Text>
+        <Text style={styles.hello}>{t('pages.hello', { name: firstName })}</Text>
+        <Text style={styles.sub}>{t('pages.patientSub')}</Text>
 
         <View style={styles.emergency}>
-          <Text style={styles.emergencyTitle}>Need Blood?</Text>
-          <Text style={styles.emergencyText}>Send a request to nearby donors and blood banks.</Text>
+          <Text style={styles.emergencyTitle}>{t('pages.needBlood')}</Text>
+          <Text style={styles.emergencyText}>{t('pages.needBloodCopy')}</Text>
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => navigation.navigate('CreateBloodRequest')}
           >
-            <Text style={styles.primaryText}>Create Blood Request</Text>
+            <Text style={styles.primaryText}>{t('pages.createBloodRequest')}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.grid}>
-          <TouchableOpacity style={styles.card} onPress={() => comingSoon('Find Donors')}>
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('Donors', { menu: PATIENT_MENU, showAvailability: false })}
+          >
             <Ionicons name="search-outline" size={20} color={colors.text} />
-            <Text style={styles.cardTitle}>Find Donors</Text>
-            <Text style={styles.cardSub}>Search compatible nearby donors</Text>
+            <Text style={styles.cardTitle}>{t('pages.findDonors')}</Text>
+            <Text style={styles.cardSub}>{t('pages.findDonorsSub')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate('MyRequests')}
           >
             <Ionicons name="document-text-outline" size={20} color={colors.text} />
-            <Text style={styles.cardTitle}>My Requests</Text>
-            <Text style={styles.cardSub}>Track request status and responses</Text>
+            <Text style={styles.cardTitle}>{t('pages.myRequests')}</Text>
+            <Text style={styles.cardSub}>{t('pages.myRequestsSub')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -75,7 +83,7 @@ const PatientDashboardScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
