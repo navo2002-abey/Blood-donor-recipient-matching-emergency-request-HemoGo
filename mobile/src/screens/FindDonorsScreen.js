@@ -14,12 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
 import { BloodDrop } from '../components/Logo';
-import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { BLOOD_GROUPS, getNearbyDonors } from '../utils/nearbyDonors';
-import { DONOR_MENU } from '../utils/roles';
 import { useTheme } from '../context/ThemeContext';
 
 const AVAILABILITY = ['Available Now', 'All', 'Unavailable'];
@@ -43,11 +41,8 @@ const FindDonorsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
-  const menu = route.params?.menu || DONOR_MENU;
-  const showAvailability = route.params?.showAvailability !== false;
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [bloodGroup, setBloodGroup] = useState(route.params?.bloodGroup || 'A+');
   const [availability, setAvailability] = useState(route.params?.availability || 'Available Now');
@@ -86,6 +81,15 @@ const FindDonorsScreen = ({ navigation, route }) => {
       .sort((a, b) => a.distanceKm - b.distanceKm);
   }, [availability, bloodGroup, donors, query]);
 
+  const goDashboard = () => {
+    const names = navigation.getState?.()?.routeNames || [];
+    if (names.includes('Home')) {
+      navigation.navigate('Home');
+      return;
+    }
+    navigation.navigate('Main', { screen: 'Home' });
+  };
+
   const filterOptions = openFilter === 'blood' ? BLOOD_GROUPS : AVAILABILITY;
   const selectFilter = (value) => {
     if (openFilter === 'blood') {
@@ -99,8 +103,8 @@ const FindDonorsScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} hitSlop={10} style={styles.headerBtn}>
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
+        <TouchableOpacity onPress={goDashboard} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
@@ -237,15 +241,6 @@ const FindDonorsScreen = ({ navigation, route }) => {
         </Pressable>
       </Modal>
 
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={menu}
-        showAvailability={showAvailability}
-        activeKey="Find Donors"
-      />
     </SafeAreaView>
   );
 };

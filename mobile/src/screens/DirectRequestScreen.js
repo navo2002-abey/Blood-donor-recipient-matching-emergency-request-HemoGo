@@ -6,6 +6,8 @@ import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import api from '../services/api';
+import { getApiErrorMessage } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
 
 const MAX_MESSAGE = 200;
@@ -45,15 +47,40 @@ const DirectRequestScreen = ({ navigation, route }) => {
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
   const [message, setMessage] = useState(donor ? defaultMessage(donor) : '');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
-  const send = () => {
+  const send = async () => {
+    if (!donor || sending) {
+      return;
+    }
     if (!message.trim()) {
       Alert.alert('Missing message', 'Write a short message for the donor.');
       return;
     }
-    setReceipt(formatReceipt(new Date()));
-    setSent(true);
+
+    try {
+      setSending(true);
+      const { data } = await api.post('/request-summaries', {
+        donorId: donor.id,
+        donorName: donor.name,
+        donorPhone: donor.phone,
+        donorHospital: donor.hospital,
+        donorArea: donor.area,
+        bloodType: donor.bloodGroup,
+        unitsRequired: 1,
+        location: donor.address,
+        additionalDetails: message.trim(),
+      });
+      const saved = data.data;
+      const when = new Date(saved.requestedAt);
+      setReceipt({ ...formatReceipt(when), id: saved.requestId });
+      setSent(true);
+    } catch (error) {
+      Alert.alert('Request failed', getApiErrorMessage(error, 'Unable to save the request.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   const goHome = () => {
@@ -255,8 +282,8 @@ const DirectRequestScreen = ({ navigation, route }) => {
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.sendBtn} onPress={send}>
-              <Text style={styles.sendText}>Send Request</Text>
+            <TouchableOpacity style={styles.sendBtn} onPress={send} disabled={sending}>
+              <Text style={styles.sendText}>{sending ? 'Sending...' : 'Send Request'}</Text>
             </TouchableOpacity>
           </View>
         </>

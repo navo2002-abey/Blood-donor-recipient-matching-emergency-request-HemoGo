@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { useLanguage } from '../context/LanguageContext';
+import api from '../services/api';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { getApiErrorMessage } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -44,12 +46,39 @@ const RequestBloodScreen = ({ navigation, route }) => {
   const [units, setUnits] = useState(1);
   const [details, setDetails] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
-  const sendRequest = () => {
-    if (!donor) return;
-    setReceipt(formatReceipt(new Date()));
-    setSent(true);
+  const sendRequest = async () => {
+    if (!donor || sending) return;
+    const locationText = place.trim() || donor.address;
+    if (!locationText) {
+      Alert.alert('Missing location', 'Enter the location for this request.');
+      return;
+    }
+
+    try {
+      setSending(true);
+      const { data } = await api.post('/request-summaries', {
+        donorId: donor.id,
+        donorName: donor.name,
+        donorPhone: donor.phone,
+        donorHospital: donor.hospital,
+        donorArea: donor.area,
+        bloodType: bloodGroup,
+        unitsRequired: units,
+        location: locationText,
+        additionalDetails: details.trim(),
+      });
+      const saved = data.data;
+      const when = new Date(saved.requestedAt);
+      setReceipt({ ...formatReceipt(when), id: saved.requestId });
+      setSent(true);
+    } catch (error) {
+      Alert.alert('Request failed', getApiErrorMessage(error, 'Unable to save the request.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   const goHome = () => {
@@ -275,8 +304,8 @@ const RequestBloodScreen = ({ navigation, route }) => {
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.sendBtn} onPress={sendRequest} activeOpacity={0.85}>
-              <Text style={styles.sendText}>Send Request</Text>
+            <TouchableOpacity style={styles.sendBtn} onPress={sendRequest} activeOpacity={0.85} disabled={sending}>
+              <Text style={styles.sendText}>{sending ? 'Sending...' : 'Send Request'}</Text>
             </TouchableOpacity>
           </View>
         </>
