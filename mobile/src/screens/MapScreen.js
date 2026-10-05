@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import NativeLiveMap from '../components/NativeLiveMap';
+import LiveDonorsMap from '../components/LiveDonorsMap';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
@@ -122,7 +122,7 @@ const MapScreen = ({ navigation, route }) => {
       </View>
 
       <View style={styles.mapWrap}>
-        <NativeLiveMap
+        <LiveDonorsMap
           location={location}
           donors={filtered}
           interactive
