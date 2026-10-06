@@ -225,7 +225,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity
-          onPress={() => Alert.alert('Notifications', 'No new alerts.')}
+          onPress={() => navigation.navigate('Notifications')}
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >

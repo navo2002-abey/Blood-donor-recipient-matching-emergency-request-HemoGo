@@ -90,7 +90,7 @@ const DashboardScreen = ({ navigation }) => {
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <TouchableOpacity onPress={() => comingSoon('Notifications')} hitSlop={10} style={styles.headerBtn}>
+        <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
           <View style={styles.bellBadge} />
         </TouchableOpacity>

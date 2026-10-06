@@ -89,6 +89,7 @@ const ActiveRequestProgressScreen = ({ route, navigation }) => {
       verifierId: requestData.verifierId || '#NHC01078',
       acceptedTime,
       isOwner: route?.params?.isOwner || false,
+      isAcceptedDonor: true,
     });
   };
 
