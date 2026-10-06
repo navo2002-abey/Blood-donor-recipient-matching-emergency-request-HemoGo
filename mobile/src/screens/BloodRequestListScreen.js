@@ -22,6 +22,43 @@ import {
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
 
+export const isRequestActiveAndNotExpired = (item, myVerifiedIds = []) => {
+  if (!item) return false;
+
+  const cleanId = String(item._id || '').replace(/^#/, '');
+  if (Array.isArray(myVerifiedIds) && myVerifiedIds.includes(cleanId)) {
+    return false;
+  }
+
+  // 1. Status Check: Must not be closed, fulfilled, verified, completed, cancelled, or expired
+  const closedStatuses = ['CLOSED', 'FULFILLED', 'VERIFIED', 'COMPLETED', 'CANCELLED', 'EXPIRED'];
+  const statusUpper = String(item.status || '').toUpperCase().trim();
+  if (closedStatuses.includes(statusUpper)) {
+    return false;
+  }
+
+  // 2. Units Check: If all units are already fulfilled, it is completed & closed
+  const totalUnits = Number(item.units) || 1;
+  const fulfilledUnits = typeof item.fulfilledUnits === 'number' ? item.fulfilledUnits : 0;
+  if (fulfilledUnits >= totalUnits && totalUnits > 0) {
+    return false;
+  }
+
+  // 3. Expiration Check (12 hour threshold):
+  // Requests older than 12 hours (43,200,000 ms) from creation are expired and not shown
+  if (item.createdAt) {
+    const createdTime = new Date(item.createdAt).getTime();
+    if (!isNaN(createdTime)) {
+      const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+      if (Date.now() - createdTime > TWELVE_HOURS_MS) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
 const SAMPLE_REQUESTS = [
   {
     _id: 'REQ-2026-001',
@@ -29,7 +66,8 @@ const SAMPLE_REQUESTS = [
     hospital: 'National Hospital Colombo',
     bloodGroup: 'A+',
     units: 2,
-    requiredDateTime: '16 Sep 2026, 10:00 AM',
+    fulfilledUnits: 0,
+    requiredDateTime: 'Immediate / ASAP',
     urgency: 'Critical',
     status: 'OPEN',
     additionalInfo: 'Immediate assistance required for emergency surgery.',
@@ -41,35 +79,12 @@ const SAMPLE_REQUESTS = [
     hospital: 'Lanka Hospitals Colombo',
     bloodGroup: 'O+',
     units: 1,
-    requiredDateTime: 'Today, 4:00 PM',
+    fulfilledUnits: 0,
+    requiredDateTime: 'Within 1 Hour',
     urgency: 'High',
-    status: 'IN_PROGRESS',
-    additionalInfo: 'Platelets required for ongoing treatment.',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    _id: 'REQ-2026-003',
-    patientName: 'Sunil Jayawardena',
-    hospital: 'Teaching Hospital Kandy',
-    bloodGroup: 'B-',
-    units: 3,
-    requiredDateTime: 'Tomorrow, 9:00 AM',
-    urgency: 'Medium',
     status: 'OPEN',
-    additionalInfo: 'Scheduled heart surgery requirement.',
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-  },
-  {
-    _id: 'REQ-2026-004',
-    patientName: 'Dhammika Fernando',
-    hospital: 'Asiri Central Hospital',
-    bloodGroup: 'AB+',
-    units: 1,
-    requiredDateTime: '18 Sep 2026, 11:30 AM',
-    urgency: 'Low',
-    status: 'OPEN',
-    additionalInfo: 'Routine transfusion.',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    additionalInfo: 'Platelets required for ongoing emergency treatment.',
+    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -101,6 +116,7 @@ const BloodRequestListScreen = ({ navigation }) => {
       const params = {
         page: pageNum,
         limit: PAGE_LIMIT,
+        activeOnly: 'true',
       };
       if (activeFilter !== 'All') {
         params.urgency = activeFilter;
@@ -167,6 +183,11 @@ const BloodRequestListScreen = ({ navigation }) => {
   };
 
   const filteredRequests = requests.filter((item) => {
+    // Exclude closed, verified, fulfilled, cancelled, or expired (>1 hr) requests
+    if (!isRequestActiveAndNotExpired(item, myVerifiedIds)) {
+      return false;
+    }
+
     const matchesFilter =
       activeFilter === 'All' || item.urgency?.toLowerCase() === activeFilter.toLowerCase();
     const query = searchQuery.toLowerCase();

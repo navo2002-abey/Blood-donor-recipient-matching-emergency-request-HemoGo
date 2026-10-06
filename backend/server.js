@@ -17,6 +17,7 @@ const bloodBankRoutes = require('./routes/bloodBankRoutes');
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
 const requestSummaryRoutes = require('./routes/requestSummaryRoutes');
 const matchRoutes = require('./routes/matchRoutes');
+const emergencyAlertRoutes = require('./routes/emergencyAlertRoutes');
 
 const seedUsers = require('./utils/seedUsers');
 const seedBloodBanks = require('./utils/seedBloodBanks');
@@ -46,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/blood-requests', bloodRequestRoutes);
 app.use('/api/request-summaries', requestSummaryRoutes);
+app.use('/api/emergency-alerts', emergencyAlertRoutes);
 app.use('/api', matchRoutes);
 
 // Blood Bank Officer + Advanced Features (Rashan's part)

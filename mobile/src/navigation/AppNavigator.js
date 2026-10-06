@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { navigationRef } from './navigationRef';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
@@ -59,6 +60,7 @@ import SmartMatchScreen from '../screens/SmartMatchScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
 import NotificationHubScreen from '../screens/NotificationHubScreen';
+import RequesterDonationConfirmedScreen from '../screens/RequesterDonationConfirmedScreen';
 
 // Rashan's navigator
 import OfficerNavigator from './OfficerNavigator';
@@ -191,7 +193,7 @@ const AppNavigator = () => {
   };
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer ref={navigationRef} theme={navigationTheme}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
@@ -227,6 +229,7 @@ const AppNavigator = () => {
         <Stack.Screen name="ActiveRequestDetail" component={ActiveRequestDetailScreen} />
         <Stack.Screen name="ActiveRequestQRVerify" component={ActiveRequestQRVerifyScreen} />
         <Stack.Screen name="ActiveRequestCompleted" component={ActiveRequestCompletedScreen} />
+        <Stack.Screen name="RequesterDonationConfirmed" component={RequesterDonationConfirmedScreen} />
         <Stack.Screen name="BloodRequestList" component={BloodRequestListScreen} />
         <Stack.Screen name="MyRequests" component={MyRequestsScreen} />
         <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} />

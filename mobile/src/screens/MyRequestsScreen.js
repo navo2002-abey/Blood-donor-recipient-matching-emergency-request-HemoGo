@@ -3,7 +3,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -15,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchBloodRequests } from '../services/bloodRequestService';
-import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
 
 const formatTimeAgo = (dateInput) => {
@@ -31,14 +29,22 @@ const formatTimeAgo = (dateInput) => {
   return `${Math.floor(diffInSec / 604800)}w ago`;
 };
 
-const PAGE_LIMIT = 8;
+const PAGE_LIMIT = 10;
+const TABS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'ACTIVE', label: 'Active' },
+  { key: 'VERIFIED', label: 'Verified' },
+  { key: 'CRITICAL', label: 'Critical' },
+];
 
 const MyRequestsScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
   const { user } = useAuth();
+
   const [requests, setRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,10 +77,18 @@ const MyRequestsScreen = ({ navigation }) => {
           if (reqUserId && currentUserId && String(reqUserId) === String(currentUserId)) {
             return true;
           }
-          if (item.requestedBy?.email && user.email && item.requestedBy.email.toLowerCase() === user.email.toLowerCase()) {
+          if (
+            item.requestedBy?.email &&
+            user.email &&
+            item.requestedBy.email.toLowerCase() === user.email.toLowerCase()
+          ) {
             return true;
           }
-          if (item.patientName && user.name && item.patientName.toLowerCase() === user.name.toLowerCase()) {
+          if (
+            item.patientName &&
+            user.name &&
+            item.patientName.toLowerCase() === user.name.toLowerCase()
+          ) {
             return true;
           }
           return !item.requestedBy;
@@ -82,21 +96,20 @@ const MyRequestsScreen = ({ navigation }) => {
 
         const mapped = myOnly.map((item, idx) => ({
           _id: item._id,
-          patientName: item.patientName,
-          bloodGroup: item.bloodGroup,
-          hospital: item.hospital,
+          patientName: item.patientName || 'Emergency Patient',
+          bloodGroup: item.bloodGroup || 'O+',
+          hospital: item.hospital || 'Hospital',
           distance: `${(1.8 + (((pageNum - 1) * PAGE_LIMIT + idx) * 1.3) % 5).toFixed(1)} km away`,
-          status: item.status === 'OPEN' ? 'Awaiting Verification' : item.status || 'Active',
-          urgency: item.urgency || 'Low',
+          rawStatus: item.status || 'OPEN',
+          status: item.status || 'OPEN',
+          urgency: item.urgency || 'Medium',
           timeAgo: formatTimeAgo(item.createdAt),
-          units: item.units,
-          fulfilledUnits: item.fulfilledUnits || 0,
-          requiredDateTime: item.requiredDateTime,
+          units: Number(item.units) || 1,
+          fulfilledUnits: Number(item.fulfilledUnits) || 0,
+          requiredDateTime: item.requiredDateTime || 'ASAP',
           createdAt: item.createdAt,
-          avatar:
-            idx % 2 === 0
-              ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
-              : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+          verifierId: item.verifierId,
+          additionalInfo: item.additionalInfo || '',
         }));
 
         if (shouldAppend) {
@@ -141,61 +154,224 @@ const MyRequestsScreen = ({ navigation }) => {
     }
   };
 
-  const filteredRequests = requests.filter((item) => {
-    const q = searchQuery.toLowerCase();
-    if (!q) return true;
+  // Compute status counts for quick tab indicators
+  const counts = useMemo(() => {
+    const total = requests.length;
+    const active = requests.filter(
+      (r) =>
+        r.rawStatus === 'OPEN' ||
+        r.rawStatus === 'IN_PROGRESS' ||
+        r.rawStatus === 'ACCEPTED' ||
+        r.rawStatus === 'ARRIVED'
+    ).length;
+    const verified = requests.filter(
+      (r) =>
+        r.rawStatus === 'VERIFIED' ||
+        r.rawStatus === 'FULFILLED' ||
+        r.rawStatus === 'COMPLETED' ||
+        r.fulfilledUnits >= r.units
+    ).length;
+    const critical = requests.filter(
+      (r) => String(r.urgency).toLowerCase() === 'critical'
+    ).length;
+
+    return { total, active, verified, critical };
+  }, [requests]);
+
+  // Tab & Search Filtering
+  const filteredRequests = useMemo(() => {
+    return requests.filter((item) => {
+      // 1. Tab filter
+      if (activeTab === 'ACTIVE') {
+        const isCompleted =
+          item.rawStatus === 'VERIFIED' ||
+          item.rawStatus === 'FULFILLED' ||
+          item.rawStatus === 'COMPLETED' ||
+          item.fulfilledUnits >= item.units;
+        if (isCompleted) return false;
+      } else if (activeTab === 'VERIFIED') {
+        const isVerified =
+          item.rawStatus === 'VERIFIED' ||
+          item.rawStatus === 'FULFILLED' ||
+          item.rawStatus === 'COMPLETED' ||
+          item.fulfilledUnits >= item.units;
+        if (!isVerified) return false;
+      } else if (activeTab === 'CRITICAL') {
+        if (String(item.urgency).toLowerCase() !== 'critical') return false;
+      }
+
+      // 2. Search query filter
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+
+      const cleanId = String(item._id || '').toLowerCase();
+      return (
+        item.patientName?.toLowerCase().includes(q) ||
+        item.hospital?.toLowerCase().includes(q) ||
+        item.bloodGroup?.toLowerCase().includes(q) ||
+        item.rawStatus?.toLowerCase().includes(q) ||
+        item.urgency?.toLowerCase().includes(q) ||
+        cleanId.includes(q)
+      );
+    });
+  }, [requests, activeTab, searchQuery]);
+
+  const getUrgencyConfig = (urgency) => {
+    switch (String(urgency).toLowerCase()) {
+      case 'critical':
+        return { bg: '#FEE2E2', text: '#DC2626', border: '#FECACA' };
+      case 'high':
+        return { bg: '#FFEDD5', text: '#EA580C', border: '#FED7AA' };
+      case 'medium':
+        return { bg: '#FEF3C7', text: '#D97706', border: '#FDE68A' };
+      case 'low':
+      default:
+        return { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB' };
+    }
+  };
+
+  const getStatusBadge = (item) => {
+    const isFulfilled =
+      item.rawStatus === 'VERIFIED' ||
+      item.rawStatus === 'FULFILLED' ||
+      item.rawStatus === 'COMPLETED' ||
+      (item.fulfilledUnits >= item.units && item.units > 0);
+
+    if (isFulfilled) {
+      return {
+        label: 'Verified & Completed',
+        icon: 'checkmark-circle',
+        bg: '#DCFCE7',
+        color: '#15803D',
+        border: '#BBF7D0',
+      };
+    }
+
+    if (item.rawStatus === 'IN_PROGRESS' || item.rawStatus === 'ACCEPTED') {
+      return {
+        label: 'Donor Accepted / En Route',
+        icon: 'walk-outline',
+        bg: '#FEF3C7',
+        color: '#B45309',
+        border: '#FDE68A',
+      };
+    }
+
+    return {
+      label: 'Searching Compatible Donors',
+      icon: 'search-outline',
+      bg: '#DBEAFE',
+      color: '#1D4ED8',
+      border: '#BFDBFE',
+    };
+  };
+
+  const renderItem = ({ item }) => {
+    const urgencyStyle = getUrgencyConfig(item.urgency);
+    const statusConfig = getStatusBadge(item);
+    const isCompleted =
+      item.rawStatus === 'VERIFIED' ||
+      item.rawStatus === 'FULFILLED' ||
+      item.rawStatus === 'COMPLETED' ||
+      item.fulfilledUnits >= item.units;
+
     return (
-      item.patientName?.toLowerCase().includes(q) ||
-      item.hospital?.toLowerCase().includes(q) ||
-      item.bloodGroup?.toLowerCase().includes(q) ||
-      item.status?.toLowerCase().includes(q) ||
-      item.urgency?.toLowerCase().includes(q)
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() =>
+          navigation.navigate('TrackingRequest', {
+            requestData: item,
+            requestId: item._id,
+            isOwner: true,
+            fromMyRequests: true,
+          })
+        }
+        activeOpacity={0.85}
+      >
+        {/* Card Header: Patient Name, Urgency Pill, Time */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.patientInfoCol}>
+            <Text style={styles.patientName} numberOfLines={1}>
+              {item.patientName}
+            </Text>
+            <Text style={styles.hospitalText} numberOfLines={1}>
+              <Ionicons name="location-outline" size={12} color="#6B7280" /> {item.hospital}
+            </Text>
+          </View>
+
+          <View style={styles.headerRightCol}>
+            <View
+              style={[
+                styles.urgencyBadge,
+                { backgroundColor: urgencyStyle.bg, borderColor: urgencyStyle.border },
+              ]}
+            >
+              <Text style={[styles.urgencyText, { color: urgencyStyle.text }]}>
+                {item.urgency}
+              </Text>
+            </View>
+            <Text style={styles.timeAgoText}>{item.timeAgo}</Text>
+          </View>
+        </View>
+
+        <View style={styles.cardDivider} />
+
+        {/* Card Body: Blood Group Badge + Units Details */}
+        <View style={styles.cardBodyRow}>
+          {/* Blood Group Circle */}
+          <View style={styles.bloodBadgeWrap}>
+            <Text style={styles.bloodBadgeLabel}>{item.bloodGroup}</Text>
+          </View>
+
+          {/* Core Info */}
+          <View style={styles.infoCol}>
+            <View style={styles.infoLine}>
+              <Ionicons
+                name={isCompleted ? 'checkmark-circle' : 'water'}
+                size={14}
+                color={isCompleted ? '#16A34A' : colors.primary}
+              />
+              <Text style={styles.unitsText}>
+                {isCompleted
+                  ? `${item.units} Unit${item.units > 1 ? 's' : ''} Fulfilled`
+                  : `${item.units} Unit${item.units > 1 ? 's' : ''} Required`}
+              </Text>
+            </View>
+
+            <View style={styles.infoLine}>
+              <Ionicons name="time-outline" size={14} color="#6B7280" />
+              <Text style={styles.requiredTimeText}>{item.requiredDateTime}</Text>
+            </View>
+          </View>
+
+          {/* Action Arrow */}
+          <View style={styles.viewActionCol}>
+            <View style={styles.actionPill}>
+              <Text style={styles.actionPillText}>Track</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+            </View>
+          </View>
+        </View>
+
+        {/* Card Footer: Live Status Pill & Request ID */}
+        <View style={styles.cardFooterRow}>
+          <View
+            style={[
+              styles.statusPill,
+              { backgroundColor: statusConfig.bg, borderColor: statusConfig.border },
+            ]}
+          >
+            <Ionicons name={statusConfig.icon} size={12} color={statusConfig.color} />
+            <Text style={[styles.statusPillText, { color: statusConfig.color }]}>
+              {statusConfig.label}
+            </Text>
+          </View>
+
+          <Text style={styles.requestIdText}>ID: #{String(item._id).slice(-8)}</Text>
+        </View>
+      </TouchableOpacity>
     );
-  });
-
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {/* Top Card Row: Urgency on Left, Time on Right */}
-      <View style={styles.cardTopRow}>
-        <Text style={styles.urgencyLabel}>{item.urgency}</Text>
-        <Text style={styles.timeLabel}>• {item.timeAgo}</Text>
-      </View>
-
-      {/* Main Card Content Row */}
-      <View style={styles.cardBody}>
-        {/* Avatar */}
-        <View style={styles.avatarWrap}>
-          <Image source={{ uri: item.avatar }} style={styles.avatarImg} />
-        </View>
-
-        {/* Details Column */}
-        <View style={styles.detailsCol}>
-          <Text style={styles.bloodGroupText}>
-            Blood Group: <Text style={styles.bloodGroupBold}>{item.bloodGroup}</Text>
-          </Text>
-          <Text style={styles.hospitalText}>{item.hospital}</Text>
-          <Text style={styles.metaText}>Distance: {item.distance}</Text>
-          <Text style={styles.metaText}>Status: {item.status}</Text>
-        </View>
-
-        {/* View Action Button */}
-        <TouchableOpacity
-          style={styles.viewBtn}
-          onPress={() =>
-            navigation.navigate('TrackingRequest', {
-              requestData: item,
-              requestId: item._id,
-              isOwner: true,
-              fromMyRequests: true,
-            })
-          }
-          activeOpacity={0.85}
-        >
-          <Text style={styles.viewBtnText}>View</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  };
 
   const renderFooter = () => {
     if (loadingMore) {
@@ -211,7 +387,7 @@ const MyRequestsScreen = ({ navigation }) => {
       return (
         <View style={styles.paginationFooter}>
           <Text style={styles.paginationFooterEndText}>
-            Showing all {requests.length} of {totalCount || requests.length} requests
+            Showing {filteredRequests.length} of {requests.length} total requests
           </Text>
         </View>
       );
@@ -236,25 +412,55 @@ const MyRequestsScreen = ({ navigation }) => {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('CreateBloodRequest')}
-          style={styles.iconBtn}
+          style={styles.addBtn}
           accessibilityLabel="Create Request"
         >
-          <Ionicons name="add" size={24} color={colors.primary} />
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Text style={styles.addBtnText}>New</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Quick Status Filter Tabs */}
+      <View style={styles.tabsContainer}>
+        {TABS.map((tab) => {
+          const isSelected = activeTab === tab.key;
+          let count = counts.total;
+          if (tab.key === 'ACTIVE') count = counts.active;
+          if (tab.key === 'VERIFIED') count = counts.verified;
+          if (tab.key === 'CRITICAL') count = counts.critical;
+
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tabBtn, isSelected && styles.tabBtnActive]}
+              onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabBtnText, isSelected && styles.tabBtnTextActive]}>
+                {tab.label}
+              </Text>
+              <View style={[styles.tabBadge, isSelected && styles.tabBadgeActive]}>
+                <Text style={[styles.tabBadgeText, isSelected && styles.tabBadgeTextActive]}>
+                  {count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Search Input Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+        <Ionicons name="search-outline" size={18} color="#9CA3AF" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search"
+          placeholder="Search by patient, hospital, blood group, ID..."
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
             <Ionicons name="close-circle" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         ) : null}
@@ -264,6 +470,7 @@ const MyRequestsScreen = ({ navigation }) => {
       {loading && !refreshing ? (
         <View style={styles.loaderWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading your requests...</Text>
         </View>
       ) : (
         <FlatList
@@ -276,24 +483,43 @@ const MyRequestsScreen = ({ navigation }) => {
           onEndReachedThreshold={0.3}
           ListFooterComponent={renderFooter}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
           }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <View style={styles.emptyIconCircle}>
-                <Ionicons name="document-text-outline" size={36} color={colors.primary} />
+                <Ionicons name="document-text-outline" size={34} color={colors.primary} />
               </View>
-              <Text style={styles.emptyTitle}>No Requests Posted Yet</Text>
-              <Text style={styles.emptySub}>
-                You haven&apos;t posted any blood requests under your account.
+              <Text style={styles.emptyTitle}>
+                {searchQuery || activeTab !== 'ALL'
+                  ? 'No Matching Requests'
+                  : 'No Requests Posted Yet'}
               </Text>
-              <TouchableOpacity
-                style={styles.createBtn}
-                onPress={() => navigation.navigate('CreateBloodRequest')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.createBtnText}>Create Blood Request</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptySub}>
+                {searchQuery || activeTab !== 'ALL'
+                  ? 'Try changing your search terms or filter tab.'
+                  : "You haven't posted any emergency blood requests under your account."}
+              </Text>
+              {searchQuery || activeTab !== 'ALL' ? (
+                <TouchableOpacity
+                  style={styles.resetFilterBtn}
+                  onPress={() => {
+                    setActiveTab('ALL');
+                    setSearchQuery('');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.resetFilterText}>Clear Filters</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.createBtn}
+                  onPress={() => navigation.navigate('CreateBloodRequest')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.createBtnText}>+ Create Blood Request</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -302,200 +528,350 @@ const MyRequestsScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (colors) => StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.cardBg,
-  },
-  topBar: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: -0.3,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 14,
-    marginHorizontal: 18,
-    marginTop: 16,
-    marginBottom: 14,
-    paddingHorizontal: 14,
-    height: 48,
-    backgroundColor: colors.cardBg,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: colors.text,
-  },
-  listContent: {
-    paddingHorizontal: 18,
-    paddingTop: 6,
-    paddingBottom: 24,
-    flexGrow: 1,
-  },
-  card: {
-    backgroundColor: colors.page,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 14,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  urgencyLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  timeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    overflow: 'hidden',
-    backgroundColor: colors.border,
-    marginRight: 12,
-  },
-  avatarImg: {
-    width: '100%',
-    height: '100%',
-  },
-  detailsCol: {
-    flex: 1,
-    gap: 2,
-  },
-  bloodGroupText: {
-    fontSize: 12.5,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  bloodGroupBold: {
-    fontWeight: '800',
-    color: colors.text,
-  },
-  hospitalText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  metaText: {
-    fontSize: 11.5,
-    color: colors.textSecondary,
-  },
-  viewBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
-    marginBottom: 4,
-  },
-  viewBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  loaderWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 20,
-  },
-  emptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 20,
-  },
-  createBtn: {
-    height: 44,
-    paddingHorizontal: 24,
-    backgroundColor: colors.primary,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  paginationFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 8,
-  },
-  paginationFooterText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  paginationFooterEndText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    textAlign: 'center',
-    paddingVertical: 8,
-  },
-});
+const makeStyles = (colors) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: '#F8FAFC',
+    },
+    topBar: {
+      height: 54,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      backgroundColor: '#FFFFFF',
+      borderBottomWidth: 1,
+      borderBottomColor: '#E2E8F0',
+    },
+    iconBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: colors.primary,
+      letterSpacing: -0.3,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+    },
+    addBtnText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    tabsContainer: {
+      flexDirection: 'row',
+      backgroundColor: '#FFFFFF',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F1F5F9',
+    },
+    tabBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 7,
+      paddingHorizontal: 6,
+      borderRadius: 20,
+      backgroundColor: '#F1F5F9',
+      gap: 5,
+    },
+    tabBtnActive: {
+      backgroundColor: colors.primary,
+    },
+    tabBtnText: {
+      fontSize: 12.5,
+      fontWeight: '600',
+      color: '#475569',
+    },
+    tabBtnTextActive: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    tabBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 10,
+      backgroundColor: '#E2E8F0',
+    },
+    tabBadgeActive: {
+      backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    },
+    tabBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#475569',
+    },
+    tabBadgeTextActive: {
+      color: '#FFFFFF',
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      borderRadius: 14,
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 10,
+      paddingHorizontal: 12,
+      height: 44,
+      backgroundColor: '#FFFFFF',
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: 8,
+      fontSize: 14,
+      color: '#1E293B',
+    },
+    listContent: {
+      paddingHorizontal: 16,
+      paddingTop: 4,
+      paddingBottom: 24,
+      flexGrow: 1,
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      padding: 15,
+      marginBottom: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    cardHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    patientInfoCol: {
+      flex: 1,
+      marginRight: 10,
+    },
+    patientName: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#0F172A',
+      letterSpacing: -0.2,
+      marginBottom: 3,
+    },
+    hospitalText: {
+      fontSize: 12.5,
+      fontWeight: '500',
+      color: '#64748B',
+    },
+    headerRightCol: {
+      alignItems: 'flex-end',
+      gap: 4,
+    },
+    urgencyBadge: {
+      paddingHorizontal: 9,
+      paddingVertical: 3,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    urgencyText: {
+      fontSize: 11,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: 0.2,
+    },
+    timeAgoText: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: '#94A3B8',
+    },
+    cardDivider: {
+      height: 1,
+      backgroundColor: '#F1F5F9',
+      marginVertical: 12,
+    },
+    cardBodyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    bloodBadgeWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#FEE2E2',
+      borderWidth: 1.5,
+      borderColor: '#FECACA',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    bloodBadgeLabel: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: colors.primary,
+    },
+    infoCol: {
+      flex: 1,
+      gap: 4,
+    },
+    infoLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    unitsText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#1E293B',
+    },
+    requiredTimeText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#64748B',
+    },
+    viewActionCol: {
+      paddingLeft: 8,
+    },
+    actionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      backgroundColor: '#FEF2F2',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#FEE2E2',
+    },
+    actionPillText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    cardFooterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 12,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: '#F8FAFC',
+    },
+    statusPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 3.5,
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    statusPillText: {
+      fontSize: 11.5,
+      fontWeight: '700',
+    },
+    requestIdText: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: '#94A3B8',
+    },
+    loaderWrap: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    loadingText: {
+      fontSize: 13,
+      color: '#64748B',
+      fontWeight: '500',
+    },
+    emptyWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 56,
+      paddingHorizontal: 20,
+    },
+    emptyIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: '#FEF2F2',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 14,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#1E293B',
+      marginBottom: 6,
+    },
+    emptySub: {
+      fontSize: 13,
+      color: '#64748B',
+      textAlign: 'center',
+      lineHeight: 18,
+      marginBottom: 18,
+    },
+    createBtn: {
+      height: 42,
+      paddingHorizontal: 22,
+      backgroundColor: colors.primary,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    createBtnText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 13.5,
+    },
+    resetFilterBtn: {
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      backgroundColor: '#F1F5F9',
+      borderRadius: 16,
+    },
+    resetFilterText: {
+      color: '#475569',
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    paginationFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+      gap: 8,
+    },
+    paginationFooterText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#64748B',
+    },
+    paginationFooterEndText: {
+      fontSize: 11.5,
+      fontWeight: '500',
+      color: '#94A3B8',
+      textAlign: 'center',
+      paddingVertical: 6,
+    },
+  });
 
 export default MyRequestsScreen;

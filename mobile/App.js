@@ -7,6 +7,7 @@ import { ConfirmProvider } from './src/context/ConfirmContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { ToastProvider } from './src/context/ToastContext';
+import { EmergencyAlertProvider } from './src/context/EmergencyAlertContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
 function ThemedStatusBar() {
@@ -23,10 +24,12 @@ export default function App() {
             <AuthProvider>
               <ConfirmProvider>
                 <AlertsProvider>
-                  <ToastProvider>
-                    <ThemedStatusBar />
-                    <AppNavigator />
-                  </ToastProvider>
+                  <EmergencyAlertProvider>
+                    <ToastProvider>
+                      <ThemedStatusBar />
+                      <AppNavigator />
+                    </ToastProvider>
+                  </EmergencyAlertProvider>
                 </AlertsProvider>
               </ConfirmProvider>
             </AuthProvider>

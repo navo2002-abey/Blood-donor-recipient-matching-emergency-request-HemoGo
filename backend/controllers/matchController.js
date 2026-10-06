@@ -27,11 +27,21 @@ exports.getMatchingDonors = async (req, res) => {
     const cleanBg = String(bloodGroup).trim().toUpperCase();
     const compatibleGroups = COMPATIBILITY[cleanBg] || [cleanBg];
 
-    // Query registered donors matching compatible blood groups
+    // Query registered donors matching compatible blood groups (including legacy fallback)
+    const bloodGroupFilter = compatibleGroups.includes('O+')
+      ? {
+          $or: [
+            { bloodGroup: { $in: compatibleGroups } },
+            { bloodGroup: { $exists: false } },
+            { bloodGroup: null },
+          ],
+        }
+      : { bloodGroup: { $in: compatibleGroups } };
+
     const donors = await User.find({
       role: 'DONOR',
       isActive: { $ne: false },
-      bloodGroup: { $in: compatibleGroups },
+      ...bloodGroupFilter,
     }).select('-password');
 
     const results = donors.map((donor, idx) => {

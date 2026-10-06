@@ -68,7 +68,21 @@ const DONOR_DEFAULT_NOTIFICATIONS = [
     time: '10:24 AM',
     timestamp: Date.now() - 1000 * 60 * 35,
     message: 'Amal Perera Donated blood for A+ Accepted by Sumudu Hospital.',
-    screen: 'TrackingRequest',
+    screen: 'ActiveRequestCompleted',
+    params: {
+      requestData: {
+        _id: 'REQ-2026-001',
+        patientName: 'Amal Perera',
+        hospital: 'Sumudu Hospital',
+        bloodGroup: 'A+',
+        units: 1,
+        fulfilledUnits: 1,
+        status: 'VERIFIED',
+        urgency: 'Critical',
+        verifiedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+        acceptedAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+      },
+    },
     isRead: false,
   },
   {
@@ -115,6 +129,32 @@ const DONOR_DEFAULT_NOTIFICATIONS = [
 
 // 2. Seed Notifications for PATIENT / FAMILY
 const PATIENT_DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'patient-notif-0',
+    type: 'EMERGENCY',
+    title: 'DONATION VERIFIED & FULFILLED!',
+    time: '10:24 AM',
+    timestamp: Date.now() - 1000 * 60 * 15,
+    message: 'Amal Perera Donated blood for A+ Accepted & Verified by Sumudu Hospital.',
+    screen: 'RequesterDonationConfirmed',
+    params: {
+      requestData: {
+        _id: 'REQ-2026-001',
+        patientName: 'Amal Perera',
+        hospital: 'Sumudu Hospital',
+        bloodGroup: 'A+',
+        units: 1,
+        fulfilledUnits: 1,
+        status: 'VERIFIED',
+        urgency: 'Critical',
+        verifierId: '#SH01078',
+        verifiedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+        donorName: 'Amal Perera',
+      },
+      donorName: 'Amal Perera',
+    },
+    isRead: false,
+  },
   {
     id: 'patient-notif-1',
     type: 'EMERGENCY',
@@ -309,7 +349,7 @@ const NotificationHubScreen = ({ navigation }) => {
                 time: 'Live',
                 timestamp: new Date(reqItem.createdAt || Date.now()).getTime(),
                 message: `${reqItem.bloodGroup} Blood Needed at ${reqItem.hospital} (${reqItem.units} units required).`,
-                screen: 'TrackingRequest',
+                screen: 'ActiveRequestProgress',
                 params: { requestId: reqItem._id, requestData: reqItem },
                 isRead: false,
               }));
@@ -359,9 +399,66 @@ const NotificationHubScreen = ({ navigation }) => {
       await persistNotifications(updated);
     }
 
-    if (item.screen) {
+    let targetScreen = item.screen;
+    let targetParams = item.params || {};
+
+    // Smart routing overrides based on notification content:
+    const msg = (item.message || '').toLowerCase();
+    const title = (item.title || '').toLowerCase();
+
+    if (
+      title.includes('emergency blood needed') ||
+      title.includes('emergency blood request') ||
+      msg.includes('blood needed at')
+    ) {
+      targetScreen = 'ActiveRequestProgress';
+      if (!targetParams.requestData) {
+        targetParams.requestData = item.requestData || {
+          patientName: 'Emergency Patient',
+          hospital: 'Teaching Hospital Kandy',
+          bloodGroup: 'A-',
+          units: 1,
+          requiredDateTime: 'Immediate / ASAP',
+          urgency: 'Critical',
+          status: 'OPEN',
+        };
+      }
+      if (!targetParams.requestId) {
+        targetParams.requestId = item.requestId || targetParams.requestData?._id || 'REQ-2026-003';
+      }
+    } else if (
+      msg.includes('donated blood for') ||
+      msg.includes('accepted by sumudu hospital') ||
+      title.includes('donation verified') ||
+      title.includes('request fulfilled')
+    ) {
+      targetScreen =
+        userRole === ROLES.PATIENT_FAMILY || item.screen === 'RequesterDonationConfirmed'
+          ? 'RequesterDonationConfirmed'
+          : 'ActiveRequestCompleted';
+      if (!targetParams.requestData) {
+        targetParams.requestData = {
+          patientName: 'Amal Perera',
+          hospital: 'Sumudu Hospital',
+          bloodGroup: 'A+',
+          units: 1,
+          fulfilledUnits: 1,
+          status: 'VERIFIED',
+          urgency: 'Critical',
+          verifierId: '#SH01078',
+          verifiedAt: new Date().toISOString(),
+          acceptedAt: new Date(Date.now() - 3600000).toISOString(),
+          donorName: 'Amal Perera',
+        };
+      }
+      if (!targetParams.donorName) {
+        targetParams.donorName = 'Amal Perera';
+      }
+    }
+
+    if (targetScreen) {
       try {
-        navigation.navigate(item.screen, item.params || {});
+        navigation.navigate(targetScreen, targetParams);
       } catch (err) {
         console.warn('Navigation error:', err);
       }
