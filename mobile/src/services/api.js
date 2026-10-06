@@ -39,4 +39,46 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Appointment endpoints
+export const createAppointment = async (hospital, date, time) => {
+  const response = await api.post('/appointments', { hospital, date, time });
+  return response.data;
+};
+
+export const getAppointmentHistory = async () => {
+  const response = await api.get('/appointments/history');
+  return response.data;
+};
+
+export const deleteAppointment = async (appointmentId) => {
+  const response = await api.delete(`/appointments/${appointmentId}`);
+  return response.data;
+};
+
+// Donor endpoints
+export const verifyQR = async (qrCodeId) => {
+  const response = await api.post('/donor/verify-qr', { qrCodeId });
+  return response.data;
+};
+
+export const completeDonation = async (qrCodeId) => {
+  const response = await api.post('/donor/complete-donation', { qrCodeId });
+  return response.data;
+};
+
+export const getDonorProfile = async () => {
+  const response = await api.get('/donor/profile');
+  return response.data;
+};
+
+export const redeemReward = async (rewardId) => {
+  const response = await api.post('/donor/redeem', { rewardId });
+  return response.data;
+};
+
+export const getRedemptions = async () => {
+  const response = await api.get('/donor/redemptions');
+  return response.data;
+};
+
 export default api;

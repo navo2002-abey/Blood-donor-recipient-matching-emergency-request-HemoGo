@@ -69,6 +69,14 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
+    points: {
+      type: Number,
+      default: 0,
+    },
+    lastDonationDate: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: { createdAt: true, updatedAt: true },
@@ -88,6 +96,8 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     isAvailable: this.isAvailable !== false,
     avatar: this.avatar,
     isActive: this.isActive !== false,
+    points: this.points || 0,
+    lastDonationDate: this.lastDonationDate,
   };
 };
 

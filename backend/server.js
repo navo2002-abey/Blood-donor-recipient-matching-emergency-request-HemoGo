@@ -18,6 +18,9 @@ const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
 const requestSummaryRoutes = require('./routes/requestSummaryRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const emergencyAlertRoutes = require('./routes/emergencyAlertRoutes');
+// QR Scan & Appointment routes
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const donorRoutes = require('./routes/donorRoutes');
 
 const seedUsers = require('./utils/seedUsers');
 const seedBloodBanks = require('./utils/seedBloodBanks');
@@ -58,6 +61,10 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/blood-banks', bloodBankRoutes);
 
+// QR Scan & Appointment routes
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/donor', donorRoutes);
+
 // -------------------- 404 --------------------
 app.use((req, res) => {
   res.status(404).json({
@@ -88,15 +95,14 @@ const startServer = async () => {
     console.log('  /api/auth');
     console.log('  /api/admin');
     console.log('  /api/blood-requests');
-    console.log('  /api/request-summaries');
-    console.log('  /api/request-matches');
-    console.log('  /api/best-donor-ai');
     console.log('  /api/stock');
     console.log('  /api/reservations');
     console.log('  /api/transfers');
     console.log('  /api/predictions');
     console.log('  /api/campaigns');
     console.log('  /api/blood-banks');
+    console.log('  /api/appointments');
+    console.log('  /api/donor');
   });
 };
 

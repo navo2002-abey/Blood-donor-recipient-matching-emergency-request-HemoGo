@@ -1,21 +1,39 @@
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
-import { useLanguage } from '../context/LanguageContext';
+import { deleteAppointment } from '../services/api';
 import { colors } from '../utils/colors';
-import { useTheme } from '../context/ThemeContext';
 
 const HistoryDetailScreen = ({ route, navigation }) => {
-  const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { t } = useLanguage();
   const { appointment } = route.params || {};
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Appointment',
+      'Are you sure you want to delete this appointment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAppointment(appointment._id);
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete appointment');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const qrData = JSON.stringify({
-    id: appointment.bookedAt,
+    id: appointment.qrCodeId || `HG-${appointment.bookedAt}`,
     hospital: appointment.hospital,
     date: appointment.date,
     time: appointment.time,
@@ -25,16 +43,20 @@ const HistoryDetailScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="arrow-back-outline" size={26} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity onPress={handleDelete} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="close-outline" size={26} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{t('pages.appointmentDetails')}</Text>
+        <Text style={styles.title}>Appointment Details</Text>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -104,10 +126,10 @@ const HistoryDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.page,
+    backgroundColor: '#FAFAFA',
   },
   header: {
     flexDirection: 'row',
@@ -142,7 +164,7 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 20,
   },
   card: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -204,7 +226,7 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 20,
   },
   qrCard: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
