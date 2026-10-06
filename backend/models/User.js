@@ -37,6 +37,24 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    bloodGroup: {
+      type: String,
+      enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+      default: 'O+',
+    },
+    area: {
+      type: String,
+      trim: true,
+      default: 'Colombo',
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    avatar: {
+      type: String,
+      default: '',
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -73,6 +91,10 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     phone: this.phone,
     role: this.role,
     hospital: this.hospital,
+    bloodGroup: this.bloodGroup,
+    area: this.area,
+    isAvailable: this.isAvailable !== false,
+    avatar: this.avatar,
     isActive: this.isActive !== false,
     points: this.points || 0,
     lastDonationDate: this.lastDonationDate,

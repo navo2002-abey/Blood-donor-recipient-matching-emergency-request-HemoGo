@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
+import { getStoredUser } from '../utils/storage';
 
 export const createBloodRequest = async (requestData) => {
   try {
@@ -69,55 +70,83 @@ export const deleteBloodRequest = async (id) => {
   }
 };
 
-export const getMyAcceptedIds = async () => {
+export const getMyAcceptedIds = async (userKey) => {
   try {
-    const raw = await AsyncStorage.getItem('HEMOGO_ACCEPTED_REQUESTS');
+    let key = userKey;
+    if (!key) {
+      const stored = await getStoredUser();
+      key = stored?.email || stored?.id || stored?._id;
+    }
+    if (!key) return [];
+    const storageKey = `HEMOGO_ACCEPTED_REQUESTS_${String(key).toLowerCase().trim()}`;
+    const raw = await AsyncStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 };
 
-export const saveMyAcceptedId = async (id) => {
+export const saveMyAcceptedId = async (id, userKey) => {
   try {
     if (!id) return;
+    let key = userKey;
+    if (!key) {
+      const stored = await getStoredUser();
+      key = stored?.email || stored?.id || stored?._id;
+    }
+    if (!key) return;
+    const storageKey = `HEMOGO_ACCEPTED_REQUESTS_${String(key).toLowerCase().trim()}`;
     const clean = String(id).replace(/^#/, '');
-    const ids = await getMyAcceptedIds();
+    const ids = await getMyAcceptedIds(key);
     if (!ids.includes(clean)) {
       ids.push(clean);
-      await AsyncStorage.setItem('HEMOGO_ACCEPTED_REQUESTS', JSON.stringify(ids));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(ids));
     }
   } catch {}
 };
 
-export const getMyVerifiedIds = async () => {
+export const getMyVerifiedIds = async (userKey) => {
   try {
-    const raw = await AsyncStorage.getItem('HEMOGO_VERIFIED_REQUESTS');
+    let key = userKey;
+    if (!key) {
+      const stored = await getStoredUser();
+      key = stored?.email || stored?.id || stored?._id;
+    }
+    if (!key) return [];
+    const storageKey = `HEMOGO_VERIFIED_REQUESTS_${String(key).toLowerCase().trim()}`;
+    const raw = await AsyncStorage.getItem(storageKey);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 };
 
-export const saveMyVerifiedId = async (id) => {
+export const saveMyVerifiedId = async (id, userKey) => {
   try {
     if (!id) return;
+    let key = userKey;
+    if (!key) {
+      const stored = await getStoredUser();
+      key = stored?.email || stored?.id || stored?._id;
+    }
+    if (!key) return;
+    const storageKey = `HEMOGO_VERIFIED_REQUESTS_${String(key).toLowerCase().trim()}`;
     const clean = String(id).replace(/^#/, '');
-    const ids = await getMyVerifiedIds();
+    const ids = await getMyVerifiedIds(key);
     if (!ids.includes(clean)) {
       ids.push(clean);
-      await AsyncStorage.setItem('HEMOGO_VERIFIED_REQUESTS', JSON.stringify(ids));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(ids));
     }
   } catch {}
 };
 
-export const acceptBloodRequest = async (id, payload = {}) => {
+export const acceptBloodRequest = async (id, payload = {}, userKey) => {
   try {
-    await saveMyAcceptedId(id);
+    await saveMyAcceptedId(id, userKey || payload?.donorEmail || payload?.email);
     const response = await api.post(`/blood-requests/${id}/accept`, payload);
     return response.data;
   } catch (error) {
-    await saveMyAcceptedId(id);
+    await saveMyAcceptedId(id, userKey || payload?.donorEmail || payload?.email);
     if (error.response?.data) {
       return error.response.data;
     }
@@ -134,13 +163,13 @@ export const acceptBloodRequest = async (id, payload = {}) => {
   }
 };
 
-export const verifyBloodRequest = async (id, payload = {}) => {
+export const verifyBloodRequest = async (id, payload = {}, userKey) => {
   try {
-    await saveMyVerifiedId(id);
+    await saveMyVerifiedId(id, userKey || payload?.donorEmail || payload?.email);
     const response = await api.post(`/blood-requests/${id}/verify`, payload);
     return response.data;
   } catch (error) {
-    await saveMyVerifiedId(id);
+    await saveMyVerifiedId(id, userKey || payload?.donorEmail || payload?.email);
     if (error.response?.data) {
       return error.response.data;
     }
@@ -157,3 +186,19 @@ export const verifyBloodRequest = async (id, payload = {}) => {
     };
   }
 };
+
+export const fetchMatchingDonors = async (params = {}) => {
+  try {
+    const response = await api.get('/donors/matching', { params });
+    return response.data;
+  } catch (error) {
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    return {
+      success: false,
+      data: [],
+    };
+  }
+};
+

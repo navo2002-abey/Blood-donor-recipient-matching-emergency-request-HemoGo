@@ -31,6 +31,8 @@ const formatTimeAgo = (dateInput) => {
   return `${Math.floor(diffInSec / 604800)}w ago`;
 };
 
+const PAGE_LIMIT = 8;
+
 const MyRequestsScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -40,11 +42,26 @@ const MyRequestsScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const loadMyRequests = async () => {
+  const loadMyRequests = async (pageNum = 1, shouldAppend = false) => {
     try {
-      const res = await fetchBloodRequests({ my: 'true' });
-      if (res?.data && res.data.length > 0) {
+      if (pageNum === 1 && !shouldAppend) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const res = await fetchBloodRequests({
+        my: 'true',
+        page: pageNum,
+        limit: PAGE_LIMIT,
+      });
+
+      if (res?.data && Array.isArray(res.data)) {
         // Filter strictly for requests posted by this current user
         const myOnly = res.data.filter((item) => {
           if (!user) return true;
@@ -60,7 +77,6 @@ const MyRequestsScreen = ({ navigation }) => {
           if (item.patientName && user.name && item.patientName.toLowerCase() === user.name.toLowerCase()) {
             return true;
           }
-          // If created in demo mode
           return !item.requestedBy;
         });
 
@@ -69,11 +85,12 @@ const MyRequestsScreen = ({ navigation }) => {
           patientName: item.patientName,
           bloodGroup: item.bloodGroup,
           hospital: item.hospital,
-          distance: `${(1.8 + (idx * 1.3) % 5).toFixed(1)} km away`,
+          distance: `${(1.8 + (((pageNum - 1) * PAGE_LIMIT + idx) * 1.3) % 5).toFixed(1)} km away`,
           status: item.status === 'OPEN' ? 'Awaiting Verification' : item.status || 'Active',
           urgency: item.urgency || 'Low',
           timeAgo: formatTimeAgo(item.createdAt),
           units: item.units,
+          fulfilledUnits: item.fulfilledUnits || 0,
           requiredDateTime: item.requiredDateTime,
           createdAt: item.createdAt,
           avatar:
@@ -82,25 +99,46 @@ const MyRequestsScreen = ({ navigation }) => {
               : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
         }));
 
-        setRequests(mapped);
+        if (shouldAppend) {
+          setRequests((prev) => {
+            const existingIds = new Set(prev.map((r) => String(r._id)));
+            const newItems = mapped.filter((r) => !existingIds.has(String(r._id)));
+            return [...prev, ...newItems];
+          });
+        } else {
+          setRequests(mapped);
+        }
+
+        setPage(pageNum);
+        setTotalCount(res.total || mapped.length);
+        setHasMore(Boolean(res.hasMore));
       } else {
-        setRequests([]);
+        if (!shouldAppend) setRequests([]);
+        setHasMore(false);
       }
     } catch (e) {
-      setRequests([]);
+      if (!shouldAppend) setRequests([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadMyRequests();
+    loadMyRequests(1, false);
   }, [user]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadMyRequests();
-    setRefreshing(false);
+    await loadMyRequests(1, false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && !loadingMore && !refreshing && hasMore) {
+      loadMyRequests(page + 1, true);
+    }
   };
 
   const filteredRequests = requests.filter((item) => {
@@ -144,10 +182,11 @@ const MyRequestsScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.viewBtn}
           onPress={() =>
-            navigation.navigate('ActiveRequestProgress', {
+            navigation.navigate('TrackingRequest', {
               requestData: item,
               requestId: item._id,
               isOwner: true,
+              fromMyRequests: true,
             })
           }
           activeOpacity={0.85}
@@ -157,6 +196,29 @@ const MyRequestsScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+  const renderFooter = () => {
+    if (loadingMore) {
+      return (
+        <View style={styles.paginationFooter}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.paginationFooterText}>Loading more requests...</Text>
+        </View>
+      );
+    }
+
+    if (!hasMore && requests.length > 0) {
+      return (
+        <View style={styles.paginationFooter}>
+          <Text style={styles.paginationFooterEndText}>
+            Showing all {requests.length} of {totalCount || requests.length} requests
+          </Text>
+        </View>
+      );
+    }
+
+    return <View style={{ height: 20 }} />;
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -199,17 +261,20 @@ const MyRequestsScreen = ({ navigation }) => {
       </View>
 
       {/* Requests List */}
-      {loading ? (
+      {loading && !refreshing ? (
         <View style={styles.loaderWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
           data={filteredRequests}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => String(item._id)}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={renderFooter}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -411,6 +476,25 @@ const makeStyles = (colors) => StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  paginationFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 8,
+  },
+  paginationFooterText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  paginationFooterEndText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });
 

@@ -47,7 +47,7 @@ exports.createBloodRequest = async (req, res) => {
 exports.getBloodRequests = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.urgency) {
+    if (req.query.urgency && req.query.urgency !== 'All') {
       filter.urgency = req.query.urgency;
     }
     if (req.query.bloodGroup) {
@@ -56,21 +56,46 @@ exports.getBloodRequests = async (req, res) => {
     if (req.query.status) {
       filter.status = req.query.status;
     }
+    if (req.query.search) {
+      const s = req.query.search.trim();
+      filter.$or = [
+        { patientName: { $regex: s, $options: 'i' } },
+        { hospital: { $regex: s, $options: 'i' } },
+        { bloodGroup: { $regex: s, $options: 'i' } },
+      ];
+    }
     if (req.query.my === 'true' && req.user?._id) {
       filter.requestedBy = req.user._id;
     } else if (req.query.requestedBy) {
       filter.requestedBy = req.query.requestedBy;
     }
 
-    const requests = await BloodRequest.find(filter)
+    const total = await BloodRequest.countDocuments(filter);
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || (req.query.page ? 10 : 0);
+
+    let query = BloodRequest.find(filter)
       .sort({ createdAt: -1 })
       .populate('requestedBy', 'name email phone')
       .populate('acceptedBy', 'name email phone')
       .populate('verifiedBy', 'name email phone');
 
+    if (limit > 0) {
+      const skip = (page - 1) * limit;
+      query = query.skip(skip).limit(limit);
+    }
+
+    const requests = await query;
+    const totalPages = limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1;
+
     return res.status(200).json({
       success: true,
       count: requests.length,
+      total,
+      page,
+      totalPages,
+      hasMore: limit > 0 ? page < totalPages : false,
       data: requests,
     });
   } catch (error) {
@@ -219,20 +244,63 @@ exports.acceptBloodRequest = async (req, res) => {
       });
     }
 
-    if (request.status === 'VERIFIED' || request.status === 'FULFILLED') {
-      return res.status(200).json({
-        success: true,
-        message: 'Blood request is already verified/completed.',
+    const totalRequired = Number(request.units) || 1;
+    const currentFulfilled = Number(request.fulfilledUnits) || 0;
+
+    if (currentFulfilled >= totalRequired || request.status === 'VERIFIED' || request.status === 'FULFILLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'This blood request has already been completely fulfilled.',
         data: request,
       });
     }
 
-    request.status = 'ACCEPTED';
-    if (!request.acceptedAt) {
-      request.acceptedAt = new Date();
+    if (!Array.isArray(request.acceptedDonors)) {
+      request.acceptedDonors = [];
     }
+
+    const currentUserId = req.user?._id ? req.user._id.toString() : null;
+
+    // Check if this donor already has an active acceptance on this request
+    const alreadyAccepted = request.acceptedDonors.some(
+      (d) => d.donor && currentUserId && d.donor.toString() === currentUserId && d.status === 'ACCEPTED'
+    );
+
+    if (alreadyAccepted) {
+      return res.status(200).json({
+        success: true,
+        message: 'You have already accepted this blood request.',
+        data: request,
+      });
+    }
+
+    const activeAcceptedCount = request.acceptedDonors.filter((d) => d.status === 'ACCEPTED').length;
+    const remainingUnitsNeeded = Math.max(0, totalRequired - currentFulfilled);
+
+    if (activeAcceptedCount >= remainingUnitsNeeded) {
+      return res.status(400).json({
+        success: false,
+        message: 'All remaining units for this blood request are currently assigned to active donors.',
+        data: request,
+      });
+    }
+
+    // Add donor acceptance
     if (req.user?._id) {
+      request.acceptedDonors.push({
+        donor: req.user._id,
+        status: 'ACCEPTED',
+        acceptedAt: new Date(),
+      });
       request.acceptedBy = req.user._id;
+    }
+    request.acceptedAt = new Date();
+
+    // If all remaining units are now assigned, status becomes IN_PROGRESS; otherwise remains OPEN so others can donate!
+    if (activeAcceptedCount + 1 >= remainingUnitsNeeded) {
+      request.status = 'IN_PROGRESS';
+    } else {
+      request.status = 'OPEN';
     }
 
     await request.save();
@@ -264,15 +332,51 @@ exports.verifyBloodRequest = async (req, res) => {
       });
     }
 
-    const currentFulfilled = request.fulfilledUnits || 0;
+    const currentFulfilled = Number(request.fulfilledUnits) || 0;
     const nextFulfilled = currentFulfilled + 1;
-    const totalRequired = request.units || 1;
+    const totalRequired = Number(request.units) || 1;
 
     request.fulfilledUnits = Math.min(totalRequired, nextFulfilled);
+
+    if (!Array.isArray(request.acceptedDonors)) {
+      request.acceptedDonors = [];
+    }
+
+    const currentUserId = req.user?._id ? req.user._id.toString() : null;
+    // Find the donor's entry in acceptedDonors
+    let donorEntry = request.acceptedDonors.find(
+      (d) => d.donor && currentUserId && d.donor.toString() === currentUserId && d.status === 'ACCEPTED'
+    );
+    if (!donorEntry) {
+      // Find latest ACCEPTED entry
+      donorEntry = request.acceptedDonors.find((d) => d.status === 'ACCEPTED');
+    }
+
+    if (donorEntry) {
+      donorEntry.status = 'VERIFIED';
+      donorEntry.verifiedAt = new Date();
+      if (verifierId) donorEntry.verifierId = verifierId;
+    } else if (req.user?._id) {
+      request.acceptedDonors.push({
+        donor: req.user._id,
+        status: 'VERIFIED',
+        acceptedAt: request.acceptedAt || new Date(),
+        verifiedAt: new Date(),
+        verifierId: verifierId || null,
+      });
+    }
+
     if (request.fulfilledUnits >= totalRequired) {
       request.status = 'VERIFIED';
     } else {
-      request.status = 'IN_PROGRESS';
+      // Still units remaining! Check if other donors are currently active
+      const remainingActiveDonors = request.acceptedDonors.filter((d) => d.status === 'ACCEPTED').length;
+      const remainingUnitsNeeded = Math.max(0, totalRequired - request.fulfilledUnits);
+      if (remainingActiveDonors >= remainingUnitsNeeded) {
+        request.status = 'IN_PROGRESS';
+      } else {
+        request.status = 'OPEN'; // Open for more donors!
+      }
     }
 
     request.verifiedAt = new Date();

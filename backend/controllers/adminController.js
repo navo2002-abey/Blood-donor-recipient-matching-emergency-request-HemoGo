@@ -355,4 +355,292 @@ const getReports = async (req, res) => {
   }
 };
 
-module.exports = { getStats, getUsers, createUser, updateUser, getReports };
+const getAdminBloodRequests = async (req, res) => {
+  try {
+    const filter = {};
+    const { status, urgency, bloodGroup, hospital, search, page = 1, limit = 10 } = req.query;
+
+    if (status && status !== 'All') {
+      const upper = String(status).toUpperCase();
+      if (upper === 'IN_PROGRESS') {
+        filter.status = { $in: ['IN_PROGRESS', 'ACCEPTED', 'ARRIVED', 'MATCHED'] };
+      } else if (upper === 'FULFILLED') {
+        filter.status = { $in: ['FULFILLED', 'VERIFIED', 'COMPLETED'] };
+      } else {
+        filter.status = upper;
+      }
+    }
+    if (urgency && urgency !== 'All') {
+      filter.urgency = { $regex: new RegExp(`^${escapeRegex(urgency)}$`, 'i') };
+    }
+    if (bloodGroup && bloodGroup !== 'All') {
+      filter.bloodGroup = bloodGroup;
+    }
+    if (hospital && hospital !== 'All') {
+      filter.hospital = { $regex: escapeRegex(hospital), $options: 'i' };
+    }
+    if (search && search.trim()) {
+      const term = escapeRegex(search.trim());
+      filter.$or = [
+        { patientName: { $regex: term, $options: 'i' } },
+        { hospital: { $regex: term, $options: 'i' } },
+        { bloodGroup: { $regex: term, $options: 'i' } },
+        { verifierId: { $regex: term, $options: 'i' } },
+      ];
+      if (mongoose.Types.ObjectId.isValid(search.trim())) {
+        filter.$or.push({ _id: search.trim() });
+      }
+    }
+
+    const pageNum = parseInt(page, 10) || 1;
+    const pageLimit = parseInt(limit, 10) || 10;
+    const skip = (pageNum - 1) * pageLimit;
+
+    const [total, openCount, inProgressCount, fulfilledCount, cancelledCount, criticalCount] = await Promise.all([
+      BloodRequest.countDocuments(filter),
+      BloodRequest.countDocuments({ status: 'OPEN' }),
+      BloodRequest.countDocuments({ status: { $in: ['IN_PROGRESS', 'ACCEPTED'] } }),
+      BloodRequest.countDocuments({ status: { $in: ['FULFILLED', 'VERIFIED', 'COMPLETED'] } }),
+      BloodRequest.countDocuments({ status: 'CANCELLED' }),
+      BloodRequest.countDocuments({ urgency: 'Critical', status: { $nin: ['FULFILLED', 'VERIFIED', 'COMPLETED', 'CANCELLED'] } }),
+    ]);
+
+    const requests = await BloodRequest.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageLimit)
+      .populate('requestedBy', 'name email phone role')
+      .populate('acceptedBy', 'name email phone role')
+      .populate('verifiedBy', 'name email phone role')
+      .populate('acceptedDonors.donor', 'name email phone role');
+
+    const totalPages = Math.max(1, Math.ceil(total / pageLimit));
+
+    return res.status(200).json({
+      success: true,
+      data: requests,
+      count: requests.length,
+      total,
+      page: pageNum,
+      totalPages,
+      hasMore: pageNum < totalPages,
+      metrics: {
+        total,
+        open: openCount,
+        inProgress: inProgressCount,
+        fulfilled: fulfilledCount,
+        cancelled: cancelledCount,
+        critical: criticalCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching admin blood requests:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve blood requests for admin.',
+    });
+  }
+};
+
+const updateAdminBloodRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      patientName,
+      hospital,
+      bloodGroup,
+      units,
+      fulfilledUnits,
+      requiredDateTime,
+      urgency,
+      additionalInfo,
+      status,
+    } = req.body;
+
+    const request = await BloodRequest.findById(id);
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blood request not found.',
+      });
+    }
+
+    if (patientName !== undefined) request.patientName = patientName;
+    if (hospital !== undefined) request.hospital = hospital;
+    if (bloodGroup !== undefined) request.bloodGroup = bloodGroup;
+    if (units !== undefined) request.units = Number(units);
+    if (fulfilledUnits !== undefined) request.fulfilledUnits = Number(fulfilledUnits);
+    if (requiredDateTime !== undefined) request.requiredDateTime = requiredDateTime;
+    if (urgency !== undefined) request.urgency = urgency;
+    if (additionalInfo !== undefined) request.additionalInfo = additionalInfo;
+    if (status !== undefined) request.status = status;
+
+    const updated = await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Blood request updated successfully by admin.',
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Error updating admin blood request:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update blood request.',
+    });
+  }
+};
+
+const assignDonorToBloodRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { donorId } = req.body;
+
+    if (!donorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Donor ID is required.',
+      });
+    }
+
+    const [request, donorUser] = await Promise.all([
+      BloodRequest.findById(id),
+      User.findById(donorId),
+    ]);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blood request not found.',
+      });
+    }
+    if (!donorUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Donor user not found.',
+      });
+    }
+
+    if (!Array.isArray(request.acceptedDonors)) {
+      request.acceptedDonors = [];
+    }
+
+    const alreadyAssigned = request.acceptedDonors.some(
+      (d) => d.donor && String(d.donor) === String(donorId) && d.status === 'ACCEPTED'
+    );
+
+    if (!alreadyAssigned) {
+      request.acceptedDonors.push({
+        donor: donorUser._id,
+        status: 'ACCEPTED',
+        acceptedAt: new Date(),
+      });
+    }
+
+    request.acceptedBy = donorUser._id;
+    request.acceptedAt = new Date();
+    request.status = 'IN_PROGRESS';
+
+    const saved = await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully assigned donor ${donorUser.name} to this request.`,
+      data: saved,
+    });
+  } catch (error) {
+    console.error('Error assigning donor to request:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to assign donor.',
+    });
+  }
+};
+
+const overrideBloodRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminNotes } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status is required.',
+      });
+    }
+
+    const request = await BloodRequest.findById(id);
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blood request not found.',
+      });
+    }
+
+    request.status = status;
+    if (status === 'VERIFIED' || status === 'FULFILLED') {
+      request.fulfilledUnits = request.units || 1;
+      request.verifiedAt = new Date();
+      if (!request.verifierId) request.verifierId = '#ADMIN_VERIFIED';
+    } else if (status === 'OPEN') {
+      request.fulfilledUnits = 0;
+      request.acceptedBy = null;
+      request.acceptedAt = null;
+    }
+
+    if (adminNotes) {
+      request.additionalInfo = `${request.additionalInfo ? request.additionalInfo + ' | ' : ''}[Admin Note: ${adminNotes}]`;
+    }
+
+    const saved = await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Status updated to ${status} successfully.`,
+      data: saved,
+    });
+  } catch (error) {
+    console.error('Error overriding status:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to override status.',
+    });
+  }
+};
+
+const deleteAdminBloodRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await BloodRequest.findByIdAndDelete(id);
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blood request not found.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Blood request permanently deleted by admin.',
+    });
+  } catch (error) {
+    console.error('Error deleting request:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete blood request.',
+    });
+  }
+};
+
+module.exports = {
+  getStats,
+  getUsers,
+  createUser,
+  updateUser,
+  getReports,
+  getAdminBloodRequests,
+  updateAdminBloodRequest,
+  assignDonorToBloodRequest,
+  overrideBloodRequestStatus,
+  deleteAdminBloodRequest,
+};
