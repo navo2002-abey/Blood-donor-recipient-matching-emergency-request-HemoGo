@@ -44,7 +44,7 @@ const EmergencyModeScreen = ({ navigation, route }) => {
         <View style={styles.header}>
           <View style={styles.headerBtn} />
           <View style={styles.headerBtn} />
-          <TouchableOpacity onPress={() => comingSoon('Notifications')} hitSlop={10} style={styles.headerBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="notifications-outline" size={22} color={colors.white} />
           </TouchableOpacity>
         </View>

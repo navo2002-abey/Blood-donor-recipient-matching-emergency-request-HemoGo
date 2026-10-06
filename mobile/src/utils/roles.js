@@ -22,12 +22,12 @@ export const DONOR_MENU = [
   { key: 'Dashboard', tab: 'Home' },
   { key: 'Find Donors', screen: 'FindDonors' },
   { key: 'Request Blood', screen: 'AvailableDonors' },
-  { key: 'History' },
+  { key: 'History', screen: 'History' },
   { key: 'Live Map', tab: 'Map' },
   { key: 'Rewards', tab: 'Rewards' },
   { key: 'Profile', tab: 'Profile' },
   { key: 'Settings', screen: 'DonorSettings' },
-  { key: 'Notifications' },
+  { key: 'Notifications', screen: 'Notifications' },
   { key: 'Help & Support', screen: 'HelpSupport' },
 ];
 
@@ -38,7 +38,7 @@ export const ADMIN_MENU = [
   { key: 'Emergency Requests', tab: 'Requests' },
   { key: 'Reports & Analytics', tab: 'Reports' },
   { key: 'Donor Verification' },
-  { key: 'Notifications' },
+  { key: 'Notifications', screen: 'Notifications' },
   { key: 'Profile', tab: 'Profile' },
   { key: 'Settings', screen: 'AdminSettings' },
 ];
@@ -61,6 +61,7 @@ export const PATIENT_MENU = [
   { key: 'Create Request', tab: 'Requests' },
   { key: 'Find Donors', screen: 'FindDonors' },
   { key: 'My Requests', tab: 'Requests' },
+  { key: 'Notifications', screen: 'Notifications' },
   { key: 'Profile & Settings', tab: 'Profile' },
-  { key: 'Help & Support' },
+  { key: 'Help & Support', screen: 'HelpSupport' },
 ];

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import { verifyBloodRequest } from '../services/bloodRequestService';
+import { verifyBloodRequest, saveMyAcceptedId, saveMyVerifiedId } from '../services/bloodRequestService';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
@@ -71,50 +71,13 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
 
-  // Authorization Security Guard: Only the actual accepted donor, owner, or admin can access
-  const isAuthorized = useMemo(() => {
-    if (!user) return false;
-    if (user?.role === 'ADMIN') return true;
-    if (route?.params?.isOwner || route?.params?.isAcceptedDonor) return true;
-
-    const currentUserId = user?.id || user?._id;
-    const acceptedUserId =
-      requestData?.acceptedBy?._id ||
-      requestData?.acceptedBy?.id ||
-      (typeof requestData?.acceptedBy === 'string' ? requestData.acceptedBy : null);
-    const reqUserId =
-      requestData?.requestedBy?._id ||
-      requestData?.requestedBy?.id ||
-      (typeof requestData?.requestedBy === 'string' ? requestData.requestedBy : null);
-
-    if (acceptedUserId && currentUserId && String(acceptedUserId) === String(currentUserId)) return true;
-    if (reqUserId && currentUserId && String(reqUserId) === String(currentUserId)) return true;
-    if (
-      requestData?.acceptedBy?.email &&
-      user?.email &&
-      requestData.acceptedBy.email.toLowerCase() === user.email.toLowerCase()
-    ) {
-      return true;
-    }
-    if (
-      requestData?.requestedBy?.email &&
-      user?.email &&
-      requestData.requestedBy.email.toLowerCase() === user.email.toLowerCase()
-    ) {
-      return true;
-    }
-    return false;
-  }, [user, requestData, route?.params]);
-
+  // Automatically record this donation as accepted by the current donor
   React.useEffect(() => {
-    if (!isAuthorized) {
-      Alert.alert(
-        'Access Denied',
-        'This verification QR code is private and only accessible by the donor who accepted this request.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+    const userKey = user?.email || user?.id || user?._id;
+    if (cleanId && userKey) {
+      saveMyAcceptedId(cleanId, userKey);
     }
-  }, [isAuthorized, navigation]);
+  }, [cleanId, user]);
 
   // Dynamic QR Code payload encoded with live request details
   const qrPayload = JSON.stringify({
@@ -135,8 +98,13 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setVerifiedTime(nowTime);
 
+    const userKey = user?.email || user?.id || user?._id;
+    if (cleanId && userKey) {
+      await saveMyVerifiedId(cleanId, userKey);
+    }
+
     try {
-      await verifyBloodRequest(cleanId, { verifierId });
+      await verifyBloodRequest(cleanId, { verifierId }, userKey);
       setIsVerified(true);
       setTimeout(() => {
         navigation.navigate('ActiveRequestCompleted', {

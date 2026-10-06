@@ -15,6 +15,9 @@ const campaignRoutes = require('./routes/campaignRoutes');
 const bloodBankRoutes = require('./routes/bloodBankRoutes');
 // Teammate's routes
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes');
+const requestSummaryRoutes = require('./routes/requestSummaryRoutes');
+const matchRoutes = require('./routes/matchRoutes');
+const emergencyAlertRoutes = require('./routes/emergencyAlertRoutes');
 // QR Scan & Appointment routes
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const donorRoutes = require('./routes/donorRoutes');
@@ -46,6 +49,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/blood-requests', bloodRequestRoutes);
+app.use('/api/request-summaries', requestSummaryRoutes);
+app.use('/api/emergency-alerts', emergencyAlertRoutes);
+app.use('/api', matchRoutes);
 
 // Blood Bank Officer + Advanced Features (Rashan's part)
 app.use('/api/stock', stockRoutes);

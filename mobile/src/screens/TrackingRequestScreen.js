@@ -31,10 +31,201 @@ import {
 } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
+import { useEmergencyAlert } from '../context/EmergencyAlertContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
+
+const COMPATIBILITY_MAP = {
+  'A+': ['A+', 'A-', 'O+', 'O-'],
+  'A-': ['A-', 'O-'],
+  'B+': ['B+', 'B-', 'O+', 'O-'],
+  'B-': ['B-', 'O-'],
+  'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+  'AB-': ['AB-', 'A-', 'B-', 'O-'],
+  'O+': ['O+', 'O-'],
+  'O-': ['O-'],
+};
+
+const getCompatibleGroups = (bloodGroup) => {
+  if (!bloodGroup) return ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  const bg = String(bloodGroup).trim().toUpperCase();
+  return COMPATIBILITY_MAP[bg] || [bg];
+};
+
+const ALL_REGISTERED_DONORS = [
+  {
+    id: 'd1',
+    name: 'Kasun Silva',
+    bloodGroup: 'B+',
+    distance: '4.6km away',
+    distanceKm: 4.6,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 71 345 6789',
+    hospital: 'Sri Jayewardenepura Hospital',
+    area: 'Colombo 05',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd2',
+    name: 'Menaka Dias',
+    bloodGroup: 'B-',
+    distance: '5.8km away',
+    distanceKm: 5.8,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 71 789 0123',
+    hospital: 'Castle Street Hospital',
+    area: 'Colombo 03',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd3',
+    name: 'Nimesha Perera',
+    bloodGroup: 'O-',
+    distance: '5.2km away',
+    distanceKm: 5.2,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 345 6789',
+    hospital: 'Lady Ridgeway Hospital',
+    area: 'Colombo 08',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd4',
+    name: 'Sajith Kumar',
+    bloodGroup: 'O+',
+    distance: '7.1km away',
+    distanceKm: 7.1,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 678 9012',
+    hospital: 'National Hospital Colombo',
+    area: 'Colombo 04',
+    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd5',
+    name: 'Amal Silva',
+    bloodGroup: 'O+',
+    distance: '3.2km away',
+    distanceKm: 3.2,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 000 0002',
+    hospital: 'Colombo General Hospital',
+    area: 'Colombo',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd6',
+    name: 'Rashed Fernando',
+    bloodGroup: 'A+',
+    distance: '3.8km away',
+    distanceKm: 3.8,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 234 5678',
+    hospital: 'National Hospital Colombo',
+    area: 'Colombo 07',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd7',
+    name: 'Dilani Perera',
+    bloodGroup: 'A-',
+    distance: '6.2km away',
+    distanceKm: 6.2,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 76 456 7890',
+    hospital: 'Colombo General Hospital',
+    area: 'Colombo 10',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd8',
+    name: 'Amal Perera',
+    bloodGroup: 'AB-',
+    distance: '2.4km away',
+    distanceKm: 2.4,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 123 4567',
+    hospital: 'Kalubowila Hospital',
+    area: 'Kalubowila',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd9',
+    name: 'Tharindu Silva',
+    bloodGroup: 'AB+',
+    distance: '6.8km away',
+    distanceKm: 6.8,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 75 567 8901',
+    hospital: 'Kalubowila Hospital',
+    area: 'Colombo 06',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd10',
+    name: 'Chathura Bandara',
+    bloodGroup: 'O-',
+    distance: '6.8km away',
+    distanceKm: 6.8,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 889 9001',
+    hospital: 'National Hospital Colombo',
+    area: 'Nugegoda',
+    avatar: 'https://images.unsplash.com/photo-1528892952291-009c663ce843?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd11',
+    name: 'Hasini Wickremasinghe',
+    bloodGroup: 'B+',
+    distance: '4.2km away',
+    distanceKm: 4.2,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 76 890 1234',
+    hospital: 'National Hospital Colombo',
+    area: 'Colombo 07',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd12',
+    name: 'Ishara Jayawardena',
+    bloodGroup: 'B-',
+    distance: '8.4km away',
+    distanceKm: 8.4,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 77 456 9012',
+    hospital: 'Colombo General Hospital',
+    area: 'Borella',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+  },
+  {
+    id: 'd13',
+    name: 'Nuwan Thilakarathne',
+    bloodGroup: 'O+',
+    distance: '9.2km away',
+    distanceKm: 9.2,
+    status: 'Available',
+    isAvailable: true,
+    phone: '+94 75 345 8901',
+    hospital: 'City Hospital',
+    area: 'Dehiwala',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+  },
+];
 
 const formatDate = (dateObj) => {
   if (!dateObj) return '';
@@ -192,6 +383,8 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const { triggerEmergencyAlert } = useEmergencyAlert();
 
   const initialRequestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
@@ -301,59 +494,67 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   const [loadingDonors, setLoadingDonors] = useState(true);
   const [notifiedDonors, setNotifiedDonors] = useState({});
 
+  const compatibleGroups = useMemo(
+    () => getCompatibleGroups(currentRequest.bloodGroup),
+    [currentRequest.bloodGroup]
+  );
+
   useEffect(() => {
     let isMounted = true;
     const loadMatchingDonors = async () => {
       try {
         setLoadingDonors(true);
+        const reqBg = (currentRequest.bloodGroup || 'A+').trim().toUpperCase();
+        const comp = COMPATIBILITY_MAP[reqBg] || [reqBg];
+
         const res = await fetchMatchingDonors({
-          bloodGroup: currentRequest.bloodGroup,
+          bloodGroup: reqBg,
           hospital: currentRequest.hospital,
         });
 
         if (isMounted) {
           if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-            setMatchingDonors(res.data);
+            // Sort exact match first, then by score & distance
+            const sorted = [...res.data].sort((a, b) => {
+              const aExact = a.bloodGroup?.toUpperCase() === reqBg;
+              const bExact = b.bloodGroup?.toUpperCase() === reqBg;
+              if (aExact !== bExact) return bExact ? 1 : -1;
+              return (a.distanceKm || 0) - (b.distanceKm || 0);
+            });
+            setMatchingDonors(sorted);
           } else {
-            // Intelligent fallback matching donors
-            setMatchingDonors([
-              {
-                id: 'd1',
-                name: 'Amal Perera',
-                bloodGroup: currentRequest.bloodGroup || 'AB-',
-                distance: '2.4km away',
-                status: 'Available',
-                phone: '+94 77 123 4567',
-                avatar:
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-              },
-              {
-                id: 'd2',
-                name: 'Rashed Fernando',
-                bloodGroup: currentRequest.bloodGroup || 'A+',
-                distance: '3.8km away',
-                status: 'Available',
-                phone: '+94 77 234 5678',
-                avatar:
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-              },
-            ]);
+            // Intelligent compatible donor pool matching from all registered donors
+            const matchedFallback = ALL_REGISTERED_DONORS.filter((d) =>
+              comp.includes(d.bloodGroup)
+            )
+              .map((d) => ({
+                ...d,
+                exactMatch: d.bloodGroup === reqBg,
+              }))
+              .sort((a, b) => {
+                if (a.exactMatch !== b.exactMatch) return b.exactMatch ? 1 : -1;
+                return a.distanceKm - b.distanceKm;
+              });
+
+            setMatchingDonors(matchedFallback);
           }
         }
       } catch {
         if (isMounted) {
-          setMatchingDonors([
-            {
-              id: 'd1',
-              name: 'Amal Perera',
-              bloodGroup: currentRequest.bloodGroup || 'AB-',
-              distance: '2.4km away',
-              status: 'Available',
-              phone: '+94 77 123 4567',
-              avatar:
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-            },
-          ]);
+          const reqBg = (currentRequest.bloodGroup || 'A+').trim().toUpperCase();
+          const comp = COMPATIBILITY_MAP[reqBg] || [reqBg];
+          const matchedFallback = ALL_REGISTERED_DONORS.filter((d) =>
+            comp.includes(d.bloodGroup)
+          )
+            .map((d) => ({
+              ...d,
+              exactMatch: d.bloodGroup === reqBg,
+            }))
+            .sort((a, b) => {
+              if (a.exactMatch !== b.exactMatch) return b.exactMatch ? 1 : -1;
+              return a.distanceKm - b.distanceKm;
+            });
+          setMatchingDonors(matchedFallback);
         }
       } finally {
         if (isMounted) setLoadingDonors(false);
@@ -370,7 +571,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     if (!matchingDonors.length) return [];
     return matchingDonors.map((d, index) => {
       const angle = (index * (2 * Math.PI)) / matchingDonors.length;
-      const radius = 0.007 + (index % 3) * 0.003;
+      const radius = 0.006 + (index % 3) * 0.003;
       return {
         name: d.name,
         bloodGroup: d.bloodGroup,
@@ -470,10 +671,67 @@ const TrackingRequestScreen = ({ route, navigation }) => {
 
   const handleNotify = (donor) => {
     setNotifiedDonors((prev) => ({ ...prev, [donor.id]: true }));
-    Alert.alert(
-      'Emergency Alert Sent!',
-      `An urgent push notification and SMS alert has been dispatched to ${donor.name} (${donor.distance || 'nearby'}).`
-    );
+
+    showToast({
+      type: 'emergency',
+      title: 'Emergency Alert Sent!',
+      message: `Dispatched urgent alert to ${donor.name} (${donor.bloodGroup || currentRequest.bloodGroup}) for ${currentRequest.hospital}.`,
+      duration: 4000,
+    });
+
+    triggerEmergencyAlert({
+      targetUserId: donor.id || donor._id,
+      targetEmail: donor.email,
+      targetPhone: donor.phone,
+      targetName: donor.name,
+      senderEmail: user?.email,
+      senderName: user?.name || 'Requester',
+      senderId: user?.id || user?._id,
+      bloodGroup: currentRequest.bloodGroup || donor.bloodGroup || 'O+',
+      hospital: currentRequest.hospital || 'National Hospital Colombo',
+      patientName: currentRequest.patientName || 'Kamal P.',
+      phone: user?.phone || currentRequest.phone || '071-2345678',
+      requestId: currentRequest._id || cleanId,
+      requestData: currentRequest,
+      location: location || { latitude: 6.9271, longitude: 79.8612 },
+    });
+  };
+
+  const handleNotifyAll = () => {
+    if (closureState.isClosed || matchingDonors.length === 0) return;
+    const newNotified = { ...notifiedDonors };
+    matchingDonors.forEach((d) => {
+      newNotified[d.id] = true;
+    });
+    setNotifiedDonors(newNotified);
+
+    showToast({
+      type: 'emergency',
+      title: 'Emergency Broadcast Sent!',
+      message: `Dispatched urgent alerts to all ${matchingDonors.length} matching blood donors (${compatibleGroups.join(', ')}) for ${currentRequest.hospital}.`,
+      duration: 4500,
+    });
+
+    triggerEmergencyAlert({
+      targetAll: true,
+      targetDonors: matchingDonors.map((d) => ({
+        id: d.id || d._id,
+        email: d.email,
+        name: d.name,
+        phone: d.phone,
+        bloodGroup: d.bloodGroup,
+      })),
+      senderEmail: user?.email,
+      senderName: user?.name || 'Requester',
+      senderId: user?.id || user?._id,
+      bloodGroup: currentRequest.bloodGroup || 'O+',
+      hospital: currentRequest.hospital || 'National Hospital Colombo',
+      patientName: currentRequest.patientName || 'Kamal P.',
+      phone: user?.phone || currentRequest.phone || '071-2345678',
+      requestId: currentRequest._id || cleanId,
+      requestData: currentRequest,
+      location: location || { latitude: 6.9271, longitude: 79.8612 },
+    });
   };
 
   const handleGoToDashboard = () => {
@@ -595,7 +853,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
           <Text style={styles.brandTitle}>HemoGo</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('Notifications', 'No new alerts.')}
+          onPress={() => navigation.navigate('Notifications')}
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >
@@ -815,6 +1073,31 @@ const TrackingRequestScreen = ({ route, navigation }) => {
           </View>
         </View>
 
+        {/* Matching Donors Header */}
+        <View style={styles.matchingSectionHeader}>
+          <View style={styles.matchingSectionLeft}>
+            <View style={styles.matchingTitleRow}>
+              <Ionicons name="people" size={17} color={colors.primary} />
+              <Text style={styles.matchingSectionTitle}>
+                Matching Donors ({matchingDonors.length})
+              </Text>
+            </View>
+            <Text style={styles.matchingSectionSub}>
+              Compatible with {currentRequest.bloodGroup}: {compatibleGroups.join(', ')}
+            </Text>
+          </View>
+          {!closureState.isClosed && matchingDonors.length > 0 && (
+            <TouchableOpacity
+              style={styles.notifyAllBtn}
+              onPress={handleNotifyAll}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="megaphone" size={13} color="#FFFFFF" />
+              <Text style={styles.notifyAllBtnText}>Notify All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Matching Donors List */}
         {loadingDonors && matchingDonors.length === 0 ? (
           <View style={{ paddingVertical: 20, alignItems: 'center' }}>
@@ -826,6 +1109,12 @@ const TrackingRequestScreen = ({ route, navigation }) => {
         ) : (
           matchingDonors.map((donor) => {
             const isNotified = Boolean(notifiedDonors[donor.id]);
+            const isExact =
+              donor.exactMatch ||
+              (donor.bloodGroup &&
+                currentRequest.bloodGroup &&
+                donor.bloodGroup.toUpperCase() === currentRequest.bloodGroup.toUpperCase());
+
             return (
               <View key={donor.id} style={[styles.donorCard, closureState.isClosed && { opacity: 0.85 }]}>
                 <View style={styles.donorTopRow}>
@@ -837,9 +1126,21 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                     />
                   </View>
                   <View style={styles.donorInfo}>
-                    <Text style={styles.donorName}>{donor.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={styles.donorName}>{donor.name}</Text>
+                      {isExact ? (
+                        <View style={styles.exactMatchBadge}>
+                          <Text style={styles.exactMatchText}>Exact Match</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.compatibleBadge}>
+                          <Text style={styles.compatibleBadgeText}>Compatible</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.donorSub}>
-                      {donor.bloodGroup} • {donor.distance || '2.4km away'}
+                      {donor.bloodGroup} • {donor.distance || `${donor.distanceKm || 3.5}km away`}
+                      {donor.hospital ? ` • ${donor.hospital}` : donor.area ? ` • ${donor.area}` : ''}
                     </Text>
                   </View>
                   <View style={[styles.availablePill, (!donor.isAvailable || closureState.isClosed) && { backgroundColor: '#F3F4F6' }]}>
@@ -857,6 +1158,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                     activeOpacity={closureState.isClosed ? 1 : 0.7}
                     disabled={closureState.isClosed}
                   >
+                    <Ionicons name="call" size={14} color={closureState.isClosed ? '#9CA3AF' : colors.text} style={{ marginRight: 5 }} />
                     <Text style={[styles.callBtnText, closureState.isClosed && { color: '#9CA3AF' }]}>Call</Text>
                   </TouchableOpacity>
 
@@ -870,6 +1172,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
                     activeOpacity={closureState.isClosed ? 1 : 0.85}
                     disabled={closureState.isClosed}
                   >
+                    <Ionicons name={isNotified ? 'checkmark-circle' : 'notifications'} size={14} color="#FFFFFF" style={{ marginRight: 5 }} />
                     <Text style={[styles.notifyBtnText, closureState.isClosed && { color: '#9CA3AF' }]}>
                       {closureState.isClosed
                         ? closureState.isFulfilled ? 'Completed' : 'Closed'
@@ -1539,6 +1842,75 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  matchingSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    marginTop: 6,
+    paddingHorizontal: 2,
+  },
+  matchingSectionLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  matchingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  matchingSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  matchingSectionSub: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  notifyAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    gap: 5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  notifyAllBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  exactMatchBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  exactMatchText: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  compatibleBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  compatibleBadgeText: {
+    color: '#0284C7',
+    fontSize: 10,
+    fontWeight: '700',
   },
   donorCard: {
     backgroundColor: colors.cardBg,
