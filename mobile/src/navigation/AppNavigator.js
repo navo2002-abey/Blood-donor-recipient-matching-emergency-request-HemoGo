@@ -58,6 +58,7 @@ import SocialContinueScreen from '../screens/SocialContinueScreen';
 import SmartMatchScreen from '../screens/SmartMatchScreen';
 import SplashScreen from '../screens/SplashScreen';
 import TrackingRequestScreen from '../screens/TrackingRequestScreen';
+import NotificationHubScreen from '../screens/NotificationHubScreen';
 
 // Rashan's navigator
 import OfficerNavigator from './OfficerNavigator';
@@ -240,6 +241,9 @@ const AppNavigator = () => {
         <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="Notifications" component={NotificationHubScreen} />
+        <Stack.Screen name="NotificationHub" component={NotificationHubScreen} />
+        <Stack.Screen name="Alerts" component={NotificationHubScreen} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       </Stack.Navigator>
     </NavigationContainer>

@@ -20,6 +20,7 @@ import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import {
   assignDonorToBloodRequest,
   deleteAdminBloodRequest,
@@ -48,6 +49,7 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Data & Pagination
@@ -214,7 +216,11 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
         additionalInfo: editForm.additionalInfo,
       });
       setEditModalOpen(false);
-      Alert.alert('Success', 'Blood request updated successfully.');
+      showToast({
+        type: 'success',
+        title: 'Request Updated',
+        message: `Changes for ${editForm.patientName} saved successfully.`,
+      });
       loadRequests(1, false, false);
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to update request.');
@@ -251,7 +257,11 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
       setSubmitting(true);
       const res = await assignDonorToBloodRequest(selectedRequest._id, selectedDonorId);
       setAssignModalOpen(false);
-      Alert.alert('Assigned', res?.message || 'Donor assigned successfully.');
+      showToast({
+        type: 'success',
+        title: 'Donor Assigned',
+        message: res?.message || 'Donor assigned successfully to this request.',
+      });
       loadRequests(1, false, false);
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to assign donor.');
@@ -280,7 +290,11 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
         adminNote
       );
       setStatusModalOpen(false);
-      Alert.alert('Status Updated', res?.message || 'Request status updated successfully.');
+      showToast({
+        type: 'info',
+        title: 'Status Overridden',
+        message: `Request status updated to ${selectedStatus}.`,
+      });
       loadRequests(1, false, false);
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to override status.');
@@ -303,7 +317,11 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
       const cleanId = String(selectedRequest._id).replace(/^#/, '');
       await deleteAdminBloodRequest(cleanId);
       setDeleteModalOpen(false);
-      Alert.alert('Deleted', 'Blood request deleted successfully.');
+      showToast({
+        type: 'warning',
+        title: 'Request Deleted',
+        message: `Blood request #${selectedRequest._id?.slice(-6)} has been permanently removed.`,
+      });
       loadRequests(1, false, false);
     } catch (err) {
       Alert.alert('Error', err?.response?.data?.message || 'Failed to delete request.');

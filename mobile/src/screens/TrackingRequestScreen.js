@@ -595,7 +595,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
           <Text style={styles.brandTitle}>HemoGo</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('Notifications', 'No new alerts.')}
+          onPress={() => navigation.navigate('Notifications')}
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >

@@ -15,11 +15,13 @@ import { createBloodRequest } from '../services/bloodRequestService';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 
 const ConfirmBloodRequestScreen = ({ route, navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const requestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
     hospital: 'National Hospital Colombo',
@@ -89,6 +91,21 @@ const ConfirmBloodRequestScreen = ({ route, navigation }) => {
           ? `REQ-2026-${String(res.data._id).slice(-3).toUpperCase()}`
           : 'REQ-2026-001';
 
+      showToast({
+        type: requestData.urgency === 'Critical' ? 'emergency' : 'success',
+        title:
+          requestData.urgency === 'Critical'
+            ? '🚨 Emergency Request Broadcasted!'
+            : 'Blood Request Created',
+        message: `${requestData.bloodGroup} request for ${requestData.hospital} is live and notifying donors.`,
+        duration: 5000,
+        onPress: () =>
+          navigation.navigate('TrackingRequest', {
+            requestData,
+            requestId: generatedId,
+          }),
+      });
+
       navigation.navigate('TrackingRequest', {
         requestData,
         requestId: generatedId,
@@ -118,7 +135,7 @@ const ConfirmBloodRequestScreen = ({ route, navigation }) => {
         </View>
 
         <TouchableOpacity
-          onPress={() => Alert.alert('Notifications', 'No new alerts.')}
+          onPress={() => navigation.navigate('Notifications')}
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >

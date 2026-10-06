@@ -147,7 +147,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
         <TouchableOpacity
-          onPress={() => comingSoon('Notifications')}
+          onPress={() => navigation.navigate('Notifications')}
           hitSlop={10}
           style={styles.headerBtn}
         >
