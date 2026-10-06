@@ -3,9 +3,11 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
 import { createAppointment, getDonorProfile } from '../services/api';
 import { colors } from '../utils/colors';
+import { useCallback } from 'react';
 
 const bloodBanks = [
   'National Blood Bank',
@@ -25,25 +27,41 @@ const BookAppointmentScreen = ({ route, navigation }) => {
   const [date, setDate] = useState(editing ? new Date(appointment.date) : new Date());
   const [loading, setLoading] = useState(false);
   const [nextEligibleDate, setNextEligibleDate] = useState(null);
+  const [lastDonationDate, setLastDonationDate] = useState(null);
   const [dateValidationMessage, setDateValidationMessage] = useState('');
+  const [isDateValid, setIsDateValid] = useState(true);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await getDonorProfile();
-        console.log('Donor profile:', response.data);
-        console.log('Last appointment date:', response.data.lastAppointmentDate);
-        console.log('Next eligible date:', response.data.nextEligibleDate);
-        if (response.data.nextEligibleDate) {
-          setNextEligibleDate(response.data.nextEligibleDate);
+  useFocusEffect(
+    useCallback(() => {
+      const fetchProfile = async () => {
+        try {
+          const response = await getDonorProfile();
+          console.log('=== DONOR PROFILE FETCHED ===');
+          console.log('Full response:', response.data);
+          console.log('Last donation date:', response.data.lastDonationDate);
+          console.log('Next eligible date:', response.data.nextEligibleDate);
+          if (response.data.lastDonationDate) {
+            setLastDonationDate(response.data.lastDonationDate);
+            console.log('Set lastDonationDate state to:', response.data.lastDonationDate);
+          } else {
+            setLastDonationDate(null);
+            console.log('Set lastDonationDate state to null');
+          }
+          if (response.data.nextEligibleDate) {
+            setNextEligibleDate(response.data.nextEligibleDate);
+            console.log('Set nextEligibleDate state to:', response.data.nextEligibleDate);
+          } else {
+            setNextEligibleDate(null);
+            console.log('Set nextEligibleDate state to null');
+          }
+        } catch (error) {
+          console.error('Failed to fetch donor profile:', error);
         }
-      } catch (error) {
-        console.error('Failed to fetch donor profile:', error);
-      }
-    };
-    
-    fetchProfile();
-  }, []);
+      };
+      
+      fetchProfile();
+    }, [])
+  );
 
   const handleBookAppointment = async () => {
     if (!selectedBank || !selectedTime || !selectedDate) {
@@ -63,7 +81,7 @@ const BookAppointmentScreen = ({ route, navigation }) => {
       if (selected < nextEligible) {
         Alert.alert(
           'Not Eligible',
-          `You can donate again from ${nextEligibleDate}. Please choose a later date.`
+          `Your last donation was on ${lastDonationDate}. Adding 90 days to that, you can donate again from ${nextEligibleDate}.`
         );
         return;
       }
@@ -142,12 +160,15 @@ const BookAppointmentScreen = ({ route, navigation }) => {
         nextEligible.setHours(0, 0, 0, 0);
         
         if (selected < nextEligible) {
-          setDateValidationMessage(`You can donate again from ${nextEligibleDate}. Please choose a later date.`);
+          setDateValidationMessage(`Your last donation was on ${lastDonationDate}. Adding 90 days to that, you can donate again from ${nextEligibleDate}.`);
+          setIsDateValid(false);
         } else {
           setDateValidationMessage('');
+          setIsDateValid(true);
         }
       } else {
         setDateValidationMessage('');
+        setIsDateValid(true);
       }
     }
   };
@@ -259,9 +280,9 @@ const BookAppointmentScreen = ({ route, navigation }) => {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.bookButton, loading && styles.bookButtonDisabled]}
+            style={[styles.bookButton, loading && styles.bookButtonDisabled, !isDateValid && styles.bookButtonDisabled]}
             onPress={handleBookAppointment}
-            disabled={loading}
+            disabled={loading || !isDateValid}
           >
             <Text style={styles.bookButtonText}>
               {loading ? 'Booking...' : editing ? 'Update Appointment' : 'Book Appointment'}
@@ -406,7 +427,7 @@ const styles = StyleSheet.create({
   },
   validationMessage: {
     fontSize: 12,
-    color: colors.primary,
+    color: '#DC2626',
     marginTop: 8,
     lineHeight: 16,
   },

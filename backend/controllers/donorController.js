@@ -17,9 +17,9 @@ const REWARDS = {
 const getDonorProfile = async (req, res) => {
   try {
     let nextEligibleDate = null;
-    if (req.user.lastAppointmentDate) {
-      const lastAppointment = new Date(req.user.lastAppointmentDate);
-      const nextEligible = new Date(lastAppointment);
+    if (req.user.lastDonationDate) {
+      const lastDonation = new Date(req.user.lastDonationDate);
+      const nextEligible = new Date(lastDonation);
       nextEligible.setDate(nextEligible.getDate() + MIN_DAYS_BETWEEN_DONATIONS);
       nextEligibleDate = nextEligible.toISOString().split('T')[0];
     }
@@ -184,7 +184,9 @@ const completeDonation = async (req, res) => {
     }
 
     // Step (c): Get donor (skip eligibility check for QR scanning)
+    console.log('Finding donor with ID:', appointment.user);
     const donor = await User.findById(appointment.user).session(session);
+    console.log('Found donor:', donor ? donor._id : 'null', 'current lastDonationDate:', donor ? donor.lastDonationDate : 'null');
     if (!donor) {
       session.endSession();
       return res.status(404).json({
@@ -243,6 +245,7 @@ const completeDonation = async (req, res) => {
     }
 
     // Update user (add points and set last donation date)
+    console.log('Before update - donor._id:', donor._id, 'current lastDonationDate:', donor.lastDonationDate);
     await User.updateOne(
       { _id: donor._id },
       {
@@ -251,6 +254,7 @@ const completeDonation = async (req, res) => {
       },
       { session }
     );
+    console.log('After update - lastDonationDate set to:', new Date());
 
     await session.commitTransaction();
     session.endSession();

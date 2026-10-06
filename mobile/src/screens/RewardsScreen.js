@@ -6,17 +6,22 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
 import { getDonorProfile } from '../services/api';
 import { colors } from '../utils/colors';
+import { ActivityIndicator } from 'react-native';
 
 const RewardsScreen = ({ navigation }) => {
   const [points, setPoints] = useState(0);
+  const [loading, setLoading] = useState(false);
   const nextLevelPoints = 1000;
 
   const loadRewards = async () => {
+    setLoading(true);
     try {
       const response = await getDonorProfile();
       setPoints(response.data.points || 0);
     } catch (error) {
       console.error('Failed to load rewards:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,6 +38,13 @@ const RewardsScreen = ({ navigation }) => {
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
+        <TouchableOpacity style={styles.refreshButton} onPress={loadRewards} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size={20} color={colors.primary} />
+          ) : (
+            <Ionicons name="refresh" size={20} color={colors.primary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -88,7 +100,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
@@ -96,6 +108,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  refreshButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandText: {
     color: colors.primary,
