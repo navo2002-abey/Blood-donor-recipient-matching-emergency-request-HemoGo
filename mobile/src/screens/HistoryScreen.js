@@ -1,34 +1,77 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
-import { useLanguage } from '../context/LanguageContext';
+import { deleteAppointment, getAppointmentHistory } from '../services/api';
 import { colors } from '../utils/colors';
-import { useTheme } from '../context/ThemeContext';
 
 const HISTORY_KEY = '@appointment_history';
-const POINTS_KEY = '@donor_points';
 
 const HistoryScreen = ({ navigation }) => {
-  const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { t } = useLanguage();
   const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadAppointments = async () => {
+    setLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(HISTORY_KEY);
-      console.log('Stored appointments:', stored);
-      if (stored) {
-        setAppointments(JSON.parse(stored));
+      // Load from AsyncStorage (officer updates this when scanning QR)
+      const storageStr = await AsyncStorage.getItem(HISTORY_KEY);
+      const storageAppointments = storageStr ? JSON.parse(storageStr) : [];
+      
+      // Also try API for additional appointments
+      try {
+        const result = await getAppointmentHistory();
+        const apiAppointments = result.data || [];
+        
+        // Merge: API + AsyncStorage, avoiding duplicates
+        const merged = [...apiAppointments];
+        storageAppointments.forEach(storageAppt => {
+          const exists = apiAppointments.some(apiAppt => 
+            apiAppt._id === storageAppt._id || 
+            apiAppt.qrCodeId === storageAppt.qrCodeId ||
+            (apiAppt.bookedAt && storageAppt.bookedAt && 
+             new Date(apiAppt.bookedAt).getTime() === new Date(storageAppt.bookedAt).getTime())
+          );
+          if (!exists) {
+            merged.push(storageAppt);
+          }
+        });
+        
+        // Sort by bookedAt descending
+        merged.sort((a, b) => {
+          const dateA = a.bookedAt ? new Date(a.bookedAt) : new Date(0);
+          const dateB = b.bookedAt ? new Date(b.bookedAt) : new Date(0);
+          return dateB - dateA;
+        });
+        
+        setAppointments(merged);
+      } catch (apiError) {
+        // API failed, use AsyncStorage only
+        storageAppointments.sort((a, b) => {
+          const dateA = a.bookedAt ? new Date(a.bookedAt) : new Date(0);
+          const dateB = b.bookedAt ? new Date(b.bookedAt) : new Date(0);
+          return dateB - dateA;
+        });
+        setAppointments(storageAppointments);
       }
     } catch (error) {
-      console.error('Failed to load appointments:', error);
+      console.error('Load appointments error:', error);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAppointments();
+    setRefreshing(false);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,31 +79,41 @@ const HistoryScreen = ({ navigation }) => {
     }, [])
   );
 
-  const deleteAppointment = async (index) => {
-    try {
-      const updated = appointments.filter((_, i) => i !== index);
-      setAppointments(updated);
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    } catch (error) {
-      console.error('Failed to delete appointment:', error);
-    }
+  const showQRCode = (appointment) => {
+    navigation.navigate('HistoryDetail', { appointment });
   };
 
-  const completeDonation = async (index) => {
-    try {
-      const updated = [...appointments];
-      updated[index].completed = true;
-      updated[index].completedAt = new Date().toISOString();
-      setAppointments(updated);
-      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-
-      // Add 100 points for completing donation
-      const existingPoints = await AsyncStorage.getItem(POINTS_KEY);
-      const currentPoints = existingPoints ? parseInt(existingPoints) : 0;
-      await AsyncStorage.setItem(POINTS_KEY, JSON.stringify(currentPoints + 100));
-    } catch (error) {
-      console.error('Failed to complete donation:', error);
-    }
+  const handleDelete = async (appointment) => {
+    Alert.alert(
+      'Delete Appointment',
+      'Are you sure you want to delete this appointment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Try API delete first if appointment has _id
+              if (appointment._id) {
+                await deleteAppointment(appointment._id);
+              } else {
+                // Fallback: delete from AsyncStorage
+                const storageStr = await AsyncStorage.getItem(HISTORY_KEY);
+                const history = storageStr ? JSON.parse(storageStr) : [];
+                const updatedHistory = history.filter(appt => 
+                  appt.bookedAt !== appointment.bookedAt
+                );
+                await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+              }
+              await loadAppointments();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete appointment');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -76,19 +129,30 @@ const HistoryScreen = ({ navigation }) => {
         <View style={styles.headerBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{t('pages.historyTitle')}</Text>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <Text style={styles.title}>Appointment History</Text>
 
-        {appointments.length === 0 ? (
+        {loading && appointments.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.emptyText}>Loading...</Text>
+          </View>
+        ) : appointments.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={colors.textMuted} />
-            <Text style={styles.emptyText}>{t('pages.noAppointments')}</Text>
-            <Text style={styles.emptySubtext}>{t('pages.historyEmpty')}</Text>
+            <Text style={styles.emptyText}>No appointments yet</Text>
+            <Text style={styles.emptySubtext}>Your appointment history will appear here</Text>
           </View>
         ) : (
-          appointments.map((appointment, index) => (
-            <TouchableOpacity 
-              key={index} 
+          appointments.map((appointment) => (
+            <TouchableOpacity
+              key={appointment._id}
               style={styles.card}
               onPress={() => navigation.navigate('HistoryDetail', { appointment })}
             >
@@ -100,15 +164,32 @@ const HistoryScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.headerRight}>
                   <Text style={styles.cardDate}>{appointment.date}</Text>
-                  <TouchableOpacity 
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      deleteAppointment(index);
-                    }} 
-                    style={styles.deleteBtn}
-                  >
-                    <Ionicons name="close-outline" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  <View style={styles.iconRow}>
+                    {!appointment.completed && (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          navigation.navigate('BookAppointment', {
+                            editing: true,
+                            appointment: appointment,
+                            index: appointments.indexOf(appointment)
+                          });
+                        }}
+                        style={styles.editBtn}
+                      >
+                        <Ionicons name="create-outline" size={20} color={colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDelete(appointment);
+                      }}
+                      style={styles.editBtn}
+                    >
+                      <Ionicons name="close-outline" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
               <View style={styles.cardBody}>
@@ -121,14 +202,14 @@ const HistoryScreen = ({ navigation }) => {
                   <Text style={styles.detailText}>{appointment.time}</Text>
                 </View>
                 {!appointment.completed && (
-                  <TouchableOpacity 
-                    style={styles.completeButton} 
+                  <TouchableOpacity
+                    style={styles.completeButton}
                     onPress={(e) => {
                       e.stopPropagation();
-                      completeDonation(index);
+                      showQRCode(appointment);
                     }}
                   >
-                    <Text style={styles.completeButtonText}>{t('pages.completeDonation')}</Text>
+                    <Text style={styles.completeButtonText}>Show QR Code</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -140,10 +221,10 @@ const HistoryScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.page,
+    backgroundColor: '#FAFAFA',
   },
   header: {
     flexDirection: 'row',
@@ -196,7 +277,7 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -214,11 +295,16 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  deleteBtn: {
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  editBtn: {
     padding: 4,
   },
   statusBadge: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -229,7 +315,7 @@ const makeStyles = (colors) => StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.white,
   },
   statusTextCompleted: {
     color: colors.white,

@@ -1,31 +1,27 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { BloodDrop } from '../components/Logo';
-import { useLanguage } from '../context/LanguageContext';
+import { getDonorProfile } from '../services/api';
 import { colors } from '../utils/colors';
-import { useTheme } from '../context/ThemeContext';
-
-const POINTS_KEY = '@donor_points';
+import { ActivityIndicator } from 'react-native';
 
 const RewardsScreen = ({ navigation }) => {
-  const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { t } = useLanguage();
   const [points, setPoints] = useState(0);
+  const [loading, setLoading] = useState(false);
   const nextLevelPoints = 1000;
 
   const loadRewards = async () => {
+    setLoading(true);
     try {
-      // Load points from AsyncStorage
-      const storedPoints = await AsyncStorage.getItem(POINTS_KEY);
-      const totalPoints = storedPoints ? parseInt(storedPoints) : 0;
-      setPoints(totalPoints);
+      const response = await getDonorProfile();
+      setPoints(response.data.points || 0);
     } catch (error) {
       console.error('Failed to load rewards:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,16 +38,23 @@ const RewardsScreen = ({ navigation }) => {
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
+        <TouchableOpacity style={styles.refreshButton} onPress={loadRewards} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size={20} color={colors.primary} />
+          ) : (
+            <Ionicons name="refresh" size={20} color={colors.primary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{t('pages.rewardsTitle')}</Text>
+        <Text style={styles.title}>Rewards & Achievements</Text>
 
         <View style={styles.pointsCard}>
           <View style={styles.pointsIconContainer}>
             <Ionicons name="star" size={40} color={colors.white} />
           </View>
-          <Text style={styles.pointsLabel}>{t('pages.totalPoints')}</Text>
+          <Text style={styles.pointsLabel}>Total Points</Text>
           <Text style={styles.pointsValue}>{points}</Text>
           
           <View style={styles.progressContainer}>
@@ -71,20 +74,16 @@ const RewardsScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('RewardsGift')}
           >
             <Ionicons name="gift-outline" size={20} color={colors.white} />
-            <Text style={styles.collectButtonText}>{t('pages.collect')}</Text>
+            <Text style={styles.collectButtonText}>Collect Rewards</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('pages.howToEarn')}</Text>
+          <Text style={styles.sectionTitle}>How to Earn Points</Text>
           <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.infoText}>{t('pages.earnBook')}</Text>
-            </View>
             <View style={[styles.infoRow, styles.infoRowLast]}>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.infoText}>{t('pages.earnDonate')}</Text>
+              <Text style={styles.infoText}>Complete a blood donation: +100 points</Text>
             </View>
           </View>
         </View>
@@ -93,15 +92,15 @@ const RewardsScreen = ({ navigation }) => {
   );
 };
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.page,
+    backgroundColor: '#FAFAFA',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
@@ -109,6 +108,12 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  refreshButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandText: {
     color: colors.primary,
@@ -170,7 +175,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.white,
     borderRadius: 4,
   },
   progressText: {
@@ -204,7 +209,7 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 12,
   },
   infoCard: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.white,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
