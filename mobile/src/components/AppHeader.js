@@ -51,7 +51,7 @@ const AppHeader = ({
     <View style={styles.header}>
       <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={handleLeft}>
         <Ionicons
-          name={showBack ? 'arrow-back' : 'menu-outline'}
+          name={showBack ? 'chevron-back' : 'menu-outline'}
           size={24}
           color={colors.text}
         />

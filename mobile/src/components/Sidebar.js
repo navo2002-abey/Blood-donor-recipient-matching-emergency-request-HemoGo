@@ -116,6 +116,29 @@ const Sidebar = ({
     onComingSoon(item.key);
   };
 
+  const handleNotificationPress = () => {
+    onClose();
+    if (!navigation) return;
+
+    // Check if current navigator has Notifications
+    const state = navigation.getState?.();
+    const routeNames = state?.routeNames || [];
+
+    if (routeNames.includes('Notifications')) {
+      navigation.navigate('Notifications');
+      return;
+    }
+
+    // Try parent navigator if nested inside tabs
+    const parent = navigation.getParent?.();
+    if (parent?.navigate) {
+      parent.navigate('Notifications');
+      return;
+    }
+
+    navigation.navigate('Notifications');
+  };
+
   const handleLogout = async () => {
     onClose();
     await logout();
@@ -163,7 +186,16 @@ const Sidebar = ({
         {isStaff ? (
           <>
             <View style={styles.staffTopRow}>
-              <View />
+              <TouchableOpacity
+                style={styles.bellWrap}
+                onPress={handleNotificationPress}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Notifications"
+              >
+                <Ionicons name="notifications-outline" size={20} color={colors.white} />
+                <View style={styles.badge} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
                 <Ionicons name="close" size={22} color={colors.white} />
               </TouchableOpacity>
@@ -213,14 +245,20 @@ const Sidebar = ({
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.group}>{subtitle}</Text>
               </View>
-              <View style={styles.bellWrap}>
+              <TouchableOpacity
+                style={styles.bellWrap}
+                onPress={handleNotificationPress}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Notifications"
+              >
                 <Ionicons
                   name="notifications-outline"
                   size={20}
                   color={colors.white}
                 />
                 <View style={styles.badge} />
-              </View>
+              </TouchableOpacity>
             </View>
 
             <ScrollView

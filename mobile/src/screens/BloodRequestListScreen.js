@@ -469,7 +469,7 @@ const BloodRequestListScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brandContainer}>
           <BloodDrop size={18} />

@@ -881,7 +881,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
             style={styles.iconBtn}
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
         ) : (
           <View style={styles.iconBtnPlaceholder} />
