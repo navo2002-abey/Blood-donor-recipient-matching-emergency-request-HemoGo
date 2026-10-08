@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useMyHospital } from '../../hooks/useMyHospital';
 import { predictionService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -36,6 +37,8 @@ const riskTheme = (riskLevel) => {
 };
 
 const AIPredictionScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -221,8 +224,8 @@ const AIPredictionScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 100 },
 
   pageTitle: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 6 },
@@ -239,7 +242,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   chartHeader: {
     flexDirection: 'row',
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,

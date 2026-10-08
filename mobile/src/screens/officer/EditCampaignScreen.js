@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,8 +17,10 @@ import DateField from '../../components/DateField';
 import FormField from '../../components/FormField';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { campaignService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { minLength, notPastDate, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const VENUE_TYPES = [
@@ -27,6 +29,9 @@ const VENUE_TYPES = [
 ];
 
 const EditCampaignScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const HOSPITAL = useMyHospital();
   const campaign = route?.params?.campaign;
 
@@ -121,7 +126,7 @@ const EditCampaignScreen = ({ route, navigation }) => {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Edit Campaign</Text>
+          <Text style={styles.title}>{t('pages.editCampaign')}</Text>
           <Text style={styles.subtitle}>Update the details below.</Text>
 
           <FormField label="CAMPAIGN NAME" error={touched.name ? errors.name : null}>
@@ -271,8 +276,8 @@ const EditCampaignScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
   title: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 6 },
   subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 4, marginBottom: 20 },
@@ -281,9 +286,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 54,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     paddingHorizontal: 16,
   },
   inputIcon: { marginRight: 12 },
@@ -296,7 +301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   groupChipActive: { backgroundColor: colors.primary },
   groupChipText: { fontSize: 13, fontWeight: '700', color: colors.text },
@@ -311,12 +316,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
   },
   venueTypeCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#FFF8F9',
+    backgroundColor: colors.primarySoft,
   },
   venueTypeText: {
     fontSize: 12,

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { fetchCurrentUser, loginUser, logoutUser, registerUser } from '../services/authService';
+import { fetchCurrentUser, loginUser, logoutUser, registerUser, socialLoginUser, updateProfile } from '../services/authService';
 import { getStoredUser, getToken, saveSession } from '../utils/storage';
 
 const AuthContext = createContext(null);
@@ -41,9 +41,27 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, []);
 
+  const socialLogin = useCallback(async (payload) => {
+    const data = await socialLoginUser(payload);
+    if (data.user) {
+      setUser(data.user);
+    }
+    return data;
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutUser();
     setUser(null);
+  }, []);
+
+  const saveProfile = useCallback(async (payload) => {
+    const data = await updateProfile(payload);
+    const token = await getToken();
+    if (token) {
+      await saveSession(token, data.user);
+    }
+    setUser(data.user);
+    return data.user;
   }, []);
 
   const hydrateFromStorage = useCallback(async () => {
@@ -61,9 +79,11 @@ export const AuthProvider = ({ children }) => {
       hydrateFromStorage,
       login,
       register,
+      socialLogin,
       logout,
+      saveProfile,
     }),
-    [user, isReady, restoreSession, hydrateFromStorage, login, register, logout]
+    [user, isReady, restoreSession, hydrateFromStorage, login, register, socialLogin, logout, saveProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../components/Button';
 import { BloodDrop } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const ComingSoonScreen = ({ title, showLogout = false, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { logout } = useAuth();
+  const { t } = useLanguage();
 
   const handleLogout = async () => {
     await logout();
@@ -22,17 +27,17 @@ const ComingSoonScreen = ({ title, showLogout = false, navigation }) => {
       <View style={styles.center}>
         <BloodDrop size={42} />
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>Coming Soon</Text>
-        <Text style={styles.copy}>This feature will be added in a later version of HemoGo.</Text>
+        <Text style={styles.subtitle}>{t('pages.comingSoon')}</Text>
+        <Text style={styles.copy}>{t('pages.comingSoonCopy')}</Text>
         {showLogout ? (
-          <Button title="Log Out" onPress={handleLogout} style={styles.logout} />
+          <Button title={t('common.logout')} onPress={handleLogout} style={styles.logout} />
         ) : null}
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

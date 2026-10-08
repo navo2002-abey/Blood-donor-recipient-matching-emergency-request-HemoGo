@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const LoadingIndicator = ({ label }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
       <ActivityIndicator color={colors.primary} />
@@ -11,7 +14,7 @@ const LoadingIndicator = ({ label }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',

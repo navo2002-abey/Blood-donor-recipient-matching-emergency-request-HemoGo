@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,9 +19,11 @@ import Sidebar from '../../components/Sidebar';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { campaignService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 import { minLength, notPastDate, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const VENUE_TYPES = [
@@ -33,6 +35,9 @@ const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
 
 const OrganizeDonationDriveScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const HOSPITAL = useMyHospital();
   const { location } = useUserLocation();
   const initialGroups = route?.params?.bloodGroups || [];
@@ -145,7 +150,7 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Organize Donation Drive</Text>
+          <Text style={styles.title}>{t('pages.donationDrive')}</Text>
           <Text style={styles.subtitle}>
             Suggested based on AI shortage predictions.
           </Text>
@@ -359,8 +364,8 @@ const OrganizeDonationDriveScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 40 },
 
   title: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 6 },
@@ -373,7 +378,7 @@ const styles = StyleSheet.create({
 
   aiBox: {
     flexDirection: 'row',
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
@@ -383,7 +388,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -408,9 +413,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 54,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     paddingHorizontal: 16,
   },
   inputIcon: { marginRight: 12 },
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -446,12 +451,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
   },
   venueTypeCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#FFF8F9',
+    backgroundColor: colors.primarySoft,
   },
   venueTypeText: {
     fontSize: 12,
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.primary,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   detectText: {
     color: colors.primary,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,14 +14,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import FormField from '../../components/FormField';
 import { transferService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { minLength, positiveInt, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const SOURCE_HOSPITAL = 'Colombo General Hospital Blood Bank';
 const DEST_HOSPITAL = 'National Hospital Colombo Blood Bank';
 
 const TransferRequestScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const initialGroup = route.params?.bloodGroup || 'O+';
   const [bloodGroup] = useState(initialGroup);
   const [units, setUnits] = useState('1');
@@ -84,7 +89,7 @@ const TransferRequestScreen = ({ route, navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Request Transfer</Text>
+          <Text style={styles.headerTitle}>{t('pages.requestTransfer')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -93,7 +98,7 @@ const TransferRequestScreen = ({ route, navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Request Transfer</Text>
+          <Text style={styles.title}>{t('pages.requestTransfer')}</Text>
           <Text style={styles.subtitle}>
             Send a transfer request to the destination hospital.
           </Text>
@@ -181,8 +186,8 @@ const TransferRequestScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -196,7 +201,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 6, marginBottom: 20 },
   infoRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
-  infoBox: { flex: 1, backgroundColor: '#F9FAFB', padding: 14, borderRadius: 14 },
+  infoBox: { flex: 1, backgroundColor: colors.page, padding: 14, borderRadius: 14 },
   infoLabel: { fontSize: 10, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.4 },
   infoValue: { fontSize: 22, fontWeight: '800', color: colors.primary, marginTop: 6 },
   unitsInput: {
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     height: 54,
     borderRadius: 16,
     paddingHorizontal: 16,
@@ -237,14 +242,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 12, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
   input: {
     borderRadius: 16,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     paddingHorizontal: 16,
     fontSize: 14,
     color: colors.text,

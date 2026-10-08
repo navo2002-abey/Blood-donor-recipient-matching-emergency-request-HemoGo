@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useMyHospital } from '../../hooks/useMyHospital';
 import { campaignService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -30,6 +31,8 @@ const statusColor = (s) => {
 };
 
 const CampaignListScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const confirm = useConfirm();
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -197,11 +200,11 @@ const CampaignListScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.page },
   list: { padding: 16, paddingBottom: 100 },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,

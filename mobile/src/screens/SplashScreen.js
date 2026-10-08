@@ -1,12 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const SplashScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { restoreSession } = useAuth();
+  const { t } = useLanguage();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.86)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -62,7 +67,7 @@ const SplashScreen = ({ navigation }) => {
         ]}
       >
         <View style={styles.logoGlow}>
-          <Logo size="lg" titleColor={colors.primary} tagline="Every drop saves a life" />
+          <Logo size="lg" titleColor={colors.primary} tagline={t('pages.tagline')} />
         </View>
       </Animated.View>
 
@@ -70,13 +75,13 @@ const SplashScreen = ({ navigation }) => {
         <View style={styles.track}>
           <Animated.View style={[styles.bar, { width: progressWidth }]} />
         </View>
-        <Text style={styles.footer}>Together for a healthier tomorrow</Text>
+        <Text style={styles.footer}>{t('pages.splashFooter')}</Text>
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -97,7 +102,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.cardBg,
     top: 140,
     alignSelf: 'center',
   },
@@ -117,7 +122,7 @@ const styles = StyleSheet.create({
     width: 92,
     height: 4,
     borderRadius: 4,
-    backgroundColor: '#F0F0F2',
+    backgroundColor: colors.border,
     overflow: 'hidden',
     marginBottom: 14,
   },

@@ -6,6 +6,9 @@ import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import api from '../services/api';
+import { getApiErrorMessage } from '../utils/validation';
+import { useTheme } from '../context/ThemeContext';
 
 const MAX_MESSAGE = 200;
 
@@ -37,20 +40,47 @@ const formatReceipt = (date) => {
 };
 
 const DirectRequestScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const donor = donors.find((item) => item.id === route.params?.donorId) || null;
   const [message, setMessage] = useState(donor ? defaultMessage(donor) : '');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
-  const send = () => {
+  const send = async () => {
+    if (!donor || sending) {
+      return;
+    }
     if (!message.trim()) {
       Alert.alert('Missing message', 'Write a short message for the donor.');
       return;
     }
-    setReceipt(formatReceipt(new Date()));
-    setSent(true);
+
+    try {
+      setSending(true);
+      const { data } = await api.post('/request-summaries', {
+        donorId: donor.id,
+        donorName: donor.name,
+        donorPhone: donor.phone,
+        donorHospital: donor.hospital,
+        donorArea: donor.area,
+        bloodType: donor.bloodGroup,
+        unitsRequired: 1,
+        location: donor.address,
+        additionalDetails: message.trim(),
+      });
+      const saved = data.data;
+      const when = new Date(saved.requestedAt);
+      setReceipt({ ...formatReceipt(when), id: saved.requestId });
+      setSent(true);
+    } catch (error) {
+      Alert.alert('Request failed', getApiErrorMessage(error, 'Unable to save the request.'));
+    } finally {
+      setSending(false);
+    }
   };
 
   const goHome = () => {
@@ -252,8 +282,8 @@ const DirectRequestScreen = ({ navigation, route }) => {
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.sendBtn} onPress={send}>
-              <Text style={styles.sendText}>Send Request</Text>
+            <TouchableOpacity style={styles.sendBtn} onPress={send} disabled={sending}>
+              <Text style={styles.sendText}>{sending ? 'Sending...' : 'Send Request'}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -268,8 +298,8 @@ const DirectRequestScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.white },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,7 +314,7 @@ const styles = StyleSheet.create({
   donorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -328,7 +358,7 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder,
     borderRadius: 14,
     padding: 12,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   statIcon: {
     width: 36,
@@ -347,7 +377,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
     padding: 12,
     marginBottom: 14,
     minHeight: 120,
@@ -367,7 +397,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   sendBtn: {
     height: 48,
@@ -400,7 +430,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -426,7 +456,7 @@ const styles = StyleSheet.create({
   summaryId: { fontSize: 13, fontWeight: '800', color: colors.primary },
   nextCard: {
     alignSelf: 'stretch',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,
@@ -446,7 +476,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
     borderColor: '#F3C5CB',
     alignItems: 'center',

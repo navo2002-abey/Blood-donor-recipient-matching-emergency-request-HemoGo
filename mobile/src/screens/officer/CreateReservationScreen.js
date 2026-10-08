@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,9 +16,11 @@ import { Ionicons } from '@expo/vector-icons';
 import FormField from '../../components/FormField';
 import { useMyHospital } from '../../hooks/useMyHospital';
 import { reservationService, stockService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { minLength, positiveInt, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
@@ -28,6 +30,9 @@ const daysLeft = (date) => {
 };
 
 const CreateReservationScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const HOSPITAL = useMyHospital();
   const [batches, setBatches] = useState([]);
   const [loadingBatches, setLoadingBatches] = useState(true);
@@ -146,7 +151,7 @@ const CreateReservationScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create New Reservation</Text>
+          <Text style={styles.headerTitle}>{t('pages.createReservation')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -155,7 +160,7 @@ const CreateReservationScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Create Reservation</Text>
+          <Text style={styles.title}>{t('pages.createReservation')}</Text>
           <Text style={styles.subtitle}>Pick from available stock</Text>
 
           <FormField
@@ -325,8 +330,8 @@ const CreateReservationScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
@@ -335,14 +340,14 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, letterSpacing: 1, color: colors.textMuted, fontWeight: '700', marginTop: 4, marginBottom: 16 },
   label: { fontSize: 12, fontWeight: '800', color: colors.text, marginTop: 18, marginBottom: 10, letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, backgroundColor: '#F4F4F6' },
+  chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, backgroundColor: colors.page },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
   chipTextActive: { color: colors.white },
-  noStock: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: '#FFF1F3', borderRadius: 12, padding: 12 },
+  noStock: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.primarySoft, borderRadius: 12, padding: 12 },
   noStockText: { color: colors.primary, fontWeight: '700', fontSize: 13, flex: 1 },
-  batchCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E5E7EB', marginBottom: 8 },
-  batchCardActive: { borderColor: colors.primary, backgroundColor: '#FFF8F9' },
+  batchCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: colors.cardBg, borderWidth: 1.5, borderColor: colors.border, marginBottom: 8 },
+  batchCardActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   batchLeft: { width: 24 },
   radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
@@ -351,7 +356,7 @@ const styles = StyleSheet.create({
   urgentPill: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   urgentText: { color: colors.primary, fontSize: 9, fontWeight: '800' },
   inlineError: { marginTop: 4, marginLeft: 4, fontSize: 11, fontWeight: '700', color: colors.primary },
-  input: { height: 54, borderRadius: 16, backgroundColor: '#F4F4F6', paddingHorizontal: 16, fontSize: 15, color: colors.text },
+  input: { height: 54, borderRadius: 16, backgroundColor: colors.page, paddingHorizontal: 16, fontSize: 15, color: colors.text },
   hint: { marginTop: 6, marginLeft: 4, fontSize: 11, color: colors.textMuted },
   saveBtn: { height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 26 },
   saveText: { color: colors.white, fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },

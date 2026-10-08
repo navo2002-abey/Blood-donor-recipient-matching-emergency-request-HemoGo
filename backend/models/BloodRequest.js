@@ -83,6 +83,31 @@ const bloodRequestSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    acceptedDonors: [
+      {
+        donor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        status: {
+          type: String,
+          enum: ['ACCEPTED', 'VERIFIED', 'CANCELLED'],
+          default: 'ACCEPTED',
+        },
+        acceptedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        verifiedAt: {
+          type: Date,
+          default: null,
+        },
+        verifierId: {
+          type: String,
+          default: null,
+        },
+      },
+    ],
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

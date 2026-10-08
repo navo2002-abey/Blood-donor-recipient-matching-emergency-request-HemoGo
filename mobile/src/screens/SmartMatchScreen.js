@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
-import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
+import api from '../services/api';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
-import { DONOR_MENU } from '../utils/roles';
 import { rankDonorsForRequest } from '../utils/smartMatch';
+import { getApiErrorMessage } from '../utils/validation';
+import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -24,9 +27,11 @@ const initials = (name) =>
     .toUpperCase();
 
 const SmartMatchScreen = ({ navigation, route }) => {
-  const menu = route.params?.menu || DONOR_MENU;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const { patientName, hospital, bloodGroup, urgency, details } = route.params || {};
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const matches = useMemo(
@@ -39,47 +44,94 @@ const SmartMatchScreen = ({ navigation, route }) => {
       }),
     [bloodGroup, donors, hospital, urgency]
   );
+  const savedKey = useRef('');
+  const [selectedId, setSelectedId] = useState(null);
+  const selectedDonor = matches.find((donor) => donor.id === selectedId) || null;
+
+  useEffect(() => {
+    const requestMatchId = route.params?.requestMatchId;
+    if (!requestMatchId) {
+      return undefined;
+    }
+
+    const key = `${requestMatchId}:${matches.map((donor) => `${donor.id}-${donor.score}`).join(',')}`;
+    if (savedKey.current === key) {
+      return undefined;
+    }
+    savedKey.current = key;
+
+    let cancelled = false;
+    const saveResults = async () => {
+      try {
+        await api.post('/best-donor-ai', {
+          requestMatchId,
+          donors: matches.map((donor) => ({
+            id: donor.id,
+            name: donor.name,
+            bloodGroup: donor.bloodGroup,
+            distanceKm: donor.distanceKm,
+            hospital: donor.hospital,
+            available: donor.available,
+            score: donor.score,
+            exact: donor.exact,
+            matchedHospital: donor.matchedHospital,
+            reason: donor.reason,
+          })),
+        });
+      } catch (error) {
+        if (!cancelled) {
+          savedKey.current = '';
+          Alert.alert('Could not save', getApiErrorMessage(error, 'Unable to save the AI donor results.'));
+        }
+      }
+    };
+
+    saveResults();
+    return () => {
+      cancelled = true;
+    };
+  }, [matches, route.params?.requestMatchId]);
 
   const notifyDonors = () => {
-    if (!matches.length) {
-      Alert.alert('No donors', 'There are no compatible donors to notify for this request.');
+    if (!selectedDonor) {
+      Alert.alert('Select a donor', 'Choose one donor from the list first.');
       return;
     }
 
     navigation.navigate('EmergencyMode', {
-      menu,
       patientName,
       hospital,
       bloodGroup,
       urgency,
-      donors: matches.map((donor) => ({
-        id: donor.id,
-        name: donor.name,
-        bloodGroup: donor.bloodGroup,
-        distanceKm: donor.distanceKm,
-        hospital: donor.hospital,
-        available: donor.available,
-      })),
+      donors: [{
+        id: selectedDonor.id,
+        name: selectedDonor.name,
+        bloodGroup: selectedDonor.bloodGroup,
+        distanceKm: selectedDonor.distanceKm,
+        hospital: selectedDonor.hospital,
+        available: selectedDonor.available,
+      }],
     });
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} hitSlop={10} style={styles.headerBtn}>
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <TouchableOpacity onPress={() => comingSoon('Notifications')} hitSlop={10} style={styles.headerBtn}>
+        <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>AI-Based Best Donor Selection</Text>
+        <Text style={styles.title}>{t('pages.smartMatch')}</Text>
         <Text style={styles.subtitle}>
           Our AI analyzes compatibility, location, and availability to find the best match.
         </Text>
@@ -101,8 +153,14 @@ const SmartMatchScreen = ({ navigation, route }) => {
         ) : (
           matches.map((donor, index) => {
             const best = index === 0;
+            const selected = donor.id === selectedId;
             return (
-              <View key={donor.id} style={[styles.card, best && styles.cardBest]}>
+              <TouchableOpacity
+                key={donor.id}
+                activeOpacity={0.85}
+                onPress={() => setSelectedId(donor.id)}
+                style={[styles.card, best && styles.cardBest, selected && styles.cardSelected]}
+              >
                 <View style={styles.cardTop}>
                   <View style={styles.rankRow}>
                     <Text style={[styles.rank, best && styles.rankBest]}>#{index + 1}</Text>
@@ -129,6 +187,11 @@ const SmartMatchScreen = ({ navigation, route }) => {
                       {donor.bloodGroup} · {Number(donor.distanceKm).toFixed(1)} km
                     </Text>
                   </View>
+                  <Ionicons
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={selected ? colors.primary : colors.textMuted}
+                  />
                 </View>
 
                 <Text style={styles.stat}>
@@ -144,7 +207,7 @@ const SmartMatchScreen = ({ navigation, route }) => {
                   </Text>
                 </Text>
                 <Text style={styles.reason}>{donor.reason}</Text>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}
@@ -156,18 +219,11 @@ const SmartMatchScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={menu}
-      />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -184,6 +240,17 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   brand: {
     flexDirection: 'row',
@@ -203,7 +270,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -228,13 +295,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: colors.white,
+    borderColor: colors.border,
+    backgroundColor: colors.cardBg,
     padding: 14,
   },
   cardBest: {
-    backgroundColor: '#FFF5F6',
+    backgroundColor: colors.primarySoft,
     borderColor: '#F8C9D0',
+  },
+  cardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
   cardTop: {
     flexDirection: 'row',
@@ -249,7 +320,7 @@ const styles = StyleSheet.create({
   rank: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#9CA3AF',
+    color: colors.textMuted,
   },
   rankBest: {
     color: colors.primary,
@@ -294,12 +365,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarBest: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   avatarText: {
     fontSize: 14,
@@ -344,7 +415,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     lineHeight: 17,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   empty: {
     marginTop: 20,

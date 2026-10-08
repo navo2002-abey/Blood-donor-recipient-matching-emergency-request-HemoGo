@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BloodDrop } from './Logo';
-import { useAlerts } from '../context/AlertsContext';
+import { useNotifications } from '../context/NotificationContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * Reusable top header.
@@ -21,7 +22,9 @@ const AppHeader = ({
   showBack = false,
   showBell = true,
 }) => {
-  const { unreadCount } = useAlerts();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { hasUnread } = useNotifications();
 
   const handleLeft = () => {
     if (showBack) {
@@ -36,11 +39,10 @@ const AppHeader = ({
   const handleBell = () => {
     if (onBellPress) onBellPress();
     else {
-      // Navigate to the Alerts tab if available; else fall back to stack screen
       try {
-        navigation.navigate('Alerts');
+        navigation.navigate('Notifications');
       } catch (e) {
-        navigation.navigate('OfficerTabs', { screen: 'Alerts' });
+        navigation.navigate('Alerts');
       }
     }
   };
@@ -49,7 +51,7 @@ const AppHeader = ({
     <View style={styles.header}>
       <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={handleLeft}>
         <Ionicons
-          name={showBack ? 'arrow-back' : 'menu-outline'}
+          name={showBack ? 'chevron-back' : 'menu-outline'}
           size={24}
           color={colors.text}
         />
@@ -63,7 +65,7 @@ const AppHeader = ({
       {showBell ? (
         <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={handleBell}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       ) : (
         <View style={styles.headerBtn} />
@@ -72,7 +74,7 @@ const AppHeader = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

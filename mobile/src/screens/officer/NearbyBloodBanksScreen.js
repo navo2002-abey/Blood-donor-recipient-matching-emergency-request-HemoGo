@@ -21,6 +21,7 @@ import { bloodBankService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
 import { normalizeStock, totalUnits } from '../../utils/stockHelpers';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 
@@ -38,6 +39,8 @@ const pseudoDistance = (name) => {
 };
 
 const NearbyBloodBanksScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { unreadCount } = useAlerts();
   const myHospital = useMyHospital();
   const { location } = useUserLocation();
@@ -246,8 +249,8 @@ const NearbyBloodBanksScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,11 +290,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     marginBottom: 14,
   },
   myBankIcon: {
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     backgroundColor: '#E8EEF3',
   },
   mapLoading: {
@@ -335,7 +338,7 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -353,7 +356,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1.5,
     borderColor: '#FEE2E2',
     borderRadius: 16,
@@ -365,7 +368,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.border,
   },
   totalText: { fontSize: 11, color: colors.textSecondary, fontWeight: '700' },
   availablePill: {
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
   },
   availableText: { fontSize: 10, fontWeight: '800', color: colors.success },
   emptyPill: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,

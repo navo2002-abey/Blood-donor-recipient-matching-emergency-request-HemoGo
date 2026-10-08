@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,9 +15,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
-import Sidebar from '../components/Sidebar';
+import { useLanguage } from '../context/LanguageContext';
+import api from '../services/api';
 import { colors } from '../utils/colors';
 import { DONOR_MENU } from '../utils/roles';
+import { getApiErrorMessage } from '../utils/validation';
+import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -70,8 +74,11 @@ const validateMatch = ({ patientName, hospital, bloodGroup, urgency, details }) 
 };
 
 const RequestMatchScreen = ({ navigation, route }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const menu = route.params?.menu || DONOR_MENU;
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [patientName, setPatientName] = useState('');
   const [hospital, setHospital] = useState('');
   const [bloodGroup, setBloodGroup] = useState('');
@@ -79,6 +86,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
   const [details, setDetails] = useState('');
   const [picker, setPicker] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const errors = submitted
     ? validateMatch({ patientName, hospital, bloodGroup, urgency, details })
@@ -98,39 +106,55 @@ const RequestMatchScreen = ({ navigation, route }) => {
     setPicker(null);
   };
 
-  const handleMatch = () => {
+  const handleMatch = async () => {
     const nextErrors = validateMatch({ patientName, hospital, bloodGroup, urgency, details });
     setSubmitted(true);
-    if (Object.keys(nextErrors).length > 0) {
+    if (Object.keys(nextErrors).length > 0 || saving) {
       return;
     }
 
-    navigation.navigate('SmartMatch', {
-      menu,
-      patientName: patientName.trim(),
-      hospital: hospital.trim(),
-      bloodGroup,
-      urgency,
-      details: details.trim(),
-    });
+    try {
+      setSaving(true);
+      const { data } = await api.post('/request-matches', {
+        patientName: patientName.trim(),
+        hospital: hospital.trim(),
+        bloodGroup,
+        urgency,
+        additionalDetails: details.trim(),
+      });
+      navigation.navigate('SmartMatch', {
+        menu,
+        requestMatchId: data.data._id,
+        patientName: patientName.trim(),
+        hospital: hospital.trim(),
+        bloodGroup,
+        urgency,
+        details: details.trim(),
+      });
+    } catch (error) {
+      Alert.alert('Could not save', getApiErrorMessage(error, 'Unable to save this request match.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSidebarOpen(true)} hitSlop={10} style={styles.headerBtn}>
-          <Ionicons name="menu-outline" size={26} color={colors.text} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={26} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
         <TouchableOpacity
-          onPress={() => comingSoon('Notifications')}
+          onPress={() => navigation.navigate('Notifications')}
           hitSlop={10}
           style={styles.headerBtn}
         >
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -143,7 +167,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Request a Match</Text>
+          <Text style={styles.title}>{t('pages.requestMatch')}</Text>
           <Text style={styles.subtitle}>
             Tell us what you need, and we'll find the best matching donors for you.
           </Text>
@@ -214,8 +238,13 @@ const RequestMatchScreen = ({ navigation, route }) => {
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.submit} onPress={handleMatch} activeOpacity={0.85}>
-            <Text style={styles.submitText}>Initiate Smart Matching</Text>
+          <TouchableOpacity
+            style={styles.submit}
+            onPress={handleMatch}
+            activeOpacity={0.85}
+            disabled={saving}
+          >
+            <Text style={styles.submitText}>{saving ? 'Saving...' : 'Initiate Smart Matching'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -241,26 +270,23 @@ const RequestMatchScreen = ({ navigation, route }) => {
         </Pressable>
       </Modal>
 
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={menu}
-      />
     </SafeAreaView>
   );
 };
 
-const Field = ({ label, error, children }) => (
+const Field = ({ label, error, children }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  return (
   <View style={styles.field}>
     <Text style={styles.label}>{label}</Text>
     {children}
     {error ? <Text style={styles.error}>{error}</Text> : null}
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,
@@ -281,6 +307,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
+  },
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,7 +336,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -316,12 +353,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: colors.text,
   },
   input: {
     minHeight: 52,
     borderRadius: 26,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.border,
     paddingHorizontal: 18,
     fontSize: 15,
     color: colors.text,
@@ -330,7 +367,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.primary,
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
   },
   select: {
     flexDirection: 'row',
@@ -388,7 +425,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,

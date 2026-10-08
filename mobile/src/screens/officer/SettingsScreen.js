@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Alert,
   ScrollView,
@@ -11,14 +11,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
+import LanguagePicker from '../../components/LanguagePicker';
+import ThemePicker from '../../components/ThemePicker';
 import Sidebar from '../../components/Sidebar';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const SettingsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const confirm = useConfirm();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -116,92 +123,79 @@ const SettingsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+        <Text style={styles.sectionTitle}>{t('pages.notifications')}</Text>
         <View style={styles.group}>
           <ToggleRow
             icon="notifications-outline"
-            label="Push Alerts"
+            label={t('pages.pushAlerts')}
             value={pushAlerts}
             onValueChange={setPushAlerts}
           />
           <View style={styles.divider} />
           <ToggleRow
             icon="hourglass-outline"
-            label="Expiry Reminders"
+            label={t('pages.expiryReminders')}
             value={expiryReminders}
             onValueChange={setExpiryReminders}
           />
           <View style={styles.divider} />
           <ToggleRow
             icon="alert-outline"
-            label="Low Stock Alerts"
+            label={t('pages.lowStockAlerts')}
             value={lowStockAlerts}
             onValueChange={setLowStockAlerts}
           />
         </View>
 
-        <Text style={styles.sectionTitle}>ACCOUNT</Text>
+        <Text style={styles.sectionTitle}>{t('pages.account')}</Text>
         <View style={styles.group}>
           <Row
             icon="person-outline"
-            label="Edit Profile"
+            label={t('pages.editProfile')}
             onPress={() => comingSoon('Edit Profile')}
           />
           <View style={styles.divider} />
           <Row
             icon="business-outline"
-            label="Hospital"
+            label={t('pages.hospitalLabel')}
             value={hospital}
             onPress={() => comingSoon('Change Hospital')}
           />
           <View style={styles.divider} />
           <Row
             icon="lock-closed-outline"
-            label="Change Password"
+            label={t('pages.changePassword')}
             onPress={() => comingSoon('Change Password')}
           />
         </View>
 
-        <Text style={styles.sectionTitle}>PREFERENCES</Text>
-        <View style={styles.group}>
-          <Row
-            icon="language-outline"
-            label="Language"
-            value="English"
-            onPress={() => comingSoon('Language')}
-          />
-          <View style={styles.divider} />
-          <Row
-            icon="moon-outline"
-            label="Dark Mode"
-            value="Off"
-            onPress={() => comingSoon('Dark Mode')}
-          />
-        </View>
+        <Text style={styles.sectionTitle}>{t('pages.preferences')}</Text>
+        <LanguagePicker />
+        <ThemePicker />
 
-        <Text style={styles.sectionTitle}>ABOUT</Text>
+        <Text style={styles.sectionTitle}>{t('pages.about')}</Text>
         <View style={styles.group}>
           <Row
             icon="help-circle-outline"
-            label="Help & Support"
+            label={t('menu.Help & Support')}
             onPress={() => comingSoon('Help')}
           />
           <View style={styles.divider} />
           <Row
             icon="document-text-outline"
-            label="Privacy Policy"
+            label={t('pages.privacy')}
             onPress={() => comingSoon('Privacy')}
           />
           <View style={styles.divider} />
-          <Row icon="information-circle-outline" label="App Version" value="v1.0.0" />
+          <Row icon="information-circle-outline" label={t('pages.appVersion')} value="v1.0.0" />
         </View>
 
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={colors.primary} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t('common.logout')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>HemoGo · Blood Donor Matching</Text>
+        <Text style={styles.footer}>{t('pages.appFooter')}</Text>
       </ScrollView>
 
       <Sidebar
@@ -218,14 +212,14 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   scroll: { padding: 16, paddingBottom: 40 },
 
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     padding: 16,
     borderRadius: 20,
     marginBottom: 20,
@@ -272,7 +266,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   group: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',

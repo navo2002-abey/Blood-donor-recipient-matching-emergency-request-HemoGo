@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const buildMapHtml = ({ centerLat, centerLng, banks, interactive }) => {
   const bankJson = JSON.stringify(
@@ -75,6 +76,8 @@ const buildMapHtml = ({ centerLat, centerLng, banks, interactive }) => {
 };
 
 const BloodBanksMap = ({ location, banks, interactive = false, style }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const html = useMemo(
     () =>
       buildMapHtml({
@@ -112,7 +115,7 @@ const BloodBanksMap = ({ location, banks, interactive = false, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     flex: 1,
     overflow: 'hidden',

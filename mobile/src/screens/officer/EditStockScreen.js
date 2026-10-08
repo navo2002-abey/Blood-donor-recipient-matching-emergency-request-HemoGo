@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,14 +17,19 @@ import DateField from '../../components/DateField';
 import FormField from '../../components/FormField';
 import { useConfirm } from '../../context/ConfirmContext';
 import { stockService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
 import { notPastDate, positiveInt, required } from '../../utils/validators';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const STATUSES = ['AVAILABLE', 'RESERVED', 'USED', 'EXPIRED', 'TRANSFERRED'];
 
 const EditStockScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { id } = route.params;
   const confirm = useConfirm();
 
@@ -135,7 +140,7 @@ const EditStockScreen = ({ route, navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Blood Stock</Text>
+          <Text style={styles.headerTitle}>{t('pages.updateStock')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -144,7 +149,7 @@ const EditStockScreen = ({ route, navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Update Stock</Text>
+          <Text style={styles.title}>{t('pages.updateStock')}</Text>
           <Text style={styles.subtitle}>MANUAL INVENTORY UPDATE</Text>
 
           <FormField
@@ -244,8 +249,8 @@ const EditStockScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
   input: {
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.text,

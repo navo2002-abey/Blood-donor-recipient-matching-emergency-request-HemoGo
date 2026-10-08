@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   Platform,
@@ -8,14 +8,16 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useNotifications } from '../context/NotificationContext';
 import { colors } from '../utils/colors';
 import { DONOR_MENU, ROLE_LABELS } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
 
 const getInitials = (name) =>
   name
@@ -39,7 +41,11 @@ const Sidebar = ({
   hospital = 'Colombo National Hospital',
   org,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const [available, setAvailable] = useState(false);
   const isStaff = variant === 'staff';
   const isOfficer = user?.role === 'BLOOD_BANK_OFFICER';
@@ -50,7 +56,7 @@ const Sidebar = ({
     isOfficer && !/^dr\.?\s/i.test(rawName)
       ? `Dr. ${rawName}`
       : rawName || 'HemoGo User';
-  const roleLabel = ROLE_LABELS[user?.role] || 'HemoGo User';
+  const roleLabel = (user?.role && t(`roles.${user.role}`)) || ROLE_LABELS[user?.role] || 'HemoGo User';
   const subtitle =
     user?.role === 'DONOR' ? `${user?.bloodGroup || 'O+'} Blood Group` : roleLabel;
   const orgLine = org || hospital;
@@ -112,6 +118,29 @@ const Sidebar = ({
     onComingSoon(item.key);
   };
 
+  const handleNotificationPress = () => {
+    onClose();
+    if (!navigation) return;
+
+    // Check if current navigator has Notifications
+    const state = navigation.getState?.();
+    const routeNames = state?.routeNames || [];
+
+    if (routeNames.includes('Notifications')) {
+      navigation.navigate('Notifications');
+      return;
+    }
+
+    // Try parent navigator if nested inside tabs
+    const parent = navigation.getParent?.();
+    if (parent?.navigate) {
+      parent.navigate('Notifications');
+      return;
+    }
+
+    navigation.navigate('Notifications');
+  };
+
   const handleLogout = async () => {
     onClose();
     await logout();
@@ -136,7 +165,7 @@ const Sidebar = ({
             {isStaff ? (
               <View style={[styles.staffBar, active && styles.staffBarActive]} />
             ) : null}
-            <Text style={[textStyle, active && activeTextStyle]}>{item.key}</Text>
+            <Text style={[textStyle, active && activeTextStyle]}>{t(`menu.${item.key}`)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -145,7 +174,7 @@ const Sidebar = ({
         onPress={handleLogout}
       >
         {isStaff ? <View style={styles.staffBar} /> : null}
-        <Text style={textStyle}>Log Out</Text>
+        <Text style={textStyle}>{t('common.logout')}</Text>
       </TouchableOpacity>
     </>
   );
@@ -159,7 +188,16 @@ const Sidebar = ({
         {isStaff ? (
           <>
             <View style={styles.staffTopRow}>
-              <View />
+              <TouchableOpacity
+                style={styles.bellWrap}
+                onPress={handleNotificationPress}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Notifications"
+              >
+                <Ionicons name="notifications-outline" size={20} color={colors.white} />
+                {hasUnread ? <View style={styles.badge} /> : null}
+              </TouchableOpacity>
               <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
                 <Ionicons name="close" size={22} color={colors.white} />
               </TouchableOpacity>
@@ -209,28 +247,20 @@ const Sidebar = ({
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.group}>{subtitle}</Text>
               </View>
-              <View style={styles.bellWrap}>
+              <TouchableOpacity
+                style={styles.bellWrap}
+                onPress={handleNotificationPress}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityLabel="Notifications"
+              >
                 <Ionicons
                   name="notifications-outline"
                   size={20}
                   color={colors.white}
                 />
-                <View style={styles.badge} />
-              </View>
-            </View>
-
-            <View style={styles.search}>
-              <Ionicons
-                name="search-outline"
-                size={16}
-                color={colors.sidebarMuted}
-              />
-              <TextInput
-                placeholder=""
-                placeholderTextColor={colors.sidebarMuted}
-                style={styles.searchInput}
-                editable={false}
-              />
+                {hasUnread ? <View style={styles.badge} /> : null}
+              </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -281,7 +311,7 @@ const Sidebar = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   overlay: {
     flex: 1,
     flexDirection: 'row',
@@ -363,21 +393,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
   },
-  search: {
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1F2937',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    marginBottom: 18,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    color: colors.white,
-    paddingVertical: 0,
-  },
   menu: {
     paddingBottom: 16,
   },
@@ -387,7 +402,9 @@ const styles = StyleSheet.create({
   menuText: {
     color: colors.white,
     fontSize: 15,
+    lineHeight: 22,
     fontWeight: '500',
+    paddingRight: 8,
   },
   footer: {
     flexDirection: 'row',
@@ -470,12 +487,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   staffBarActive: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   staffItemText: {
+    flex: 1,
     color: 'rgba(255,255,255,0.82)',
     fontSize: 14,
+    lineHeight: 22,
     fontWeight: '500',
+    paddingRight: 16,
   },
   staffItemTextActive: {
     color: colors.white,

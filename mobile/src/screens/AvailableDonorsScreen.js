@@ -4,8 +4,10 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import { useUserLocation } from '../hooks/useUserLocation';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
+import { useTheme } from '../context/ThemeContext';
 
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
 const AVATAR_TEXT = ['#E31E35', '#1D4ED8', '#15803D', '#C2410C', '#7E22CE'];
@@ -20,6 +22,9 @@ const initials = (name) =>
     .toUpperCase();
 
 const AvailableDonorsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { location } = useUserLocation();
   const donors = useMemo(
     () =>
@@ -43,7 +48,7 @@ const AvailableDonorsScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Available Donors</Text>
+        <Text style={styles.title}>{t('pages.availableDonors')}</Text>
         <Text style={styles.subtitle}>Choose a donor to see their details and location.</Text>
         <Text style={styles.section}>{donors.length} donors available now</Text>
 
@@ -84,15 +89,15 @@ const AvailableDonorsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FAFAFA' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.page },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -104,7 +109,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#F6C9D0',
     borderRadius: 16,

@@ -29,8 +29,16 @@ const readNativeLocation = async () => {
       return null;
     }
 
+    const last = await Location.getLastKnownPositionAsync();
+    if (last) {
+      return {
+        latitude: last.coords.latitude,
+        longitude: last.coords.longitude,
+      };
+    }
+
     const current = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+      accuracy: Location.Accuracy.Low,
     });
 
     return {
@@ -44,19 +52,22 @@ const readNativeLocation = async () => {
 
 export const useUserLocation = () => {
   const [location, setLocation] = useState(COLOMBO);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const start = async () => {
       const next = Platform.OS === 'web' ? await readBrowserLocation() : await readNativeLocation();
-      if (next) {
+      if (!cancelled && next) {
         setLocation(next);
       }
-      setReady(true);
     };
 
     start();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return { location, ready };
+  return { location, ready: true };
 };

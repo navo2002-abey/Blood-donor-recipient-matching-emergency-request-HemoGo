@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,8 +11,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { verifyBloodRequest } from '../services/bloodRequestService';
+import { useAuth } from '../context/AuthContext';
+import { verifyBloodRequest, saveMyAcceptedId, saveMyVerifiedId } from '../services/bloodRequestService';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const getDerivedVerifierId = (hospitalName) => {
   if (!hospitalName) return '#NHC01078';
@@ -29,6 +32,10 @@ const getDerivedVerifierId = (hospitalName) => {
 };
 
 const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
+  const { user } = useAuth();
   const requestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
     hospital: 'National Hospital Colombo',
@@ -64,6 +71,14 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
       : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
 
+  // Automatically record this donation as accepted by the current donor
+  React.useEffect(() => {
+    const userKey = user?.email || user?.id || user?._id;
+    if (cleanId && userKey) {
+      saveMyAcceptedId(cleanId, userKey);
+    }
+  }, [cleanId, user]);
+
   // Dynamic QR Code payload encoded with live request details
   const qrPayload = JSON.stringify({
     type: 'HEMOGO_DONATION_VERIFICATION',
@@ -83,8 +98,13 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setVerifiedTime(nowTime);
 
+    const userKey = user?.email || user?.id || user?._id;
+    if (cleanId && userKey) {
+      await saveMyVerifiedId(cleanId, userKey);
+    }
+
     try {
-      await verifyBloodRequest(cleanId, { verifierId });
+      await verifyBloodRequest(cleanId, { verifierId }, userKey);
       setIsVerified(true);
       setTimeout(() => {
         navigation.navigate('ActiveRequestCompleted', {
@@ -115,7 +135,7 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
       {/* Header Bar */}
       <View style={styles.topBar}>
         <View style={styles.iconBtnPlaceholder} />
-        <Text style={styles.headerTitle}>Active Request</Text>
+        <Text style={styles.headerTitle}>{t('pages.activeRequest')}</Text>
         <View style={styles.iconBtnPlaceholder} />
       </View>
 
@@ -235,10 +255,10 @@ const ActiveRequestQRVerifyScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -246,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   iconBtn: {
     width: 40,
@@ -277,7 +297,7 @@ const styles = StyleSheet.create({
   hospitalTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: -0.3,
@@ -285,19 +305,19 @@ const styles = StyleSheet.create({
   verifierText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
   },
   verifierBold: {
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
   },
   qrContainer: {
     width: 240,
     height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     marginBottom: 32,
   },
   qrImage: {
@@ -306,7 +326,7 @@ const styles = StyleSheet.create({
   },
   timelineCard: {
     width: '100%',
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -317,7 +337,7 @@ const styles = StyleSheet.create({
   timelineTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 16,
   },
   stepRow: {
@@ -338,7 +358,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -349,21 +369,21 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 2,
   },
   stepSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   stepTimeText: {
     fontSize: 11.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   stepStatusPending: {
     fontSize: 11.5,
-    color: '#9CA3AF',
+    color: colors.textMuted,
     fontWeight: '600',
   },
   stepStatusDone: {
@@ -379,7 +399,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: '#FECACA',
     marginTop: 4,
@@ -420,7 +440,7 @@ const styles = StyleSheet.create({
   returnDashboardText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
 });
 

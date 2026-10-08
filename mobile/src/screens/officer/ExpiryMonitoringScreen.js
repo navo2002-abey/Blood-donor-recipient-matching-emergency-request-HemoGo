@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,7 @@ import { useMyHospital } from '../../hooks/useMyHospital';
 import { stockService } from '../../services/officerService';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -33,6 +34,8 @@ const urgencyTheme = (urgency) => {
 };
 
 const ExpiryMonitoringScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const HOSPITAL = useMyHospital();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -297,8 +300,8 @@ const ExpiryMonitoringScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   scroll: { paddingHorizontal: 20, paddingBottom: 110 },
   titleSection: {
     flexDirection: 'row',
@@ -307,7 +310,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   iconBox: {
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     padding: 10,
     borderRadius: 12,
     marginRight: 12,
@@ -319,9 +322,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
   },
   windowChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   windowChipText: { fontSize: 12, fontWeight: '700', color: colors.text },
@@ -329,7 +332,7 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   statBox: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: 10,
     alignItems: 'center',
@@ -346,7 +349,7 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderColor: '#FEE2E2',
@@ -361,11 +364,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderBottomWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
-  tableRowAlt: { backgroundColor: '#FAFAFA' },
+  tableRowAlt: { backgroundColor: colors.page },
   tableRowExpired: { backgroundColor: '#FEF2F2' },
   tableCell: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   boldText: { fontWeight: '700', color: colors.text },
@@ -376,7 +379,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 50,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     gap: 8,
   },
   emptyTitle: { fontSize: 15, fontWeight: '800', color: colors.text, marginTop: 4 },

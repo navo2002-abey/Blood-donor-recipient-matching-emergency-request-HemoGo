@@ -1,14 +1,19 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const CheckEligibilityScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
   const [lastDonation, setLastDonation] = useState('');
@@ -102,7 +107,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
-          <Ionicons name="arrow-back-outline" size={26} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
@@ -123,7 +128,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
                 />
               </View>
               <Text style={[styles.resultTitle, isEligible ? styles.eligibleTitle : styles.notEligibleTitle]}>
-                {isEligible ? 'Eligible to Donate!' : 'Not Eligible'}
+                {isEligible ? t('pages.eligible') : t('pages.notEligible')}
               </Text>
               <Text style={styles.resultSubtitle}>
                 {isEligible
@@ -134,7 +139,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
 
             {!isEligible && (
               <View style={styles.issuesCard}>
-                <Text style={styles.issuesTitle}>Reasons:</Text>
+                <Text style={styles.issuesTitle}>{t('pages.reasons')}</Text>
                 {issues.map((issue, index) => (
                   <View key={index} style={styles.issueItem}>
                     <Ionicons name="alert-circle" size={20} color={colors.primary} />
@@ -147,29 +152,29 @@ const CheckEligibilityScreen = ({ navigation }) => {
             <View style={styles.resultButtons}>
               <TouchableOpacity style={styles.checkAgainButton} onPress={handleCheckAgain}>
                 <Ionicons name="refresh-outline" size={20} color={colors.white} />
-                <Text style={styles.checkAgainButtonText}>Check Again</Text>
+                <Text style={styles.checkAgainButtonText}>{t('pages.checkAgain')}</Text>
               </TouchableOpacity>
               {isEligible && (
                 <TouchableOpacity style={styles.updateButton} onPress={handleUpdateAvailability}>
                   <Ionicons name="checkmark-done-outline" size={20} color={colors.white} />
-                  <Text style={styles.updateButtonText}>Update Availability Status</Text>
+                  <Text style={styles.updateButtonText}>{t('pages.updateAvailability')}</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         ) : (
           <>
-            <Text style={styles.title}>Check Eligibility</Text>
-            <Text style={styles.subtitle}>Answer a few questions to see if you can donate</Text>
+            <Text style={styles.title}>{t('pages.eligibilityTitle')}</Text>
+            <Text style={styles.subtitle}>{t('pages.eligibilitySub')}</Text>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Age *</Text>
+                <Text style={styles.label}>{t('pages.age')}</Text>
                 <View style={styles.input}>
                   <Ionicons name="person-outline" size={20} color={colors.textMuted} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="Enter your age"
+                    placeholder={t('pages.enterAge')}
                     placeholderTextColor={colors.textMuted}
                     value={age}
                     onChangeText={setAge}
@@ -179,12 +184,12 @@ const CheckEligibilityScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Weight (kg) *</Text>
+                <Text style={styles.label}>{t('pages.weight')}</Text>
                 <View style={styles.input}>
                   <Ionicons name="fitness-outline" size={20} color={colors.textMuted} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="Enter your weight"
+                    placeholder={t('pages.enterWeight')}
                     placeholderTextColor={colors.textMuted}
                     value={weight}
                     onChangeText={setWeight}
@@ -194,7 +199,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Blood Group *</Text>
+                <Text style={styles.label}>{t('pages.bloodGroupRequired')}</Text>
                 <TouchableOpacity
                   style={styles.input}
                   onPress={() => setShowBloodDropdown(!showBloodDropdown)}
@@ -231,7 +236,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Last Donation Date</Text>
+                <Text style={styles.label}>{t('pages.lastDonation')}</Text>
                 <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
                   <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
                   <Text style={[styles.textInput, !lastDonation && styles.placeholder]}>
@@ -251,14 +256,14 @@ const CheckEligibilityScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Recent Illness (within last 30 days)</Text>
+                <Text style={styles.label}>{t('pages.illness')}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
                     style={[styles.toggle, recentIllness === true && styles.toggleActive]}
                     onPress={() => setRecentIllness(true)}
                   >
                     <Text style={[styles.toggleText, recentIllness === true && styles.toggleTextActive]}>
-                      Yes
+                      {t('pages.yes')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -266,21 +271,21 @@ const CheckEligibilityScreen = ({ navigation }) => {
                     onPress={() => setRecentIllness(false)}
                   >
                     <Text style={[styles.toggleText, recentIllness === false && styles.toggleTextActive]}>
-                      No
+                      {t('pages.no')}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Recent Tattoo (within 6 months)</Text>
+                <Text style={styles.label}>{t('pages.tattoo')}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
                     style={[styles.toggle, recentTattoo === true && styles.toggleActive]}
                     onPress={() => setRecentTattoo(true)}
                   >
                     <Text style={[styles.toggleText, recentTattoo === true && styles.toggleTextActive]}>
-                      Yes
+                      {t('pages.yes')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -288,21 +293,21 @@ const CheckEligibilityScreen = ({ navigation }) => {
                     onPress={() => setRecentTattoo(false)}
                   >
                     <Text style={[styles.toggleText, recentTattoo === false && styles.toggleTextActive]}>
-                      No
+                      {t('pages.no')}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Currently on Medication</Text>
+                <Text style={styles.label}>{t('pages.medication')}</Text>
                 <View style={styles.toggleGroup}>
                   <TouchableOpacity
                     style={[styles.toggle, onMedication === true && styles.toggleActive]}
                     onPress={() => setOnMedication(true)}
                   >
                     <Text style={[styles.toggleText, onMedication === true && styles.toggleTextActive]}>
-                      Yes
+                      {t('pages.yes')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -310,7 +315,7 @@ const CheckEligibilityScreen = ({ navigation }) => {
                     onPress={() => setOnMedication(false)}
                   >
                     <Text style={[styles.toggleText, onMedication === false && styles.toggleTextActive]}>
-                      No
+                      {t('pages.no')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -318,14 +323,14 @@ const CheckEligibilityScreen = ({ navigation }) => {
 
               <TouchableOpacity style={styles.submitButton} onPress={checkEligibility}>
                 <Ionicons name="checkmark-circle" size={24} color={colors.white} />
-                <Text style={styles.submitButtonText}>Check Eligibility</Text>
+                <Text style={styles.submitButtonText}>{t('pages.eligibilityTitle')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.infoCard}>
               <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
               <Text style={styles.infoText}>
-                Basic requirements: Age 18-65, weight 50kg+, 3-month gap between donations
+                {t('pages.eligibilityInfo')}
               </Text>
             </View>
           </>
@@ -335,10 +340,10 @@ const CheckEligibilityScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.page,
   },
   header: {
     flexDirection: 'row',
@@ -380,7 +385,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   form: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -414,7 +419,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   dropdown: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.primary,
@@ -434,7 +439,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     minHeight: 60,
   },
   dropdownItemText: {
@@ -500,7 +505,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 20,
     borderWidth: 2,
     padding: 32,
@@ -536,7 +541,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   issuesCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,

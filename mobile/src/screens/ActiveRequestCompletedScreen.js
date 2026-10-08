@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -8,7 +8,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const formatTime = (dateVal, fallback) => {
   if (!dateVal) return fallback;
@@ -22,6 +24,9 @@ const formatTime = (dateVal, fallback) => {
 };
 
 const ActiveRequestCompletedScreen = ({ route, navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const requestData = route?.params?.requestData || {};
   const acceptedTime =
     route?.params?.acceptedTime ||
@@ -42,7 +47,7 @@ const ActiveRequestCompletedScreen = ({ route, navigation }) => {
       {/* Header Bar */}
       <View style={styles.topBar}>
         <View style={styles.iconBtnPlaceholder} />
-        <Text style={styles.headerTitle}>Active Request</Text>
+        <Text style={styles.headerTitle}>{t('pages.activeRequest')}</Text>
         <View style={styles.iconBtnPlaceholder} />
       </View>
 
@@ -103,10 +108,10 @@ const ActiveRequestCompletedScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   topBar: {
     height: 52,
@@ -114,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   iconBtnPlaceholder: {
     width: 40,
@@ -153,19 +158,19 @@ const styles = StyleSheet.create({
   completedTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 10,
     letterSpacing: -0.3,
   },
   completedSub: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     fontWeight: '500',
   },
   timelineCard: {
     width: '100%',
-    backgroundColor: '#FFF7F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FEE2E2',
@@ -177,7 +182,7 @@ const styles = StyleSheet.create({
   timelineTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 16,
   },
   stepRow: {
@@ -200,22 +205,22 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     marginBottom: 2,
   },
   stepSubtitle: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
   },
   stepTimeText: {
     fontSize: 11.5,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   bottomBar: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
   },
   dashboardBtn: {
     height: 52,

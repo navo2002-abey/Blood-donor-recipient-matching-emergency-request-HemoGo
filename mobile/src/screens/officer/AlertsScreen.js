@@ -15,8 +15,10 @@ import AppHeader from '../../components/AppHeader';
 import Sidebar from '../../components/Sidebar';
 import { useAlerts } from '../../context/AlertsContext';
 import { useMyHospital } from '../../hooks/useMyHospital';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { OFFICER_MENU } from '../../utils/roles';
+import { useTheme } from '../../context/ThemeContext';
 
 const comingSoon = (label) =>
   Alert.alert('Coming Soon', `${label} will be available soon.`);
@@ -42,7 +44,10 @@ const AlertCard = ({
   isRead,
   actionLabel,
   onPress,
-}) => (
+}) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  return (
   <TouchableOpacity
     style={[
       styles.alertCard,
@@ -52,7 +57,7 @@ const AlertCard = ({
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <View style={[styles.iconCircle, { backgroundColor: '#FFFFFF' }]}>
+    <View style={[styles.iconCircle, { backgroundColor: colors.cardBg }]}>
       <Ionicons name={icon} size={20} color={iconColor} />
     </View>
     <View style={{ flex: 1, marginLeft: 12 }}>
@@ -93,9 +98,13 @@ const AlertCard = ({
     </View>
     <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
   </TouchableOpacity>
-);
+  );
+};
 
 const AlertsScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const {
     alerts,
     loading,
@@ -145,7 +154,7 @@ const AlertsScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Alerts</Text>
+          <Text style={styles.title}>{t('pages.alerts')}</Text>
           {unreadCount > 0 ? (
             <View style={styles.countPill}>
               <Text style={styles.countPillText}>{unreadCount} new</Text>
@@ -236,7 +245,7 @@ const AlertsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
   scroll: { padding: 16, paddingBottom: 30 },
 

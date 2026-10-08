@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,13 +16,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../../components/Logo';
 import { useAuth } from '../../context/AuthContext';
 import { stockService, transferService } from '../../services/officerService';
+import { useLanguage } from '../../context/LanguageContext';
 import { colors } from '../../utils/colors';
 import { digitsOnly } from '../../utils/numbers';
+import { useTheme } from '../../context/ThemeContext';
 
 const GROUPS = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
 const URGENCIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 const CreateExchangeRequestScreen = ({ navigation }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { t } = useLanguage();
   const { user } = useAuth();
   const myHospital = user?.hospital || 'Colombo General Hospital Blood Bank';
 
@@ -114,7 +119,7 @@ const CreateExchangeRequestScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Exchange Request</Text>
+          <Text style={styles.headerTitle}>{t('pages.newExchange')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -337,8 +342,8 @@ const CreateExchangeRequestScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+const makeStyles = (colors) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.cardBg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -358,11 +363,11 @@ const styles = StyleSheet.create({
   myBankCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
     marginBottom: 20,
   },
   myBankIcon: {
@@ -408,7 +413,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 22,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   chipActive: { backgroundColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '700', color: colors.text },
@@ -419,7 +424,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
   },
   smallChipActive: { backgroundColor: colors.primary },
   smallChipText: { fontSize: 10, fontWeight: '800', color: colors.text },
@@ -429,7 +434,7 @@ const styles = StyleSheet.create({
   input: {
     height: 54,
     borderRadius: 14,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: colors.page,
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.text,
@@ -453,23 +458,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     marginBottom: 10,
   },
   bankCardActive: {
     borderColor: colors.primary,
-    backgroundColor: '#FFF8F9',
+    backgroundColor: colors.primarySoft,
   },
   radioOuter: {
     width: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -488,7 +493,7 @@ const styles = StyleSheet.create({
   emptyBanks: {
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#FFF1F3',
+    backgroundColor: colors.primarySoft,
     borderRadius: 14,
     gap: 6,
     marginBottom: 20,
@@ -506,13 +511,13 @@ const styles = StyleSheet.create({
   },
 
   summaryBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.page,
     borderRadius: 14,
     padding: 14,
     marginTop: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: colors.border,
   },
   summaryTitle: {
     fontSize: 12,

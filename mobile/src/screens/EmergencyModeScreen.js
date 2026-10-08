@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
-import Sidebar from '../components/Sidebar';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
-import { DONOR_MENU } from '../utils/roles';
+import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -22,10 +22,11 @@ const initials = (name) =>
     .toUpperCase();
 
 const EmergencyModeScreen = ({ navigation, route }) => {
-  const menu = route.params?.menu || DONOR_MENU;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { hasUnread } = useNotifications();
   const donors = route.params?.donors || [];
   const [index, setIndex] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { location } = useUserLocation();
   const donor = donors[index] || null;
 
@@ -43,12 +44,11 @@ const EmergencyModeScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.top}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setSidebarOpen(true)} hitSlop={10} style={styles.headerBtn}>
-            <Ionicons name="menu-outline" size={26} color={colors.white} />
-          </TouchableOpacity>
           <View style={styles.headerBtn} />
-          <TouchableOpacity onPress={() => comingSoon('Notifications')} hitSlop={10} style={styles.headerBtn}>
+          <View style={styles.headerBtn} />
+          <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="notifications-outline" size={22} color={colors.white} />
+            {hasUnread ? <View style={styles.bellBadge} /> : null}
           </TouchableOpacity>
         </View>
         <View style={styles.modePill}>
@@ -112,21 +112,14 @@ const EmergencyModeScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      <Sidebar
-        visible={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        navigation={navigation}
-        onComingSoon={comingSoon}
-        menu={menu}
-      />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   top: {
     backgroundColor: colors.primary,
@@ -144,6 +137,17 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
   },
   modePill: {
     alignSelf: 'center',
@@ -180,7 +184,7 @@ const styles = StyleSheet.create({
     top: 14,
     left: 28,
     right: 28,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
     bottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8F8',
+    backgroundColor: colors.primarySoft,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#F8D0D6',
@@ -297,17 +301,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   cancelBtn: {
     flex: 1,
     height: 48,
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.cardBg,
   },
   cancelText: {
     fontSize: 14,

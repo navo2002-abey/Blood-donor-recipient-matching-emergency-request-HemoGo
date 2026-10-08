@@ -1,16 +1,39 @@
 import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import { deleteAppointment } from '../services/api';
 import { colors } from '../utils/colors';
 
 const HistoryDetailScreen = ({ route, navigation }) => {
   const { appointment } = route.params || {};
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Appointment',
+      'Are you sure you want to delete this appointment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAppointment(appointment._id);
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete appointment');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const qrData = JSON.stringify({
-    id: appointment.bookedAt,
+    id: appointment.qrCodeId || `HG-${appointment.bookedAt}`,
     hospital: appointment.hospital,
     date: appointment.date,
     time: appointment.time,
@@ -20,12 +43,16 @@ const HistoryDetailScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.brand}>
           <BloodDrop size={16} />
           <Text style={styles.brandText}>HemoGo</Text>
         </View>
-        <View style={styles.headerBtn} />
+        <TouchableOpacity onPress={handleDelete} hitSlop={10} style={styles.headerBtn}>
+          <Ionicons name="close-outline" size={26} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
