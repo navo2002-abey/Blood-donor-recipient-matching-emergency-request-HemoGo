@@ -573,6 +573,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
       const angle = (index * (2 * Math.PI)) / matchingDonors.length;
       const radius = 0.006 + (index % 3) * 0.003;
       return {
+        id: d.id || d._id || `donor-${index}`,
         name: d.name,
         bloodGroup: d.bloodGroup,
         latitude: location.latitude + Math.sin(angle) * radius,
@@ -605,44 +606,64 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     [editDate, editTime]
   );
 
-  // Radar Pulse Animation
-  const pulseAnim = useRef(new Animated.Value(0)).current;
+  // Multi-Ring Continuous Radar Pulse Animation
+  const pulse1 = useRef(new Animated.Value(0)).current;
+  const pulse2 = useRef(new Animated.Value(0)).current;
+  const pulse3 = useRef(new Animated.Value(0)).current;
   const dotOpacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    // Continuous radar ripple animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    const createPulse = (anim, delay) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2400,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
 
-    // Pulsing search text animation
-    Animated.loop(
+    const a1 = createPulse(pulse1, 0);
+    const a2 = createPulse(pulse2, 800);
+    const a3 = createPulse(pulse3, 1600);
+
+    a1.start();
+    a2.start();
+    a3.start();
+
+    // Pulsing search text & badge dot animation
+    const dotAnim = Animated.loop(
       Animated.sequence([
         Animated.timing(dotOpacity, {
           toValue: 1,
-          duration: 1000,
+          duration: 900,
           useNativeDriver: true,
         }),
         Animated.timing(dotOpacity, {
-          toValue: 0.35,
-          duration: 1000,
+          toValue: 0.25,
+          duration: 900,
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, [pulseAnim, dotOpacity]);
+    );
+    dotAnim.start();
+
+    return () => {
+      a1.stop();
+      a2.stop();
+      a3.stop();
+      dotAnim.stop();
+    };
+  }, [pulse1, pulse2, pulse3, dotOpacity]);
 
   const handleCall = (donor) => {
     Alert.alert(
@@ -817,14 +838,31 @@ const TrackingRequestScreen = ({ route, navigation }) => {
     }
   };
 
-  const rippleScale = pulseAnim.interpolate({
+  const scale1 = pulse1.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.6, 1.4],
+    outputRange: [0.35, 1.85],
+  });
+  const opacity1 = pulse1.interpolate({
+    inputRange: [0, 0.2, 0.75, 1],
+    outputRange: [0.75, 0.6, 0.15, 0],
   });
 
-  const rippleOpacity = pulseAnim.interpolate({
-    inputRange: [0, 0.7, 1],
-    outputRange: [0.65, 0.3, 0],
+  const scale2 = pulse2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1.85],
+  });
+  const opacity2 = pulse2.interpolate({
+    inputRange: [0, 0.2, 0.75, 1],
+    outputRange: [0.75, 0.6, 0.15, 0],
+  });
+
+  const scale3 = pulse3.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 1.85],
+  });
+  const opacity3 = pulse3.interpolate({
+    inputRange: [0, 0.2, 0.75, 1],
+    outputRange: [0.75, 0.6, 0.15, 0],
   });
 
   const showBackButton = Boolean(
@@ -949,29 +987,73 @@ const TrackingRequestScreen = ({ route, navigation }) => {
           <LiveDonorsMap
             location={location}
             donors={mapDonors}
+            radiusKm={5}
+            placeLabel={currentRequest.hospital || 'Hospital'}
             interactive={false}
             style={styles.mapElement}
           />
 
-          {/* Concentric Radar Rings Overlay (Only pulsing if active) */}
+          {/* Animated Pulsing Radar Rings & Centered Core Badge */}
           {!closureState.isClosed && (
             <View style={styles.radarOverlay} pointerEvents="none">
               <Animated.View
                 style={[
                   styles.pulseRing,
                   {
-                    transform: [{ scale: rippleScale }],
-                    opacity: rippleOpacity,
+                    transform: [{ scale: scale3 }],
+                    opacity: opacity3,
                   },
                 ]}
               />
-              <View style={styles.radarOuterRing} />
-              <View style={styles.radarMidRing} />
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  {
+                    transform: [{ scale: scale2 }],
+                    opacity: opacity2,
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  {
+                    transform: [{ scale: scale1 }],
+                    opacity: opacity1,
+                  },
+                ]}
+              />
+              <View style={styles.radarStaticRingOuter} />
+              <View style={styles.radarStaticRingInner} />
               <View style={styles.radarCoreCircle}>
-                <BloodDrop size={16} />
+                <BloodDrop size={18} />
               </View>
             </View>
           )}
+
+          {/* Floating Hospital & Radar Status Badges */}
+          <View style={styles.mapHeaderOverlay} pointerEvents="none">
+            {currentRequest.hospital ? (
+              <View style={styles.mapHospitalBadge}>
+                <Ionicons name="business" size={13} color={colors.primary} />
+                <Text style={styles.mapHospitalText} numberOfLines={1}>
+                  {currentRequest.hospital}
+                </Text>
+              </View>
+            ) : null}
+
+            {!closureState.isClosed ? (
+              <View style={styles.mapRadarBadge}>
+                <Animated.View
+                  style={[
+                    styles.mapRadarDot,
+                    { opacity: dotOpacity },
+                  ]}
+                />
+                <Text style={styles.mapRadarText}>Live Radar</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
 
         {/* Request Details Card */}
@@ -1648,62 +1730,134 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   mapContainer: {
-    height: 210,
+    height: 220,
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 14,
     borderWidth: 1,
     borderColor: colors.border,
     position: 'relative',
-    backgroundColor: colors.border,
+    backgroundColor: '#E8EEF3',
   },
   mapElement: {
-    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: 220,
   },
   radarOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 2,
   },
   pulseRing: {
     position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: 'rgba(227, 30, 53, 0.25)',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(227, 30, 53, 0.16)',
     borderWidth: 1.5,
-    borderColor: 'rgba(227, 30, 53, 0.4)',
+    borderColor: 'rgba(227, 30, 53, 0.5)',
   },
-  radarOuterRing: {
+  radarStaticRingOuter: {
     position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: 'rgba(227, 30, 53, 0.12)',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     borderWidth: 1,
-    borderColor: 'rgba(227, 30, 53, 0.25)',
+    borderColor: 'rgba(227, 30, 53, 0.22)',
+    backgroundColor: 'rgba(227, 30, 53, 0.03)',
   },
-  radarMidRing: {
+  radarStaticRingInner: {
     position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: 'rgba(227, 30, 53, 0.28)',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     borderWidth: 1,
-    borderColor: 'rgba(227, 30, 53, 0.45)',
+    borderColor: 'rgba(227, 30, 53, 0.32)',
+    backgroundColor: 'rgba(227, 30, 53, 0.06)',
   },
   radarCoreCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.cardBg,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
+    borderWidth: 2,
+    borderColor: '#E31E35',
+    shadowColor: '#E31E35',
+    shadowOpacity: 0.35,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 5,
+  },
+  mapHeaderOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    zIndex: 3,
+  },
+  mapHospitalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(243, 180, 188, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    maxWidth: '55%',
+  },
+  mapHospitalText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  mapRadarBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(227, 30, 53, 0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    marginLeft: 'auto',
+  },
+  mapRadarDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: colors.primary,
+  },
+  mapRadarText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
   },
   detailsCard: {
     backgroundColor: colors.primarySoft,
