@@ -110,7 +110,7 @@ const getTimeDifferenceText = (dateObj, timeObj, hasPickedDate, hasPickedTime) =
 };
 
 const CreateBloodRequestScreen = ({ navigation }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
   const urgencyLabel = {
@@ -126,12 +126,26 @@ const CreateBloodRequestScreen = ({ navigation }) => {
   const [quantity, setQuantity] = useState('1');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
   const [hasPickedDate, setHasPickedDate] = useState(false);
   const [hasPickedTime, setHasPickedTime] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [urgency, setUrgency] = useState('Critical');
   const [additionalInfo, setAdditionalInfo] = useState('');
+
+  const openDatePicker = () => {
+    setTempDate(hasPickedDate ? selectedDate : new Date());
+    setShowTimePicker(false);
+    setShowDatePicker(true);
+  };
+
+  const openTimePicker = () => {
+    setTempTime(hasPickedTime ? selectedTime : new Date());
+    setShowDatePicker(false);
+    setShowTimePicker(true);
+  };
 
   const timeDiff = useMemo(
     () => getTimeDifferenceText(selectedDate, selectedTime, hasPickedDate, hasPickedTime),
@@ -374,7 +388,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                 ) : (
                   <TouchableOpacity
                     style={styles.selectInput}
-                    onPress={() => setShowDatePicker(true)}
+                    onPress={openDatePicker}
                     activeOpacity={0.7}
                   >
                     <Text
@@ -426,7 +440,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                 ) : (
                   <TouchableOpacity
                     style={styles.selectInput}
-                    onPress={() => setShowTimePicker(true)}
+                    onPress={openTimePicker}
                     activeOpacity={0.7}
                   >
                     <Text
@@ -443,38 +457,6 @@ const CreateBloodRequestScreen = ({ navigation }) => {
                 )}
               </View>
             </View>
-
-            {/* Native DateTimePicker Modals */}
-            {Platform.OS !== 'web' && showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={new Date()}
-                onChange={(event, date) => {
-                  setShowDatePicker(Platform.OS === 'ios');
-                  if (date) {
-                    setSelectedDate(date);
-                    setHasPickedDate(true);
-                  }
-                }}
-              />
-            )}
-
-            {Platform.OS !== 'web' && showTimePicker && (
-              <DateTimePicker
-                value={selectedTime}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, time) => {
-                  setShowTimePicker(Platform.OS === 'ios');
-                  if (time) {
-                    setSelectedTime(time);
-                    setHasPickedTime(true);
-                  }
-                }}
-              />
-            )}
 
             {/* Dynamic Time Remaining Countdown / Duration Indicator */}
             {timeDiff && (
@@ -665,6 +647,150 @@ const CreateBloodRequestScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* iOS Date Picker Modal */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.pickerModalOverlay}>
+            <TouchableOpacity
+              style={styles.pickerModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowDatePicker(false)}
+            />
+            <View style={styles.pickerModalContent}>
+              <View style={styles.pickerModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  style={styles.pickerActionBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.pickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerModalTitle}>Select Required Date</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedDate(tempDate);
+                    setHasPickedDate(true);
+                    setShowDatePicker(false);
+                  }}
+                  style={styles.pickerActionBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="spinner"
+                  minimumDate={new Date()}
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  textColor={colors.text}
+                  onChange={(event, date) => {
+                    if (date) {
+                      setTempDate(date);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* iOS Time Picker Modal */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showTimePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowTimePicker(false)}
+        >
+          <View style={styles.pickerModalOverlay}>
+            <TouchableOpacity
+              style={styles.pickerModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowTimePicker(false)}
+            />
+            <View style={styles.pickerModalContent}>
+              <View style={styles.pickerModalHeader}>
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(false)}
+                  style={styles.pickerActionBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.pickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerModalTitle}>Select Required Time</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedTime(tempTime);
+                    setHasPickedTime(true);
+                    setShowTimePicker(false);
+                  }}
+                  style={styles.pickerActionBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={tempTime}
+                  mode="time"
+                  display="spinner"
+                  themeVariant={isDark ? 'dark' : 'light'}
+                  textColor={colors.text}
+                  onChange={(event, time) => {
+                    if (time) {
+                      setTempTime(time);
+                    }
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Android Native Date Picker */}
+      {Platform.OS === 'android' && showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          minimumDate={new Date()}
+          onChange={(event, date) => {
+            setShowDatePicker(false);
+            if (event.type === 'set' && date) {
+              setSelectedDate(date);
+              setHasPickedDate(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Android Native Time Picker */}
+      {Platform.OS === 'android' && showTimePicker && (
+        <DateTimePicker
+          value={selectedTime}
+          mode="time"
+          display="default"
+          onChange={(event, time) => {
+            setShowTimePicker(false);
+            if (event.type === 'set' && time) {
+              setSelectedTime(time);
+              setHasPickedTime(true);
+            }
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -677,37 +803,6 @@ const makeStyles = (colors) => StyleSheet.create({
   dateTimeRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  timeDiffBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primarySoft,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-    marginTop: -4,
-  },
-  timeDiffBannerImminent: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
-  },
-  timeDiffBannerPast: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FECACA',
-  },
-  timeDiffText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  timeDiffTextImminent: {
-    color: '#D97706',
-  },
-  timeDiffTextPast: {
-    color: '#DC2626',
   },
   topBar: {
     height: 52,
@@ -977,6 +1072,55 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.55,
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  pickerModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  pickerModalContent: {
+    backgroundColor: colors.cardBg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingTop: 16,
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickerModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  pickerActionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  pickerCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  pickerDoneText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  pickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: colors.cardBg,
   },
 });
 
