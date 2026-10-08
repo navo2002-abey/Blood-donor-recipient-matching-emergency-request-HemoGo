@@ -33,6 +33,7 @@ import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { useEmergencyAlert } from '../context/EmergencyAlertContext';
+import { useNotifications } from '../context/NotificationContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -385,6 +386,7 @@ const TrackingRequestScreen = ({ route, navigation }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const { triggerEmergencyAlert } = useEmergencyAlert();
+  const { hasUnread } = useNotifications();
 
   const initialRequestData = route?.params?.requestData || {
     patientName: 'Kasun Perera',
@@ -895,7 +897,8 @@ const TrackingRequestScreen = ({ route, navigation }) => {
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >
-          <Ionicons name="notifications" size={20} color={colors.text} />
+          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -1634,6 +1637,17 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   iconBtnPlaceholder: {
     width: 38,

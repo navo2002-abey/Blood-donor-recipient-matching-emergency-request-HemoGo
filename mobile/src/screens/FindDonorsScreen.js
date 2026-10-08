@@ -19,6 +19,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { BLOOD_GROUPS, getNearbyDonors } from '../utils/nearbyDonors';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const AVAILABILITY = ['Available Now', 'All', 'Unavailable'];
 const AVATAR_COLORS = ['#FDE8EB', '#E7F0FF', '#E8F8EE', '#FFF3E4', '#F3E8FF'];
@@ -41,6 +42,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
   const [query, setQuery] = useState('');
@@ -112,7 +114,7 @@ const FindDonorsScreen = ({ navigation, route }) => {
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          <View style={styles.bellBadge} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 

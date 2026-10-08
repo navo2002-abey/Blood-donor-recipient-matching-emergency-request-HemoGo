@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useNotifications } from '../context/NotificationContext';
 import { colors } from '../utils/colors';
 import { DONOR_MENU, ROLE_LABELS } from '../utils/roles';
 import { useTheme } from '../context/ThemeContext';
@@ -44,6 +45,7 @@ const Sidebar = ({
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const [available, setAvailable] = useState(false);
   const isStaff = variant === 'staff';
   const isOfficer = user?.role === 'BLOOD_BANK_OFFICER';
@@ -194,7 +196,7 @@ const Sidebar = ({
                 accessibilityLabel="Notifications"
               >
                 <Ionicons name="notifications-outline" size={20} color={colors.white} />
-                <View style={styles.badge} />
+                {hasUnread ? <View style={styles.badge} /> : null}
               </TouchableOpacity>
               <TouchableOpacity onPress={onClose} hitSlop={12} style={styles.closeBtn}>
                 <Ionicons name="close" size={22} color={colors.white} />
@@ -257,7 +259,7 @@ const Sidebar = ({
                   size={20}
                   color={colors.white}
                 />
-                <View style={styles.badge} />
+                {hasUnread ? <View style={styles.badge} /> : null}
               </TouchableOpacity>
             </View>
 

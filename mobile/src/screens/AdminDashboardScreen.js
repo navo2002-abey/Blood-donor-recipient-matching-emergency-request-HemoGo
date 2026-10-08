@@ -12,6 +12,7 @@ import api from '../services/api';
 import { colors } from '../utils/colors';
 import { ADMIN_MENU, ROLE_LABELS } from '../utils/roles';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const ORG = 'HemoGo National Network';
 
@@ -48,6 +49,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({
     total: 3,
@@ -141,7 +143,7 @@ const AdminDashboardScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          <View style={styles.bellBadge} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 

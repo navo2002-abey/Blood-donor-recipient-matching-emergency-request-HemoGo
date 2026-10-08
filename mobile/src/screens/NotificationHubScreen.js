@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 import { fetchBloodRequests } from '../services/bloodRequestService';
 import { fetchAdminBloodRequests } from '../services/adminService';
 import { ROLES } from '../utils/roles';
@@ -262,10 +263,16 @@ const NotificationHubScreen = ({ navigation }) => {
     return DONOR_DEFAULT_NOTIFICATIONS;
   }, [userRole]);
 
+  const { setRoleUnreadCount } = useNotifications();
+
   // Persist notifications to role-scoped storage
   const persistNotifications = async (items) => {
     try {
       await AsyncStorage.setItem(storageKey, JSON.stringify(items));
+      if (Array.isArray(items)) {
+        const unread = items.filter((i) => !i.isRead).length;
+        setRoleUnreadCount(unread);
+      }
     } catch (e) {
       console.error('Failed to save notifications:', e);
     }
