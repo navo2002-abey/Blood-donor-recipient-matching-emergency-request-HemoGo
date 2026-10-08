@@ -6,6 +6,7 @@ import LiveDonorsMap from '../components/LiveDonorsMap';
 import { useUserLocation } from '../hooks/useUserLocation';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -23,6 +24,7 @@ const initials = (name) =>
 const EmergencyModeScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { hasUnread } = useNotifications();
   const donors = route.params?.donors || [];
   const [index, setIndex] = useState(0);
   const { location } = useUserLocation();
@@ -46,6 +48,7 @@ const EmergencyModeScreen = ({ navigation, route }) => {
           <View style={styles.headerBtn} />
           <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
             <Ionicons name="notifications-outline" size={22} color={colors.white} />
+            {hasUnread ? <View style={styles.bellBadge} /> : null}
           </TouchableOpacity>
         </View>
         <View style={styles.modePill}>
@@ -134,6 +137,17 @@ const makeStyles = (colors) => StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
   },
   modePill: {
     alignSelf: 'center',

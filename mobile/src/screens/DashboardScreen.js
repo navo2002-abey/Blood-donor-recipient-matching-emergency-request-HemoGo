@@ -13,6 +13,7 @@ import { fetchBloodRequests } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -23,6 +24,7 @@ const DashboardScreen = ({ navigation }) => {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [urgentRequest, setUrgentRequest] = useState(null);
   const { location } = useUserLocation();
@@ -92,7 +94,7 @@ const DashboardScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          <View style={styles.bellBadge} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -158,7 +160,7 @@ const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('CreateBloodRequest')}>
             <View style={styles.cardIcon}>
-              <BloodDrop size={18} />
+              <Ionicons name="water-outline" size={20} color={colors.text} />
             </View>
             <Text style={styles.cardTitle}>{t('home.requestBlood')}</Text>
             <Text style={styles.cardSub}>{t('home.requestBloodSub')}</Text>
@@ -171,8 +173,8 @@ const DashboardScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('RequestMatch')}
             activeOpacity={0.7}
           >
-            <View style={[styles.cardIcon, styles.listIconWrap]}>
-              <Ionicons name="search-outline" size={20} color={colors.primary} />
+            <View style={styles.cardIcon}>
+              <Ionicons name="sparkles-outline" size={20} color={colors.text} />
             </View>
             <Text style={styles.cardTitle}>{t('home.requestMatch')}</Text>
             <Text style={styles.cardSub}>{t('home.requestMatchSub')}</Text>
@@ -182,7 +184,7 @@ const DashboardScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('ActiveRequests')}
             activeOpacity={0.7}
           >
-            <View style={[styles.cardIcon, styles.listIconWrap]}>
+            <View style={styles.cardIcon}>
               <Ionicons name="reorder-three-outline" size={22} color={colors.text} />
             </View>
             <Text style={styles.cardTitle}>{t('home.requestList')}</Text>
@@ -510,11 +512,6 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-  },
-  listIconWrap: {
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
   },
   cardTitle: {
     fontSize: 15,

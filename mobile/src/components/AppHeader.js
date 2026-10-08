@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BloodDrop } from './Logo';
-import { useAlerts } from '../context/AlertsContext';
+import { useNotifications } from '../context/NotificationContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
 
@@ -24,7 +24,7 @@ const AppHeader = ({
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { unreadCount } = useAlerts();
+  const { hasUnread } = useNotifications();
 
   const handleLeft = () => {
     if (showBack) {
@@ -51,7 +51,7 @@ const AppHeader = ({
     <View style={styles.header}>
       <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={handleLeft}>
         <Ionicons
-          name={showBack ? 'arrow-back' : 'menu-outline'}
+          name={showBack ? 'chevron-back' : 'menu-outline'}
           size={24}
           color={colors.text}
         />
@@ -65,7 +65,7 @@ const AppHeader = ({
       {showBell ? (
         <TouchableOpacity hitSlop={10} style={styles.headerBtn} onPress={handleBell}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          {unreadCount > 0 ? <View style={styles.bellBadge} /> : null}
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       ) : (
         <View style={styles.headerBtn} />

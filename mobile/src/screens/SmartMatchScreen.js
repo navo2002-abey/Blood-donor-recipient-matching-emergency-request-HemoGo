@@ -11,6 +11,7 @@ import { getNearbyDonors } from '../utils/nearbyDonors';
 import { rankDonorsForRequest } from '../utils/smartMatch';
 import { getApiErrorMessage } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
@@ -29,6 +30,7 @@ const SmartMatchScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const { patientName, hospital, bloodGroup, urgency, details } = route.params || {};
   const { location } = useUserLocation();
   const donors = useMemo(() => getNearbyDonors(location), [location]);
@@ -124,6 +126,7 @@ const SmartMatchScreen = ({ navigation, route }) => {
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')} hitSlop={10} style={styles.headerBtn}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -237,6 +240,17 @@ const makeStyles = (colors) => StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   brand: {
     flexDirection: 'row',

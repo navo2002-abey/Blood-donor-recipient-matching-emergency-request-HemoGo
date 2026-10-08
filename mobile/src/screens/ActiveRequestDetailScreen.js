@@ -416,7 +416,7 @@ const ActiveRequestDetailScreen = ({ route, navigation }) => {
           style={styles.iconBtn}
           accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>{t('pages.activeRequest')}</Text>

@@ -21,6 +21,7 @@ import { colors } from '../utils/colors';
 import { DONOR_MENU } from '../utils/roles';
 import { getApiErrorMessage } from '../utils/validation';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const URGENCIES = ['Critical', 'High', 'Medium', 'Low'];
@@ -76,6 +77,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const menu = route.params?.menu || DONOR_MENU;
   const [patientName, setPatientName] = useState('');
   const [hospital, setHospital] = useState('');
@@ -152,6 +154,7 @@ const RequestMatchScreen = ({ navigation, route }) => {
           style={styles.headerBtn}
         >
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -303,6 +306,17 @@ const makeStyles = (colors) => StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   brand: {
     flexDirection: 'row',
