@@ -173,8 +173,8 @@ const DashboardScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('RequestMatch')}
             activeOpacity={0.7}
           >
-            <View style={[styles.cardIcon, styles.listIconWrap]}>
-              <Ionicons name="search-outline" size={20} color={colors.primary} />
+            <View style={styles.cardIcon}>
+              <Ionicons name="sparkles-outline" size={20} color={colors.text} />
             </View>
             <Text style={styles.cardTitle}>{t('home.requestMatch')}</Text>
             <Text style={styles.cardSub}>{t('home.requestMatchSub')}</Text>
@@ -512,11 +512,6 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
-  },
-  listIconWrap: {
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
   },
   cardTitle: {
     fontSize: 15,

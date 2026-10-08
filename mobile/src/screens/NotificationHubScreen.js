@@ -60,6 +60,28 @@ const NOTIFICATION_THEMES = {
   },
 };
 
+const formatRelativeTime = (timestamp, fallbackTime) => {
+  if (!timestamp && fallbackTime && fallbackTime !== 'Live') return fallbackTime;
+  const timeVal = typeof timestamp === 'number' ? timestamp : new Date(timestamp || Date.now()).getTime();
+  if (isNaN(timeVal)) return fallbackTime && fallbackTime !== 'Live' ? fallbackTime : 'Just now';
+
+  const now = Date.now();
+  const diffMs = Math.max(0, now - timeVal);
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSec < 60) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  const date = new Date(timeVal);
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
 // 1. Seed Notifications for DONOR
 const DONOR_DEFAULT_NOTIFICATIONS = [
   {
@@ -299,16 +321,19 @@ const NotificationHubScreen = ({ navigation }) => {
           if (res?.data && Array.isArray(res.data)) {
             const liveAdminAlerts = res.data
               .filter((r) => r.urgency === 'Critical' || r.status === 'OPEN')
-              .map((reqItem) => ({
-                id: `admin-live-${reqItem._id}`,
-                type: reqItem.urgency === 'Critical' ? 'EMERGENCY' : 'REQUEST_UPDATE',
-                title: reqItem.urgency === 'Critical' ? 'URGENT ADMIN ATTENTION!' : 'Open Blood Request',
-                time: 'Live',
-                timestamp: new Date(reqItem.createdAt || Date.now()).getTime(),
-                message: `${reqItem.bloodGroup} needed at ${reqItem.hospital} (${reqItem.units} units). Urgency: ${reqItem.urgency}.`,
-                screen: 'AdminBloodRequests',
-                isRead: false,
-              }));
+              .map((reqItem) => {
+                const ts = new Date(reqItem.createdAt || Date.now()).getTime();
+                return {
+                  id: `admin-live-${reqItem._id}`,
+                  type: reqItem.urgency === 'Critical' ? 'EMERGENCY' : 'REQUEST_UPDATE',
+                  title: reqItem.urgency === 'Critical' ? 'URGENT ADMIN ATTENTION!' : 'Open Blood Request',
+                  time: formatRelativeTime(ts),
+                  timestamp: ts,
+                  message: `${reqItem.bloodGroup} needed at ${reqItem.hospital} (${reqItem.units} units). Urgency: ${reqItem.urgency}.`,
+                  screen: 'AdminBloodRequests',
+                  isRead: false,
+                };
+              });
 
             const existingIds = new Set(list.map((n) => n.id));
             const freshItems = liveAdminAlerts.filter((a) => !existingIds.has(a.id));
@@ -322,17 +347,20 @@ const NotificationHubScreen = ({ navigation }) => {
         try {
           const res = await fetchBloodRequests({ limit: 4 });
           if (res?.data && Array.isArray(res.data)) {
-            const livePatientAlerts = res.data.slice(0, 2).map((reqItem) => ({
-              id: `patient-live-${reqItem._id}`,
-              type: reqItem.status === 'IN_PROGRESS' ? 'REQUEST_UPDATE' : 'EMERGENCY',
-              title: reqItem.status === 'IN_PROGRESS' ? 'Donor Assigned' : 'Emergency Request Active',
-              time: 'Live',
-              timestamp: new Date(reqItem.createdAt || Date.now()).getTime(),
-              message: `Request for ${reqItem.patientName} at ${reqItem.hospital} (${reqItem.bloodGroup}, ${reqItem.units} units) is ${reqItem.status}.`,
-              screen: 'TrackingRequest',
-              params: { requestId: reqItem._id, requestData: reqItem },
-              isRead: false,
-            }));
+            const livePatientAlerts = res.data.slice(0, 2).map((reqItem) => {
+              const ts = new Date(reqItem.createdAt || Date.now()).getTime();
+              return {
+                id: `patient-live-${reqItem._id}`,
+                type: reqItem.status === 'IN_PROGRESS' ? 'REQUEST_UPDATE' : 'EMERGENCY',
+                title: reqItem.status === 'IN_PROGRESS' ? 'Donor Assigned' : 'Emergency Request Active',
+                time: formatRelativeTime(ts),
+                timestamp: ts,
+                message: `Request for ${reqItem.patientName} at ${reqItem.hospital} (${reqItem.bloodGroup}, ${reqItem.units} units) is ${reqItem.status}.`,
+                screen: 'TrackingRequest',
+                params: { requestId: reqItem._id, requestData: reqItem },
+                isRead: false,
+              };
+            });
 
             const existingIds = new Set(list.map((n) => n.id));
             const freshItems = livePatientAlerts.filter((a) => !existingIds.has(a.id));
@@ -349,17 +377,20 @@ const NotificationHubScreen = ({ navigation }) => {
           if (res?.data && Array.isArray(res.data)) {
             const liveDonorAlerts = res.data
               .filter((r) => r.status === 'OPEN')
-              .map((reqItem) => ({
-                id: `donor-live-${reqItem._id}`,
-                type: reqItem.urgency === 'Critical' ? 'EMERGENCY' : 'REQUEST_UPDATE',
-                title: reqItem.urgency === 'Critical' ? 'EMERGENCY BLOOD NEEDED!' : 'Blood Donation Request',
-                time: 'Live',
-                timestamp: new Date(reqItem.createdAt || Date.now()).getTime(),
-                message: `${reqItem.bloodGroup} Blood Needed at ${reqItem.hospital} (${reqItem.units} units required).`,
-                screen: 'ActiveRequestProgress',
-                params: { requestId: reqItem._id, requestData: reqItem },
-                isRead: false,
-              }));
+              .map((reqItem) => {
+                const ts = new Date(reqItem.createdAt || Date.now()).getTime();
+                return {
+                  id: `donor-live-${reqItem._id}`,
+                  type: reqItem.urgency === 'Critical' ? 'EMERGENCY' : 'REQUEST_UPDATE',
+                  title: reqItem.urgency === 'Critical' ? 'EMERGENCY BLOOD NEEDED!' : 'Blood Donation Request',
+                  time: formatRelativeTime(ts),
+                  timestamp: ts,
+                  message: `${reqItem.bloodGroup} Blood Needed at ${reqItem.hospital} (${reqItem.units} units required).`,
+                  screen: 'ActiveRequestProgress',
+                  params: { requestId: reqItem._id, requestData: reqItem },
+                  isRead: false,
+                };
+              });
 
             const existingIds = new Set(list.map((n) => n.id));
             const freshItems = liveDonorAlerts.filter((a) => !existingIds.has(a.id));
@@ -530,7 +561,7 @@ const NotificationHubScreen = ({ navigation }) => {
               {item.title}
             </Text>
           </View>
-          <Text style={styles.cardTime}>{item.time}</Text>
+          <Text style={styles.cardTime}>{formatRelativeTime(item.timestamp, item.time)}</Text>
         </View>
 
         <View style={styles.cardBodyRow}>

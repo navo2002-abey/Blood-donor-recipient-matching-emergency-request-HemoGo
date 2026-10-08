@@ -17,6 +17,7 @@ import { BloodDrop } from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -113,6 +114,7 @@ const CreateBloodRequestScreen = ({ navigation }) => {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { t } = useLanguage();
+  const { hasUnread } = useNotifications();
   const urgencyLabel = {
     Low: t('pages.low'),
     Medium: t('pages.medium'),
@@ -243,7 +245,8 @@ const CreateBloodRequestScreen = ({ navigation }) => {
           style={styles.iconBtn}
           accessibilityLabel="Notifications"
         >
-          <Ionicons name="notifications" size={20} color={colors.text} />
+          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
         </TouchableOpacity>
       </View>
 
@@ -819,6 +822,17 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   brandContainer: {
     flexDirection: 'row',

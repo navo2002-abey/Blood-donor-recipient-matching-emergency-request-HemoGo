@@ -21,6 +21,7 @@ import {
 } from '../services/bloodRequestService';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
+import { useNotifications } from '../context/NotificationContext';
 
 export const isRequestActiveAndNotExpired = (item, myVerifiedIds = []) => {
   if (!item) return false;
@@ -95,6 +96,7 @@ const BloodRequestListScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuth();
+  const { hasUnread } = useNotifications();
   const [requests, setRequests] = useState([]);
   const [myAcceptedIds, setMyAcceptedIds] = useState([]);
   const [myVerifiedIds, setMyVerifiedIds] = useState([]);
@@ -475,7 +477,14 @@ const BloodRequestListScreen = ({ navigation }) => {
           <BloodDrop size={18} />
           <Text style={styles.brandTitle}>HemoGo</Text>
         </View>
-        <View style={styles.iconBtn} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Notifications')}
+          style={styles.iconBtn}
+          accessibilityLabel="Notifications"
+        >
+          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {hasUnread ? <View style={styles.bellBadge} /> : null}
+        </TouchableOpacity>
       </View>
 
       {/* Screen Title & Subtitle */}
@@ -580,6 +589,17 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.cardBg || colors.white,
   },
   brandContainer: {
     flexDirection: 'row',
