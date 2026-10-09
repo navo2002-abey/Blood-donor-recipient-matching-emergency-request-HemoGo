@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BloodDrop } from '../components/Logo';
+import AvailabilityStatusChip from '../components/AvailabilityStatusChip';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useConfirm } from '../context/ConfirmContext';
@@ -17,6 +18,7 @@ const ProfileScreen = ({ navigation }) => {
   const { t } = useLanguage();
   const confirm = useConfirm();
   const isAdmin = user?.role === ROLES.ADMIN;
+  const isDonor = user?.role === 'DONOR' || (!user?.role && !isAdmin);
   const name = user?.name || (isAdmin ? 'Anusha Fernando' : 'Amal Silva');
   const email = user?.email || (isAdmin ? 'admin@hemogo.com' : 'donor@hemogo.com');
   const phone = user?.phone || (isAdmin ? '0770000001' : '0770000002');
@@ -41,7 +43,6 @@ const ProfileScreen = ({ navigation }) => {
         { icon: 'mail-outline', label: t('profile.email'), value: email, tint: '#EFF6FF', color: '#2563EB' },
         { icon: 'call-outline', label: t('profile.phone'), value: phone, tint: '#F0FDF4', color: '#16A34A' },
         { icon: 'water-outline', label: t('profile.bloodGroupLabel'), value: bloodGroup, tint: colors.primarySoft, color: colors.primary },
-        { icon: 'checkmark-circle-outline', label: t('profile.status'), value: t('profile.availableToDonate'), tint: '#F0FDF4', color: '#16A34A' },
       ];
 
   const handleLogout = async () => {
@@ -98,10 +99,14 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.highlightLabel}>{isAdmin ? t('profile.network') : t('profile.bloodGroup')}</Text>
             <Text style={styles.highlightValue}>{isAdmin ? t('profile.nationalNetwork') : bloodGroup}</Text>
           </View>
-          <View style={styles.statusChip}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>{isAdmin ? t('profile.active') : t('profile.available')}</Text>
-          </View>
+          {isDonor ? (
+            <AvailabilityStatusChip variant="header" />
+          ) : (
+            <View style={styles.statusChip}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>{t('profile.active')}</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>{t('profile.account')}</Text>

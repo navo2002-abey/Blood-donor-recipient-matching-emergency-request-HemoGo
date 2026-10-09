@@ -4,6 +4,7 @@ const {
   login,
   getMe,
   updateProfile,
+  updateAvailability,
   changePassword,
   forgotPassword,
   socialLogin,
@@ -18,6 +19,7 @@ router.post('/forgot-password', forgotPassword);
 router.post('/social', socialLogin);
 router.get('/me', protect, getMe);
 router.patch('/profile', protect, updateProfile);
+router.patch('/availability', protect, updateAvailability);
 router.patch('/password', protect, changePassword);
 
 module.exports = router;

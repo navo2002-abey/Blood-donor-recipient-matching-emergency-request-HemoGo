@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { fetchCurrentUser, loginUser, logoutUser, registerUser, socialLoginUser, updateProfile } from '../services/authService';
+import { fetchCurrentUser, loginUser, logoutUser, registerUser, socialLoginUser, updateProfile, updateAvailability } from '../services/authService';
 import { getStoredUser, getToken, saveSession } from '../utils/storage';
 
 const AuthContext = createContext(null);
@@ -64,6 +64,41 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   }, []);
 
+  const saveAvailability = useCallback(async (payload) => {
+    // Optimistic local state update
+    const effectiveIsAvailable =
+      payload.availabilityStatus === 'AVAILABLE' ||
+      (payload.isAvailable === true && payload.availabilityStatus !== 'TEMPORARILY_UNAVAILABLE' && payload.availabilityStatus !== 'UNAVAILABLE');
+    
+    const updatedLocal = {
+      ...(user || {}),
+      availabilityStatus: payload.availabilityStatus || (effectiveIsAvailable ? 'AVAILABLE' : 'UNAVAILABLE'),
+      isAvailable: effectiveIsAvailable,
+      unavailableUntil: payload.availabilityStatus === 'TEMPORARILY_UNAVAILABLE' ? payload.unavailableUntil : null,
+      unavailableReason: payload.unavailableReason || '',
+    };
+
+    setUser(updatedLocal);
+    const token = await getToken();
+    if (token) {
+      await saveSession(token, updatedLocal);
+    }
+
+    try {
+      const data = await updateAvailability(payload);
+      if (data?.user) {
+        if (token) {
+          await saveSession(token, data.user);
+        }
+        setUser(data.user);
+        return data;
+      }
+    } catch (error) {
+      console.warn('Backend updateAvailability notice:', error.message);
+    }
+    return { success: true, user: updatedLocal };
+  }, [user]);
+
   const hydrateFromStorage = useCallback(async () => {
     const storedUser = await getStoredUser();
     if (storedUser) {
@@ -82,8 +117,9 @@ export const AuthProvider = ({ children }) => {
       socialLogin,
       logout,
       saveProfile,
+      saveAvailability,
     }),
-    [user, isReady, restoreSession, hydrateFromStorage, login, register, socialLogin, logout, saveProfile]
+    [user, isReady, restoreSession, hydrateFromStorage, login, register, socialLogin, logout, saveProfile, saveAvailability]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

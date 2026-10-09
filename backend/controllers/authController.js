@@ -137,6 +137,9 @@ const login = async (req, res) => {
 };
 
 const getMe = async (req, res) => {
+  if (req.user && typeof req.user.checkAndResetAvailability === 'function') {
+    await req.user.checkAndResetAvailability();
+  }
   return res.status(200).json({
     success: true,
     user: req.user.toPublicJSON(),
@@ -174,6 +177,18 @@ const updateProfile = async (req, res) => {
     req.user.name = name;
     req.user.email = email;
     req.user.phone = phone;
+
+    if (req.body.availabilityStatus !== undefined) {
+      req.user.availabilityStatus = req.body.availabilityStatus;
+      req.user.isAvailable = req.body.availabilityStatus === 'AVAILABLE';
+    }
+    if (req.body.unavailableUntil !== undefined) {
+      req.user.unavailableUntil = req.body.unavailableUntil ? new Date(req.body.unavailableUntil) : null;
+    }
+    if (req.body.unavailableReason !== undefined) {
+      req.user.unavailableReason = req.body.unavailableReason;
+    }
+
     await req.user.save();
 
     return res.status(200).json({
@@ -192,6 +207,66 @@ const updateProfile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Unable to update your profile right now.',
+    });
+  }
+};
+
+const updateAvailability = async (req, res) => {
+  try {
+    const { availabilityStatus, unavailableUntil, isAvailable, unavailableReason } = req.body;
+
+    let status = availabilityStatus;
+    let available = isAvailable;
+    let until = unavailableUntil ? new Date(unavailableUntil) : null;
+
+    if (status === 'AVAILABLE' || available === true) {
+      status = 'AVAILABLE';
+      available = true;
+      until = null;
+    } else if (status === 'TEMPORARILY_UNAVAILABLE') {
+      available = false;
+    } else if (status === 'UNAVAILABLE' || available === false) {
+      status = 'UNAVAILABLE';
+      available = false;
+      until = null;
+    } else {
+      status = req.user.availabilityStatus || 'AVAILABLE';
+      available = status === 'AVAILABLE';
+    }
+
+    req.user.availabilityStatus = status;
+    req.user.isAvailable = available;
+    req.user.unavailableUntil = until;
+    if (unavailableReason !== undefined) {
+      req.user.unavailableReason = String(unavailableReason).trim();
+    }
+
+    await req.user.save();
+
+    let feedbackMessage = 'Availability updated to Available.';
+    if (status === 'TEMPORARILY_UNAVAILABLE') {
+      const formattedDate = until
+        ? new Date(until).toLocaleDateString(undefined, {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          })
+        : 'selected return date';
+      feedbackMessage = `Status set to Temporarily Unavailable until ${formattedDate}.`;
+    } else if (status === 'UNAVAILABLE') {
+      feedbackMessage = 'Status set to Unavailable.';
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: feedbackMessage,
+      user: req.user.toPublicJSON(),
+    });
+  } catch (error) {
+    console.error('Update availability error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update availability right now.',
     });
   }
 };
@@ -418,6 +493,7 @@ module.exports = {
   login,
   getMe,
   updateProfile,
+  updateAvailability,
   changePassword,
   forgotPassword,
   socialLogin,

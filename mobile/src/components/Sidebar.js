@@ -18,6 +18,7 @@ import { useNotifications } from '../context/NotificationContext';
 import { colors } from '../utils/colors';
 import { DONOR_MENU, ROLE_LABELS } from '../utils/roles';
 import { useTheme } from '../context/ThemeContext';
+import AvailabilityStatusChip from './AvailabilityStatusChip';
 
 const getInitials = (name) =>
   name
@@ -270,17 +271,10 @@ const Sidebar = ({
               {renderMenu(styles.menuItem, styles.menuText)}
             </ScrollView>
 
-            {showAvailability ? (
-              <View style={styles.footer}>
-                <Text style={styles.footerLabel}>
-                  {available ? 'Active' : 'Inactive'}
-                </Text>
-                <Switch
-                  value={available}
-                  onValueChange={setAvailable}
-                  trackColor={{ false: '#374151', true: colors.primary }}
-                  thumbColor={colors.white}
-                />
+            {showAvailability || user?.role === 'DONOR' ? (
+              <View style={[styles.footer, { justifyContent: 'space-between' }]}>
+                <Text style={styles.footerLabel}>Availability</Text>
+                <AvailabilityStatusChip variant="compact" />
               </View>
             ) : (
               <View style={styles.footer}>
