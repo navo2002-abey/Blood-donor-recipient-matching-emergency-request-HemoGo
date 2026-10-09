@@ -27,6 +27,11 @@ export const updateProfile = async (payload) => {
   return data;
 };
 
+export const updateAvailability = async (payload) => {
+  const { data } = await api.patch('/auth/availability', payload);
+  return data;
+};
+
 export const changePassword = async (payload) => {
   const { data } = await api.patch('/auth/password', payload);
   return data;
