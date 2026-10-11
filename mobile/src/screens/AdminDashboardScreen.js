@@ -20,18 +20,6 @@ const comingSoon = (feature) => {
   Alert.alert('Coming Soon', `${feature} will be available in a later version.`);
 };
 
-const REQUESTS = [
-  { id: '1', title: 'O- emergency · Colombo General', sub: 'High priority · 3 units · 12 mins ago', urgent: true },
-  { id: '2', title: 'B+ request · Kandy Teaching', sub: 'Awaiting officer match · 28 mins ago', urgent: true },
-  { id: '3', title: 'A+ scheduled · NHSL Theatre', sub: 'Regular · 1 unit · 1 hr ago', urgent: false },
-];
-
-const USERS = [
-  { name: 'Amal Silva', role: 'Donor', meta: 'O+ · Colombo' },
-  { name: 'Dr. Nimal Perera', role: 'Officer', meta: 'Colombo National Hospital' },
-  { name: 'Sanduni Perera', role: 'Patient', meta: 'A- request open' },
-];
-
 const BANKS = [
   { name: 'Colombo National', stock: 'Good', units: 55 },
   { name: 'Kandy Teaching', stock: 'Low', units: 18 },
@@ -52,14 +40,19 @@ const AdminDashboardScreen = ({ navigation }) => {
   const { hasUnread } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState({
-    total: 3,
-    donors: 1,
-    officers: 1,
+    total: 0,
+    donors: 0,
+    officers: 0,
     patients: 0,
     requests: 0,
   });
-  const [users, setUsers] = useState(USERS);
-  const [liveRequests, setLiveRequests] = useState(REQUESTS);
+  const [metrics, setMetrics] = useState({
+    critical: 0,
+    open: 0,
+    total: 0,
+  });
+  const [users, setUsers] = useState([]);
+  const [liveRequests, setLiveRequests] = useState([]);
   const name = user?.name || 'Anusha Fernando';
   const initials = name
     .split(' ')
@@ -88,41 +81,103 @@ const AdminDashboardScreen = ({ navigation }) => {
       let active = true;
       fetchAdminUsers()
         .then((list) => {
-          if (!active || !list.length) return;
-          setUsers(
-            list.slice(0, 3).map((item) => ({
-              id: item.id,
-              name: item.name,
-              role: ROLE_LABELS[item.role] || item.role,
-              meta: item.hospital || item.phone || item.email,
-            }))
-          );
-        })
-        .catch(() => {});
-
-      fetchAdminBloodRequests({ limit: 3 })
-        .then((res) => {
-          if (!active || !res?.data?.length) return;
-          setLiveRequests(
-            res.data.map((item) => ({
-              id: item._id,
-              raw: item,
-              title: `${item.bloodGroup} · ${item.hospital}`,
-              sub: `${item.urgency || 'Medium'} priority · ${item.units || 1} units · ${item.status}`,
-              urgent: item.urgency === 'Critical' || item.urgency === 'High',
-            }))
-          );
-          if (res.metrics?.total !== undefined) {
-            setStats((prev) => ({ ...prev, requests: res.metrics.total }));
+          if (!active) return;
+          if (Array.isArray(list)) {
+            setUsers(
+              list.slice(0, 3).map((item) => ({
+                id: item.id,
+                name: item.name,
+                role: ROLE_LABELS[item.role] || item.role,
+                meta: item.hospital || item.phone || item.email,
+              }))
+            );
           }
         })
-        .catch(() => {});
+        .catch(() => { });
+
+      fetchAdminBloodRequests({ limit: 10 })
+        .then((res) => {
+          if (!active) return;
+          if (Array.isArray(res?.data)) {
+            setLiveRequests(
+              res.data.map((item) => ({
+                id: item._id,
+                raw: item,
+                bloodGroup: item.bloodGroup,
+                hospital: item.hospital,
+                urgency: item.urgency,
+                units: item.units,
+                status: item.status,
+                title: `${item.bloodGroup} · ${item.hospital}`,
+                sub: `${item.urgency || 'Medium'} priority · ${item.units || 1} units · ${item.status}`,
+                urgent: item.urgency === 'Critical' || item.urgency === 'High',
+              }))
+            );
+          }
+          if (res?.metrics) {
+            setMetrics(res.metrics);
+            if (res.metrics.total !== undefined) {
+              setStats((prev) => ({ ...prev, requests: res.metrics.total }));
+            }
+          }
+        })
+        .catch(() => { });
 
       return () => {
         active = false;
       };
     }, [])
   );
+
+  const urgentRequests = useMemo(() => {
+    return liveRequests.filter(
+      (item) => item.urgent && !['FULFILLED', 'CANCELLED', 'COMPLETED', 'VERIFIED'].includes(item.status)
+    );
+  }, [liveRequests]);
+
+  const urgentCount = metrics.critical > 0 ? Math.max(metrics.critical, urgentRequests.length) : urgentRequests.length;
+
+  const emergencyInfo = useMemo(() => {
+    if (urgentCount === 0 && urgentRequests.length === 0) {
+      return {
+        hasUrgent: false,
+        kicker: 'REQUEST STATUS',
+        badge: '0 high priority',
+        title: 'All emergency requests handled',
+        copy: 'There are currently no critical blood requests awaiting blood donor matching.',
+      };
+    }
+
+    const bloodGroups = Array.from(new Set(urgentRequests.map((r) => r.bloodGroup).filter(Boolean)));
+    let title = '';
+    if (bloodGroups.length === 1) {
+      title = `${bloodGroups[0]} request needs blood donor matching`;
+    } else if (bloodGroups.length === 2) {
+      title = `${bloodGroups[0]} and ${bloodGroups[1]} requests need blood donor matching`;
+    } else if (bloodGroups.length > 2) {
+      title = `${bloodGroups.slice(0, 2).join(', ')} and +${bloodGroups.length - 2} more need blood donor matching`;
+    } else {
+      title = `${urgentCount} emergency request${urgentCount > 1 ? 's' : ''} need blood donor matching`;
+    }
+
+    const hospitals = Array.from(new Set(urgentRequests.map((r) => r.hospital).filter(Boolean)));
+    let copy = '';
+    if (hospitals.length === 1) {
+      copy = `Review urgent request at ${hospitals[0]} and assign the nearest blood bank.`;
+    } else if (hospitals.length > 1) {
+      copy = `Review urgent requests across ${hospitals.slice(0, 2).join(', ')} and assign nearest blood donors.`;
+    } else {
+      copy = t('adminHome.emergencyCopy') || 'Review live requests across the national network and assign the nearest blood bank.';
+    }
+
+    return {
+      hasUrgent: true,
+      kicker: t('adminHome.emergency') || 'EMERGENCY REQUESTS',
+      badge: `${urgentCount} Critical priority`,
+      title,
+      copy,
+    };
+  }, [urgentRequests, urgentCount, t]);
 
   const cards = [
     { label: t('adminHome.totalUsers'), value: stats.total, icon: 'people-outline' },
@@ -173,24 +228,23 @@ const AdminDashboardScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <View style={styles.emergency}>
+        <View style={[styles.emergency, !emergencyInfo.hasUrgent && styles.emergencyClear]}>
           <View style={styles.emergencyTop}>
             <View style={styles.emergencyTitleRow}>
-              <View style={styles.redDot} />
-              <Text style={styles.emergencyKicker}>{t('adminHome.emergency')}</Text>
+              <View style={[styles.redDot, !emergencyInfo.hasUrgent && styles.mutedDot]} />
+              <Text style={styles.emergencyKicker}>{emergencyInfo.kicker}</Text>
             </View>
-            <View style={styles.priority}>
-              <Text style={styles.priorityText}>{t('adminHome.highPriority')}</Text>
+            <View style={[styles.priority, !emergencyInfo.hasUrgent && styles.priorityClear]}>
+              <Text style={[styles.priorityText, !emergencyInfo.hasUrgent && styles.priorityClearText]}>
+                {emergencyInfo.badge}
+              </Text>
             </View>
           </View>
-          <Text style={styles.emergencyTitle}>{t('adminHome.emergencyTitle')}</Text>
-          <Text style={styles.emergencyCopy}>{t('adminHome.emergencyCopy')}</Text>
+          <Text style={styles.emergencyTitle}>{emergencyInfo.title}</Text>
+          <Text style={styles.emergencyCopy}>{emergencyInfo.copy}</Text>
           <View style={styles.emergencyActions}>
             <TouchableOpacity style={styles.respondBtn} onPress={() => navigation.navigate('Requests')}>
-              <Text style={styles.respondText}>{t('adminHome.openRequests')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.detailsBtn} onPress={() => comingSoon('Donor Verification')}>
-              <Text style={styles.detailsText}>{t('adminHome.verifyDonors')}</Text>
+              <Text style={styles.respondText}>{t('adminHome.openRequests') || 'Open Requests'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -202,7 +256,7 @@ const AdminDashboardScreen = ({ navigation }) => {
               <Text style={styles.panelLink}>{t('adminHome.viewAll')}</Text>
             </TouchableOpacity>
           </View>
-          {liveRequests.map((item) => (
+          {liveRequests.slice(0, 3).map((item) => (
             <View key={item.id} style={styles.row}>
               <View style={[styles.redDot, !item.urgent && styles.mutedDot]} />
               <View style={styles.rowCopy}>
@@ -391,11 +445,21 @@ const makeStyles = (colors) => StyleSheet.create({
     letterSpacing: 0.3,
     color: colors.text,
   },
+  emergencyClear: {
+    backgroundColor: colors.cardBg,
+    borderColor: colors.cardBorder,
+  },
   priority: {
     backgroundColor: colors.primarySoft,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  priorityClear: {
+    backgroundColor: colors.inputBg,
+  },
+  priorityClearText: {
+    color: colors.textSecondary,
   },
   priorityText: { fontSize: 11, color: colors.primary, fontWeight: '700' },
   emergencyTitle: {
