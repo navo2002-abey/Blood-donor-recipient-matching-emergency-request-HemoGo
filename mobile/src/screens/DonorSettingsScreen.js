@@ -7,6 +7,7 @@ import LanguagePicker from '../components/LanguagePicker';
 import ThemePicker from '../components/ThemePicker';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
+import AvailabilityStatusChip from '../components/AvailabilityStatusChip';
 import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../utils/colors';
 import { useTheme } from '../context/ThemeContext';
@@ -65,6 +66,9 @@ const DonorSettingsScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>{t('settings.title')}</Text>
         <Text style={styles.subtitle}>{t('settings.donorSubtitle')}</Text>
+
+        <Text style={styles.section}>DONOR AVAILABILITY</Text>
+        <AvailabilityStatusChip variant="full" style={{ marginBottom: 16 }} />
 
         <Text style={styles.section}>{t('settings.notifications')}</Text>
         <View style={styles.group}>

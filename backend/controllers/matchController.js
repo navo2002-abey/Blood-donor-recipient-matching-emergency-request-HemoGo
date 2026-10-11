@@ -58,7 +58,15 @@ exports.getMatchingDonors = async (req, res) => {
       let score = isExact ? 94 : 82;
       if (isSameHospital) score += 6;
       else if (isSameArea) score += 4;
-      if (donor.isAvailable) score += 4;
+      const isTemporarilyExpired =
+        donor.availabilityStatus === 'TEMPORARILY_UNAVAILABLE' &&
+        donor.unavailableUntil &&
+        new Date(donor.unavailableUntil) <= new Date();
+      const isEffectiveAvailable =
+        isTemporarilyExpired ||
+        (donor.isAvailable !== false && donor.availabilityStatus !== 'UNAVAILABLE' && donor.availabilityStatus !== 'TEMPORARILY_UNAVAILABLE');
+
+      if (isEffectiveAvailable) score += 4;
 
       // Realistic distance based on hospital/area proximity
       let distanceKm = 2.4;
@@ -66,6 +74,12 @@ exports.getMatchingDonors = async (req, res) => {
       else if (isSameArea) distanceKm = 2.8 + idx * 0.8;
       else if (isExact) distanceKm = 3.5 + idx * 1.1;
       else distanceKm = 5.2 + idx * 1.3;
+
+      const displayStatus = isEffectiveAvailable
+        ? 'Available'
+        : donor.availabilityStatus === 'TEMPORARILY_UNAVAILABLE'
+        ? 'Temporarily Unavailable'
+        : 'Unavailable';
 
       return {
         id: donor._id.toString(),
@@ -77,8 +91,10 @@ exports.getMatchingDonors = async (req, res) => {
         area: donor.area || 'Colombo',
         distanceKm: Number(distanceKm.toFixed(1)),
         distance: `${distanceKm.toFixed(1)}km away`,
-        status: donor.isAvailable ? 'Available' : 'Busy',
-        isAvailable: donor.isAvailable !== false,
+        status: displayStatus,
+        isAvailable: isEffectiveAvailable,
+        availabilityStatus: isEffectiveAvailable ? 'AVAILABLE' : donor.availabilityStatus || 'UNAVAILABLE',
+        unavailableUntil: isTemporarilyExpired ? null : donor.unavailableUntil,
         exactMatch: isExact,
         score: Math.min(100, score),
         avatar:

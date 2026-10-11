@@ -51,6 +51,19 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    availabilityStatus: {
+      type: String,
+      enum: ['AVAILABLE', 'TEMPORARILY_UNAVAILABLE', 'UNAVAILABLE'],
+      default: 'AVAILABLE',
+    },
+    unavailableUntil: {
+      type: Date,
+      default: null,
+    },
+    unavailableReason: {
+      type: String,
+      default: '',
+    },
     avatar: {
       type: String,
       default: '',
@@ -83,7 +96,33 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+userSchema.methods.checkAndResetAvailability = async function checkAndResetAvailability() {
+  if (
+    this.availabilityStatus === 'TEMPORARILY_UNAVAILABLE' &&
+    this.unavailableUntil &&
+    new Date(this.unavailableUntil) <= new Date()
+  ) {
+    this.isAvailable = true;
+    this.availabilityStatus = 'AVAILABLE';
+    this.unavailableUntil = null;
+    await this.save();
+  }
+  return this;
+};
+
 userSchema.methods.toPublicJSON = function toPublicJSON() {
+  const isTemporarilyExpired =
+    this.availabilityStatus === 'TEMPORARILY_UNAVAILABLE' &&
+    this.unavailableUntil &&
+    new Date(this.unavailableUntil) <= new Date();
+
+  const effectiveStatus = isTemporarilyExpired
+    ? 'AVAILABLE'
+    : this.availabilityStatus || (this.isAvailable !== false ? 'AVAILABLE' : 'UNAVAILABLE');
+
+  const effectiveIsAvailable = effectiveStatus === 'AVAILABLE';
+  const effectiveUntil = isTemporarilyExpired ? null : this.unavailableUntil;
+
   return {
     id: this._id.toString(),
     name: this.name,
@@ -93,7 +132,10 @@ userSchema.methods.toPublicJSON = function toPublicJSON() {
     hospital: this.hospital,
     bloodGroup: this.bloodGroup,
     area: this.area,
-    isAvailable: this.isAvailable !== false,
+    isAvailable: effectiveIsAvailable,
+    availabilityStatus: effectiveStatus,
+    unavailableUntil: effectiveUntil,
+    unavailableReason: this.unavailableReason || '',
     avatar: this.avatar,
     isActive: this.isActive !== false,
     points: this.points || 0,

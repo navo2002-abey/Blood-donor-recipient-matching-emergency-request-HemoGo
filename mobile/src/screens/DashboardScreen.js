@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LiveDonorsMap from '../components/LiveDonorsMap';
 import { BloodDrop } from '../components/Logo';
 import Sidebar from '../components/Sidebar';
+import AvailabilityStatusChip from '../components/AvailabilityStatusChip';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useUserLocation } from '../hooks/useUserLocation';
-import { fetchBloodRequests } from '../services/bloodRequestService';
+import { fetchBloodRequests, getMyVerifiedIds, getMyAcceptedIds } from '../services/bloodRequestService';
+import { isRequestActiveAndNotExpired } from './BloodRequestListScreen';
 import { colors } from '../utils/colors';
 import { getNearbyDonors } from '../utils/nearbyDonors';
 import { useTheme } from '../context/ThemeContext';
@@ -34,18 +36,21 @@ const DashboardScreen = ({ navigation }) => {
 
   const loadUrgentEmergency = async () => {
     try {
-      const res = await fetchBloodRequests({ limit: 10 });
+      const userKey = user?.email || user?.id || user?._id;
+      const [myVerified, myAccepted] = await Promise.all([
+        getMyVerifiedIds(userKey),
+        getMyAcceptedIds(userKey),
+      ]);
+      const res = await fetchBloodRequests({ activeOnly: 'true' });
       if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-        // Find active open requests with units remaining
+        // Find truly active, unexpired requests that the donor hasn't already fulfilled/verified
         const openRequests = res.data.filter((item) => {
-          const totalUnits = Number(item.units) || 1;
-          const fulfilledUnits = Number(item.fulfilledUnits) || 0;
-          const isCompleted =
-            item.status === 'VERIFIED' ||
-            item.status === 'FULFILLED' ||
-            item.status === 'COMPLETED' ||
-            fulfilledUnits >= totalUnits;
-          return !isCompleted;
+          const cleanId = String(item._id || '').replace(/^#/, '');
+          if (Array.isArray(myAccepted) && myAccepted.includes(cleanId)) {
+            // Already accepted by this user
+            return false;
+          }
+          return isRequestActiveAndNotExpired(item, myVerified);
         });
 
         if (openRequests.length > 0) {
@@ -65,9 +70,11 @@ const DashboardScreen = ({ navigation }) => {
         } else {
           setUrgentRequest(null);
         }
+      } else {
+        setUrgentRequest(null);
       }
     } catch {
-      // Keep fallback
+      setUrgentRequest(null);
     }
   };
 
@@ -106,10 +113,10 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.welcomeCopy}>
             <Text style={styles.welcomeLabel}>{t('home.welcome')}</Text>
             <Text style={styles.welcomeName}>{name}</Text>
-            <View style={styles.statusRow}>
-              <View style={styles.greenDot} />
-              <Text style={styles.statusText}>{t('home.available')}</Text>
-            </View>
+            <AvailabilityStatusChip
+              variant="compact"
+              style={{ marginTop: 4, alignSelf: 'flex-start' }}
+            />
           </View>
           <View style={styles.bloodBox}>
             <Text style={styles.bloodLabel}>{t('home.bloodGroup')}</Text>
@@ -117,38 +124,34 @@ const DashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.emergency}>
-          <View style={styles.emergencyTop}>
-            <View style={styles.emergencyTitleRow}>
-              <View style={styles.redDot} />
-              <Text style={styles.emergencyKicker}>
-                {isCritical ? 'CRITICAL NEED' : t('home.emergency')}
-              </Text>
+        {urgentRequest ? (
+          <View style={styles.emergency}>
+            <View style={styles.emergencyTop}>
+              <View style={styles.emergencyTitleRow}>
+                <View style={styles.redDot} />
+                <Text style={styles.emergencyKicker}>
+                  {isCritical ? 'CRITICAL NEED' : t('home.emergency')}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.emergencyTitle}>
-            {urgentRequest
-              ? `${displayBloodGroup} Blood Needed Urgently at ${displayHospital}`
-              : t('home.emergencyTitle', { group: bloodGroup })}
-          </Text>
-          <View style={styles.emergencyActions}>
-            <TouchableOpacity
-              style={styles.respondBtn}
-              onPress={() => {
-                if (urgentRequest) {
+            <Text style={styles.emergencyTitle}>
+              {`${displayBloodGroup} Blood Needed Urgently at ${displayHospital}`}
+            </Text>
+            <View style={styles.emergencyActions}>
+              <TouchableOpacity
+                style={styles.respondBtn}
+                onPress={() => {
                   navigation.navigate('ActiveRequestProgress', {
                     requestData: urgentRequest,
                     requestId: urgentRequest._id,
                   });
-                } else {
-                  navigation.navigate('BloodRequestList', { filterMode: 'urgent' });
-                }
-              }}
-            >
-              <Text style={styles.respondText}>{t('home.respond')}</Text>
-            </TouchableOpacity>
+                }}
+              >
+                <Text style={styles.respondText}>{t('home.respond')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <View style={styles.grid}>
           <TouchableOpacity style={styles.smallCard} onPress={() => navigation.navigate('FindDonors')}>
