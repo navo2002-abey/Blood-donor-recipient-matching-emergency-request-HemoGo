@@ -498,7 +498,7 @@ const AdminBloodRequestsScreen = ({ navigation }) => {
 
         <View style={styles.brand}>
           <BloodDrop size={16} />
-          <Text style={styles.brandTitle}>HemoGo Admin</Text>
+          <Text style={styles.brandTitle}>HemoGo</Text>
         </View>
 
         <TouchableOpacity onPress={onRefresh} style={styles.iconBtn}>
